@@ -284,14 +284,8 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               </span>
               <span className="text-base font-black text-emerald-700 dark:text-emerald-300">₹{user?.walletBalance ?? walletBalance}</span>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-center">
-              <span className="text-[10px] font-bold text-gray-400 uppercase block">Active Boxes</span>
-              <span className="text-base font-black text-gray-900 dark:text-white">{coolers.length} Held</span>
-            </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center">
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Refundable Deposit</span>
-              <span className="text-base font-black text-emerald-700 dark:text-emerald-400">₹{totalHeldDeposit}</span>
-            </div>
+            
+            
           </div>
         </div>
 
@@ -304,7 +298,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
             { id: 'payments', label: 'Payments', icon: CreditCard },
             { id: 'wishlist', label: 'Saved for Later', icon: Heart, count: wishlist.length },
             { id: 'addresses', label: 'Saved Addresses', icon: MapPin, count: savedAddresses.length },
-            { id: 'coolers', label: 'Cold Boxes', icon: RotateCcw, count: coolers.length }
+            
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -436,7 +430,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                         </span>
                         <span className="text-gray-300 dark:text-gray-700">|</span>
                         <span className="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
-                          Includes ₹{ord.coolerDeposit || 250} Refundable Deposit
+                          
                         </span>
                       </div>
 
@@ -504,7 +498,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               Profile & Contact Settings
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Keep your contact and UPI details up-to-date for instant ₹250 cooler box returns.
+              Keep your contact details up-to-date for delivery updates.
             </p>
           </div>
 
@@ -551,7 +545,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
 
               <div>
                 <label className="block text-gray-600 dark:text-gray-300 font-bold mb-1">
-                  UPI ID (For Instant ₹250 Cooler Box Refunds)
+                  UPI ID (Optional)
                 </label>
                 <input 
                   type="text" 
@@ -594,7 +588,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               Payment & Transaction Ledger
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Verified Razorpay transactions, Cash on Delivery receipts, and cold-box deposit refunds.
+              Verified transactions and receipts.
             </p>
           </div>
 
@@ -818,7 +812,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
           <div className="border-b border-gray-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
               <h3 className="font-black text-sm text-gray-950 dark:text-white uppercase tracking-wider">
-                ThermalVault™ Cold Box & Deposit Status
+                insulated packaging Cold Box & Deposit Status
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 Every box carries a ₹250 refundable deposit. Unpack your meat and schedule a free doorstep pickup anytime.
@@ -939,7 +933,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                   className="px-5 py-3 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 text-white border border-emerald-400/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Return a Box (+₹250)</span>
+                  
                 </button>
               </div>
             </div>
@@ -957,7 +951,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 </div>
                 <h5 className="font-bold text-xs text-gray-950 dark:text-white">Return Cooler Box</h5>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                  Hand your empty ThermalVault™ box back to the delivery rider on your next order, or request a free pickup from this dashboard.
+                  Packed fresh with ice packs for direct delivery.
                 </p>
               </div>
 
@@ -965,9 +959,9 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-black text-xs flex items-center justify-center">
                   2
                 </div>
-                <h5 className="font-bold text-xs text-gray-950 dark:text-white">Instant ₹250 Refund</h5>
+                <h5 className="font-bold text-xs text-gray-950 dark:text-white">Quality Guarantee</h5>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                  The moment your returned box is inspected at our local hub, ₹250 is instantly credited to your GoMeat Wallet (or directly to your UPI / Bank account).
+                  If you ever have any issue with your order freshness, let us know within 2 hours for an immediate refund.
                 </p>
               </div>
 
@@ -1006,7 +1000,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <Wallet className="w-10 h-10 text-gray-300 mx-auto" />
                 <p className="font-bold text-gray-800 dark:text-gray-200 text-xs">No transactions in your wallet yet</p>
                 <p className="text-[11px] text-gray-500 max-w-sm mx-auto">
-                  When you return an empty ThermalVault™ cooler box, your ₹250 refund credit will show up right here!
+                  Your wallet transaction history will show up right here.
                 </p>
               </div>
             ) : (
@@ -1103,7 +1097,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <span className="font-bold">₹{selectedOrder.subtotal}</span>
               </div>
               <div className="flex justify-between text-emerald-700">
-                <span>ThermalVault Cooler Deposit:</span>
+                <span>insulated packaging Cooler Deposit:</span>
                 <span className="font-bold">+₹{selectedOrder.coolerDeposit || 250} (Refundable)</span>
               </div>
               {selectedOrder.discountAmount ? (
@@ -1129,7 +1123,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <div><strong>Razorpay Payment ID:</strong> <span className="font-mono">{selectedOrder.razorpayPaymentId}</span></div>
               )}
               <div><strong>Delivery Address:</strong> {typeof selectedOrder.deliveryAddress === 'object' && selectedOrder.deliveryAddress !== null ? `${(selectedOrder.deliveryAddress as any).flatNo || (selectedOrder.deliveryAddress as any).line1 || ''} ${(selectedOrder.deliveryAddress as any).street || ''}, ${(selectedOrder.deliveryAddress as any).city || ''}` : String(selectedOrder.deliveryAddress || '')}</div>
-              <div><strong>ThermalVault Box ID:</strong> <span className="font-mono">{selectedOrder.coolerId}</span></div>
+              
             </div>
 
             <div className="flex gap-2 pt-2">

@@ -53,7 +53,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
         quantity: 2,
         unit: '500g',
         netWeight: '450g',
-        chillingMethod: '0°C to 4°C FreshSeal™ Cold Chain',
+        chillingMethod: '0°C to 4°C chilled Cold Chain',
         cutStyle: 'Curry Cut (Medium Bone-in)',
         image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=800&q=80'
       },
@@ -64,28 +64,28 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
         quantity: 1,
         unit: '500g',
         netWeight: '500g',
-        chillingMethod: '0°C to 4°C FreshSeal™ Cold Chain',
+        chillingMethod: '0°C to 4°C chilled Cold Chain',
         cutStyle: 'Biryani Cut (Large Pieces)',
         image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
       }
     ],
     subtotal: 997,
-    coolerDeposit: 250,
+    coolerDeposit: 0,
     shippingFee: 0,
-    total: 1247,
+    total: 997,
     orderStatus: 'OUT_FOR_DELIVERY',
     status: 'Out for Delivery',
     paymentStatus: 'PAID',
     paymentMethod: 'Razorpay Online (UPI)',
     razorpayPaymentId: 'pay_P1r9demo84920',
     coolerId: 'BOX-BLR-412',
-    coolerModel: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
+    coolerModel: 'Insulated Cold Pack',
     liveTemp: 2.3,
     deliveryExecutive: 'Ramesh Kumar (EV Cold Fleet #12, +91 94481 02911)',
     tempLog: [
       { time: '07:15 AM', temp: 0.8, event: 'Order confirmed & cut inspected at Bio-Secure Dark Depot' },
-      { time: '07:30 AM', temp: 1.2, event: 'Packed inside sanitized ThermalVault Box with ice gel bricks' },
-      { time: '07:45 AM', temp: 1.8, event: 'Assigned to EV Cold Courier #12; FreshSeal digital lock engaged' },
+      { time: '07:30 AM', temp: 1.2, event: 'Packed inside insulated bag with fresh ice packs' },
+      { time: '07:45 AM', temp: 1.8, event: 'Assigned to courier for express delivery' },
       { time: '08:05 AM', temp: 2.3, event: 'Courier in transit on Outer Ring Road (1.8 km from doorstep)' }
     ],
     deliverySlot: '⚡ Express Delivery in 90 Mins (Live EV Courier)',
@@ -141,7 +141,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               liveTemp: newT,
               tempLog: [
                 ...selectedOrder.tempLog,
-                { time: timeStr, temp: newT, event: `IoT Sensor Telemetry Ping: ThermalVault internal temp confirmed at ${newT}°C` }
+                { time: timeStr, temp: newT, event: `IoT Sensor Telemetry Ping: insulated cold bag internal temp confirmed at ${newT}°C` }
               ]
             };
             setSelectedOrder(updatedOrder);
@@ -198,7 +198,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       key: 'DELIVERED', 
       title: 'Delivered!', 
       timeEst: 'Within 90 mins',
-      desc: 'Delivered fresh to your door. Return the box anytime for ₹250 back.' 
+      desc: 'Delivered fresh to your door. Enjoy your meal!' 
     }
   ];
 
@@ -262,7 +262,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
         return {
           badge: 'Delivered!',
           color: 'emerald',
-          message: "Delivered! Hand back the box anytime to get your ₹250 deposit back."
+          message: "Delivered fresh to your door. Enjoy your meal!"
         };
       default:
         return {
@@ -405,27 +405,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             })}
           </div>
 
-          {/* Reusable Cold Box System Card */}
-          <div className="p-4 bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 rounded-2xl text-xs space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 font-black text-sky-950 dark:text-sky-200">
-                <RotateCcw className="w-4 h-4 text-sky-700 dark:text-sky-400" />
-                <span>₹250 Cold Box Deposit</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
-                100% Refundable
-              </span>
-            </div>
-            <p className="text-[11px] text-sky-900 dark:text-sky-300 leading-relaxed">
-              Your order comes in a reusable cold box. Return the box after delivery and get ₹250 back once it's checked.
-            </p>
-            <button
-              onClick={onNavigateToReturns}
-              className="w-full py-2 bg-sky-700 dark:bg-sky-600 hover:bg-sky-800 dark:hover:bg-sky-500 text-white rounded-xl font-bold text-xs cursor-pointer transition shadow-xs"
-            >
-              Return Box for ₹250 Refund &rarr;
-            </button>
-          </div>
+          
         </div>
 
         {/* Right Column: Visual Timeline, Status Notifications & Full Order Details */}
@@ -564,33 +544,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
 
             {/* Readout Gauges */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cold Box Temperature</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black font-mono text-emerald-400">{liveTemp}°C</span>
-                  <span className="text-xs text-gray-400">Safe: 0°C–4°C</span>
-                </div>
-                <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Fresh & Safe</span>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Box Seal</span>
-                <div className="text-base font-extrabold text-white mt-1">Safely Sealed</div>
-                <div className="text-[11px] text-gray-400">
-                  Chilled gel packs keep your meat cold and fresh
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reusable Box</span>
-                <div className="text-base font-extrabold text-emerald-400 mt-1">₹250 Deposit Recorded</div>
-                <div className="text-[11px] text-gray-400">
-                  Get ₹250 back when you return the box
-                </div>
-              </div>
+              
             </div>
           </div>
 
@@ -772,10 +726,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   <span>Item Total:</span>
                   <span className="font-bold text-gray-900 dark:text-white">₹{currentOrder.subtotal}</span>
                 </div>
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
-                  <span>Cold Box Deposit (Refundable):</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400">₹{currentOrder.coolerDeposit || 250}</span>
-                </div>
+                
                 <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
                   <span>Delivery Fee:</span>
                   <span className="font-bold text-emerald-700 dark:text-emerald-400">

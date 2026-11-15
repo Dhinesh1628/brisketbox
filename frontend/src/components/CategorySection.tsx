@@ -101,19 +101,19 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight">
-            What Are You Craving?
+          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Categories
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Pick a category to view fresh cuts ready for delivery
+            Choose by type of cut
           </p>
         </div>
 
         <button
           onClick={onViewAllSpecs}
-          className="text-xs font-bold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
+          className="text-xs font-semibold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <span>View All Products</span>
+          <span>All items</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -165,18 +165,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                   {cat.subtitle}
                 </div>
 
-                {/* Subtitle 2 / Micro Tag Pill */}
-                <div className="pt-1.5">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight ${
-                      isSelected
-                        ? 'bg-white/20 text-white'
-                        : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 group-hover:bg-gray-200/70 dark:group-hover:bg-slate-700'
-                    }`}
-                  >
-                    {cat.tag}
-                  </span>
-                </div>
+
               </div>
             </button>
           );

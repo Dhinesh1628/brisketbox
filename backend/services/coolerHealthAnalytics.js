@@ -102,7 +102,7 @@ export function getTemperatureCheck(cooler, data = {}) {
   // Synthesize or ensure breach order for damaged test box if not already present
   if (orders.length === 0 && isDamagedCooler) {
     orders = [{
-      id: 'ORD-103-BREACH',
+      id: 'GM-100103',
       coolerId: cid,
       status: 'Delivered',
       createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
@@ -270,7 +270,7 @@ export function getFleetDetails(cooler, data = {}) {
   const isDamagedCooler = cooler.status === 'damaged' || cooler.status === 'maintenance' || cid.includes('103');
   if (orders.length === 0 && isDamagedCooler) {
     orders = [{
-      id: 'ORD-103-BREACH',
+      id: 'GM-100103',
       coolerId: cid,
       status: 'Delivered',
       createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),

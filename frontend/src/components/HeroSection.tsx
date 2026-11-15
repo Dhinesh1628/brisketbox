@@ -159,11 +159,11 @@ const SLIDES: SlideData[] = [
   {
     id: 'surmai',
     giantText: 'SURMAI',
-    title: 'Crispy Surmai Tawa Fry',
-    category: 'Mangalore Coastal Catch • Tawa Fry Ready',
-    cutStyle: 'Center-Cut Surmai Steaks',
-    origin: 'Daily 4:00 AM Harbor Catch • 0°C Cold Chain',
-    description: 'Center-cut fresh Seer Fish steaks with aromatic coastal spices, ready for a golden crisp tawa fry. Shucked, cleaned in RO water, and delivered 0°C fresh.',
+    title: 'Surmai Tawa Fry',
+    category: 'Fresh fish • Tawa fry',
+    cutStyle: 'Center-Cut Steaks',
+    origin: 'Mangalore Port, Karnataka',
+    description: 'Neat center-cut seer fish steaks cleaned with fresh water. Packed cold on ice and ready to cook.',
     price: '₹799',
     priceNum: 799,
     mrp: '₹899',
@@ -174,28 +174,28 @@ const SLIDES: SlideData[] = [
     garnishes: [Garnishes.iceCube, Garnishes.lemonSlice, Garnishes.dillSprig, Garnishes.iceCube],
     productData: {
       id: 'prod_1',
-      name: 'Crispy Surmai Tawa Fry (Large Steaks)',
+      name: 'Surmai Tawa Fry',
       category: 'fish',
-      description: 'Center-cut neat steaks from daily fresh catches off the Mangalore-Malabar coast.',
+      description: 'Neat center-cut steaks from daily fresh seer fish.',
       price: 799,
       mrp: 899,
       unit: '500g',
-      chillingMethod: '0°C to 4°C Constant Cold Chain',
+      chillingMethod: 'Chilled at 0°C to 4°C',
       catchDate: 'Today 4:00 AM',
-      origin: 'Mangalore Harbor Catch',
-      cutStyle: 'Curry Cut & Tawa Fry Steaks',
-      stock: 24,
+      origin: 'Mangalore Port',
+      cutStyle: 'Tawa fry steaks',
+      stock: 33,
       image: '/images/products/prod_1.jpg'
     }
   },
   {
     id: 'mutton',
     giantText: 'MUTTON',
-    title: 'Kashmiri Mutton Rogan Josh',
-    category: 'Grass-Fed Young Goat • Slow Dum Simmer',
-    cutStyle: 'Prime Bone-In Rogan Josh Cut',
-    origin: 'Pasture-Raised Herds • 0°C Vacuum Cold Box',
-    description: 'Succulent tender young goat cuts with marrow bones, slow-simmered for rich Kashmiri Rogan Josh or aromatic dum biryani. 100% pasture-raised and blast-chilled.',
+    title: 'Mutton Rogan Josh',
+    category: 'Tender goat • Curry cut',
+    cutStyle: 'Bone-in curry cut',
+    origin: 'Dindigul Farms, Tamil Nadu',
+    description: 'Tender young goat cuts with bone. Good for curries and dum biryani.',
     price: '₹549',
     priceNum: 549,
     mrp: '₹599',
@@ -206,28 +206,28 @@ const SLIDES: SlideData[] = [
     garnishes: [Garnishes.starAnise, Garnishes.cinnamon, Garnishes.bayLeaf, Garnishes.starAnise],
     productData: {
       id: 'prod_4',
-      name: 'Kashmiri Mutton Rogan Josh (Curry Cut)',
+      name: 'Mutton Rogan Josh',
       category: 'mutton',
-      description: 'Lean, tender young goat cuts with prime rib and shoulder pieces. Naturally grazed on open pastures.',
+      description: 'Tender young goat cuts with rib and shoulder pieces.',
       price: 549,
       mrp: 599,
       unit: '500g',
-      chillingMethod: '0°C to 4°C Constant Cold Chain',
-      catchDate: 'Fresh Today',
-      origin: 'Dindigul Pasture Farms',
-      cutStyle: 'Prime Bone-In Curry Cut',
-      stock: 18,
+      chillingMethod: 'Chilled at 0°C to 4°C',
+      catchDate: 'Fresh today',
+      origin: 'Dindigul Farms',
+      cutStyle: 'Bone-in curry cut',
+      stock: 22,
       image: '/images/products/prod_4.jpg'
     }
   },
   {
     id: 'chicken',
     giantText: 'CHICKEN',
-    title: 'Andhra Nati Koli Pepper Roast',
-    category: 'Free-Range Country Fowl • Village Roast',
-    cutStyle: 'Country Chicken Curry Cut',
-    origin: 'Naturally Foraged Organic Birds • Sealed in 90 Mins',
-    description: 'Naturally foraged country fowl with rich muscle density and authentic spicy Andhra pepper roast flavor. Cleaned and vacuum-sealed within 90 minutes.',
+    title: 'Country Chicken Curry Cut',
+    category: 'Country chicken • Curry cut',
+    cutStyle: 'Country chicken curry cut',
+    origin: 'Local Farms, Karnataka',
+    description: 'Country chicken cut into curry pieces with firm meat and rich flavor.',
     price: '₹389',
     priceNum: 389,
     mrp: '₹429',
@@ -238,49 +238,49 @@ const SLIDES: SlideData[] = [
     garnishes: [Garnishes.redChili, Garnishes.garlic, Garnishes.redChili, Garnishes.garlic],
     productData: {
       id: 'prod_6',
-      name: 'Andhra Nati Koli Pepper Roast (Curry Cut)',
+      name: 'Country Chicken Curry Cut',
       category: 'chicken',
-      description: 'Naturally foraged country fowl with rich muscle density and authentic rustic flavor.',
+      description: 'Country chicken cut into curry pieces with firm meat and rich flavor.',
       price: 389,
       mrp: 429,
       unit: '500g',
-      chillingMethod: '0°C to 4°C Constant Cold Chain',
-      catchDate: 'Processed Today',
-      origin: 'Organic Poultry Farms',
-      cutStyle: 'Medium Bone-In Curry Cut',
-      stock: 35,
+      chillingMethod: 'Chilled at 0°C to 4°C',
+      catchDate: 'Fresh today',
+      origin: 'Local Farms',
+      cutStyle: 'Curry cut',
+      stock: 45,
       image: '/images/products/prod_6.jpg'
     }
   },
   {
     id: 'prawns',
     giantText: 'PRAWNS',
-    title: 'Butter Garlic Jumbo Prawns',
-    category: 'Wild Coastal Catch • Sizzling Butter Garlic',
-    cutStyle: 'Tail-On Deveined Jumbo Prawns',
-    origin: 'Deep Coastal Waters of Karnataka • Pristine Catch',
-    description: 'Jumbo sea tiger prawns, peeled and deveined with tails intact. Bursting with sweet oceanic flavor, ready for a sizzling 5-minute butter garlic and green chili toss.',
-    price: '₹449',
-    priceNum: 449,
-    mrp: '₹499',
-    mrpNum: 499,
+    title: 'Jumbo Prawns',
+    category: 'Sea prawns • Tail-on',
+    cutStyle: 'Tail-on deveined',
+    origin: 'Karwar Coast, Karnataka',
+    description: 'Peeled and deveined sea prawns with tails on. Ready to cook in garlic butter or roast.',
+    price: '₹599',
+    priceNum: 599,
+    mrp: '₹679',
+    mrpNum: 679,
     image: '/images/products/prod_3.jpg',
     bgGradient: 'radial-gradient(ellipse at 50% 45%, #1e2525 0%, #111616 45%, #070909 80%, #020303 100%)',
     glowColor: 'rgba(20, 184, 166, 0.15)',
     garnishes: [Garnishes.lime, Garnishes.saltCrystal, Garnishes.lime, Garnishes.saltCrystal],
     productData: {
       id: 'prod_3',
-      name: 'Butter Garlic Jumbo Tiger Prawns',
-      category: 'prawns',
-      description: 'Wild-caught sea tiger prawns, tail-on, cleaned in RO water and thoroughly deveined.',
-      price: 449,
-      mrp: 499,
-      unit: '500g',
-      chillingMethod: '0°C to 4°C Constant Cold Chain',
-      catchDate: 'Today 4:00 AM',
-      origin: 'Karnataka Coast',
-      cutStyle: 'Tail-On Deveined Jumbo',
-      stock: 22,
+      name: 'Jumbo Prawns',
+      category: 'fish',
+      description: 'Peeled and deveined sea prawns with tail-on.',
+      price: 599,
+      mrp: 679,
+      unit: '350g',
+      chillingMethod: 'Chilled at 0°C to 4°C',
+      catchDate: 'Today catch',
+      origin: 'Karwar Coast',
+      cutStyle: 'Tail-on deveined',
+      stock: 28,
       image: '/images/products/prod_3.jpg'
     }
   }
@@ -473,28 +473,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* 2. TOP METADATA BAR (Seamless Floating Capsule Design)   */}
+      {/* 2. TOP METADATA BAR                                      */}
       {/* ======================================================== */}
       <div className="relative z-30 px-3 sm:px-10 pt-3 sm:pt-4 pb-1.5 flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-black/40 backdrop-blur-xl ring-1 ring-white/10 shadow-sm shrink">
-          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-          <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-white truncate">
-            0°C – 4°C Active Cold Chain
+          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="text-[10px] sm:text-xs font-semibold text-gray-200">
+            Delivered fresh in about 90 minutes
           </span>
-          <span className="text-gray-500 hidden sm:inline">•</span>
-          <span className="text-[10px] sm:text-xs text-gray-300 font-semibold hidden sm:inline">
-            ⚡ 90-Min Express
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onNavigateToReturns}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-black/40 hover:bg-white/15 text-white text-[10px] sm:text-xs font-bold ring-1 ring-white/15 hover:ring-white/30 transition-all cursor-pointer backdrop-blur-xl shadow-sm"
-          >
-            <RotateCcw className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-emerald-300" />
-            <span>₹250 Box Refund</span>
-          </button>
         </div>
       </div>
 
@@ -661,7 +647,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   </>
                 ) : (
                   <>
-                    <span>Shop now</span>
+                    <span>Add</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}

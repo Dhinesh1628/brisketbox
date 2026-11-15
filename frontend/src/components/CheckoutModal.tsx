@@ -390,11 +390,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <h2 className="text-lg font-black text-gray-950 dark:text-white">Checkout</h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
                 <Lock className="w-3 h-3 text-emerald-600" />
-                <span>100% Safe & Secure</span>
+                <span>Secure checkout</span>
               </span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Delivering to {city} in a reusable cold box kept fresh at 0°C–4°C
+              Delivering to {city} in about 90 minutes
             </p>
           </div>
           <button 
@@ -797,8 +797,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                   <p className="text-[11px] text-gray-600 dark:text-gray-300">
                     {userWalletBalance > 0
-                      ? 'Refund from your returned cold boxes. Ready to use anytime.'
-                      : 'Balance is ₹0. Return your cold box after delivery to get ₹250 back!'}
+                      ? 'Available wallet store credit.'
+                      : 'Available wallet balance.'}
                   </p>
                 </div>
               </div>
@@ -1000,15 +1000,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <span className="font-bold text-gray-900 dark:text-white">₹{subtotal}</span>
             </div>
             
-            {/* Refundable Cold Box deposit */}
-            <div className="flex justify-between text-gray-600 dark:text-gray-300">
-              <span className="flex items-center gap-1">
-                <span>❄️ Cold Box Deposit:</span>
-              </span>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                +₹{coolerDeposit} (100% Refundable)
-              </span>
-            </div>
+            
 
             {couponDiscount > 0 && (
               <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
@@ -1047,13 +1039,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           </div>
 
-          {/* Refundable Cold Box Explanation */}
-          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-300 text-[11px]">
-            <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-            <span>
-              Your order comes in a reusable cold box. Return the box after delivery and get ₹250 back once it's checked.
-            </span>
-          </div>
+          
 
           {/* Action CTA Button */}
           <button

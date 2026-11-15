@@ -178,12 +178,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-gray-900 dark:text-white focus:border-[#d11243] focus:outline-none"
               >
-                <option value="order">📦 Live Delivery Tracking or Delay</option>
-                <option value="refund">❄️ Cold Box Return & ₹250 Refund Deposit</option>
-                <option value="quality">🥩 Meat Freshness or Custom Cut Quality</option>
-                <option value="billing">💳 Payment, Invoice or Wallet Credit</option>
-                <option value="partner">🤝 Partner as Rider or Butcher Supplier</option>
-                <option value="feedback">💬 General Feedback or Inquiry</option>
+                <option value="order">Order tracking or delay</option>
+                <option value="refund">Returns or refunds</option>
+                <option value="quality">Meat quality or cut preference</option>
+                <option value="billing">Payment or invoice</option>
+                <option value="partner">Partner with us</option>
+                <option value="feedback">General feedback</option>
               </select>
             </div>
 

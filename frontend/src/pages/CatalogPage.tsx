@@ -295,13 +295,15 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <h3 className="font-bold text-sm text-gray-900 dark:text-white leading-snug line-clamp-1 group-hover:text-[#d11243] dark:group-hover:text-rose-400 transition-colors">
               {product.name}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
-                <Star className="w-2.5 h-2.5 fill-emerald-600 text-emerald-600" />
-                <span>4.8</span>
+            {product.rating && product.reviewsCount ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                  <Star className="w-2.5 h-2.5 fill-emerald-600 text-emerald-600" />
+                  <span>{product.rating}</span>
+                </div>
+                <span className="text-[10px] text-gray-400 font-medium">({product.reviewsCount})</span>
               </div>
-              <span className="text-[10px] text-gray-400 font-medium">120+ ratings</span>
-            </div>
+            ) : null}
             <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 leading-relaxed">
               {product.description}
             </p>
@@ -653,7 +655,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     <Award className="w-5 h-5" />
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-                    Best Sellers
+                    Best sellers
                   </h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-400 border border-rose-200 dark:border-rose-900">
                     Most Ordered

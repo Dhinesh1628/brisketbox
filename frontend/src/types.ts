@@ -82,6 +82,8 @@ export interface Product {
   partnerId?: string;
   partnerName?: string;
   inStock?: boolean;
+  rating?: number;
+  reviewsCount?: number;
   weightOptions?: WeightOption[];
   priceUpdatedAt?: string;
 }

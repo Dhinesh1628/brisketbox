@@ -45,12 +45,12 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
     if (cartSummary && cartSummary.items && cartSummary.items.length > 0) {
       const itemsList = cartSummary.items.map(i => `• ${i.qty}x *${i.name}* (${i.weight || '500g'}) — ₹${i.price * i.qty}`).join('\n');
       return {
-        reply: `🛒 *Here is what is currently in your GoMeat Cart:*\n\n${itemsList}\n\n• *Subtotal:* ₹${cartSummary.subtotal}\n• *ThermalVault Cold Box Deposit:* ₹250 *(100% Refundable Deposit)*\n• *Total Payable:* ₹${cartSummary.total || (cartSummary.subtotal + 250)}\n${cartSummary.couponCode ? `• *Applied Deal:* ${cartSummary.couponCode} (20% OFF applied!)` : '• *Tip:* Type *"Apply 20% OFF"* to save 20% on your cart!'}\n\n⚡ *90-Minute Express Dispatch:* Ready to pack in 0°C to 4°C chilled box!\n\nI have unlocked the Cart Drawer for you below:`,
+        reply: `🛒 *Here is what is currently in your GoMeat Cart:*\n\n${itemsList}\n\n• *Subtotal:* ₹${cartSummary.subtotal}\n• *Total:* ₹${cartSummary.total || cartSummary.subtotal}\n${cartSummary.couponCode ? `• *Applied Deal:* ${cartSummary.couponCode} (20% OFF applied!)` : '• *Tip:* Type *"Apply 20% OFF"* to save 20% on your cart!'}\n\n⚡ *90-Minute Express Dispatch:* Ready to pack in 0°C to 4°C chilled box!\n\nI have unlocked the Cart Drawer for you below:`,
         action: {
           type: 'OPEN_CART'
         },
         actionCard: {
-          title: `Active Cart (${cartSummary.items.length} items • ₹${cartSummary.total || (cartSummary.subtotal + 250)})`,
+          title: `Active Cart (${cartSummary.items.length} items • ₹${cartSummary.total || cartSummary.subtotal})`,
           subtitle: 'Click below to review delivery address & proceed to pay',
           buttonText: 'Open Cart Drawer & Checkout →',
           actionType: 'OPEN_CART'
@@ -58,7 +58,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
         suggestedReplies: [
           cartSummary.couponCode ? "Proceed to Checkout" : "Apply 20% OFF Deal",
           "Add 500g Surmai Steaks",
-          "How to get ₹250 box refund?"
+          "Delivery details"
         ]
       };
     } else {
@@ -145,7 +145,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
 
     if (targetProd) {
       return {
-        reply: `🛒 *Added to your GoMeat Cart!* \n\n• *Item:* ${targetProd.name}\n• *Pack Size:* ${weight}\n• *Price:* ₹${weight === '1kg' ? targetProd.price * 2 - 50 : targetProd.price}\n• *Cold-Chain Spec:* Blast-chilled at 0°C to 4°C, 100% RO water washed.\n\n⚡ Guaranteed 90-minute express doorstep delivery inside our reusable insulated ThermalVault cold box!`,
+        reply: `🛒 *Added to your GoMeat Cart!* \n\n• *Item:* ${targetProd.name}\n• *Pack Size:* ${weight}\n• *Price:* ₹${weight === '1kg' ? targetProd.price * 2 - 50 : targetProd.price}\n• *Cold-Chain Spec:* Blast-chilled at 0°C to 4°C, 100% RO water washed.\n\n⚡ Guaranteed 90-minute express doorstep delivery inside our reusable insulated insulated bag cold box!`,
         action: {
           type: 'ADD_TO_CART',
           productId: targetProd.id,
@@ -297,39 +297,28 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // =========================================================================
   if (lower.includes('frozen') || lower.includes('fresh') || lower.includes('chilled') || lower.includes('temperature') || lower.includes('formalin') || lower.includes('ammonia') || lower.includes('antibiotic') || lower.includes('safe') || lower.includes('quality')) {
     return {
-      reply: `❄️ *The GoMeat 0°C to 4°C Cold-Chain Science Guarantee:*\n\n❌ *Why We NEVER Freeze (-18°C):*\nWhen meat is frozen into a rock-hard block, water molecules expand into sharp, jagged ice crystals that rupture cellular walls. When you thaw it, moisture bleeds out (purge loss), leaving the meat dry, stringy, and flavorless.\n\n✅ *The 0°C - 4°C FreshChilled™ Standard:*\n• *Blast Chilled:* Immediate temperature drop to 0°C within 15 minutes of harvest.\n• *Cellular Retention:* Zero ice crystals. The meat fibers remain plump, succulent, and juicy.\n• *100% Odorless:* Zero foul fishy or stale smell.\n• *Zero Chemicals:* 100% guaranteed zero formalin, ammonia, chlorine, or synthetic preservatives.\n• *ThermalVault Protection:* Delivered in our EPP multi-layered cooler box with PCM ice gel packs that maintain 0°C to 4°C for up to 36 hours!\n\nAll cuts are processed in FSSC-22000 certified, RO-sanitized cold chambers.`,
+      reply: `❄️ *Fresh, never frozen:*\n\nWe deliver fresh meat and fish daily. Cuts are kept chilled between 0°C and 4°C with ice packs to stay fresh on the road without freezing. No chemical preservatives, no ammonia, no artificial washes.`,
       suggestedReplies: [
-        "View Fresh Fish Catch",
-        "View Pasture Mutton",
-        "How does the ₹250 box deposit work?"
+        "View fish cuts",
+        "View mutton cuts",
+        "How is meat packed?"
       ]
     };
   }
 
   // =========================================================================
-  // 6. REUSABLE BOX RETURN & ₹250 UPI REFUND PROCEDURE
-  // =========================================================================
-  if (lower.includes('box') || lower.includes('cooler') || lower.includes('refund') || lower.includes('250') || lower.includes('return') || lower.includes('wapas') || lower.includes('deposit')) {
+  // 6. PACKAGING & DELIVERY
+  if (lower.includes('box') || lower.includes('cooler') || lower.includes('refund') || lower.includes('250') || lower.includes('return') || lower.includes('wapas') || lower.includes('deposit') || lower.includes('pack')) {
     return {
-      reply: `📦 *ThermalVault Reusable Box & ₹250 UPI Refund Protocol:*\n\n1. *Why the ₹250 Deposit?*\n   To eliminate single-use thermocol and plastic waste, every order is delivered in a medical-grade EPP insulated cooler box. A ₹250 refundable deposit is credited right back upon box return!\n\n2. *How to Return & Get Your Money:*\n   • *Option A (Instant on Delivery):* Hand the empty box and gel packs back to the delivery partner. Once scanned, ₹250 is instantly credited to your GoMeat Vault Wallet or UPI.\n   • *Option B (Doorstep Pickup):* Go to the *Box Returns* tab on our website and click *Schedule Pickup*. Our rider arrives within your chosen slot to collect it.\n\n3. *Instant UPI Reversal:* Works seamlessly with Google Pay, PhonePe, Paytm, and Direct Bank Transfer.\n\n🌿 Over 14,000+ thermocol boxes diverted from Indian landfills!`,
-      action: {
-        type: 'OPEN_RETURNS'
-      },
-      actionCard: {
-        title: 'Schedule Cold Box Pickup',
-        subtitle: 'Get ₹250 instant UPI refund to your account',
-        buttonText: 'Open Box Returns Portal',
-        actionType: 'OPEN_RETURNS'
-      },
+      reply: `📦 *Packaging & Delivery:*\n\nEvery order is packed in a clean insulated bag with ice packs to keep meat chilled for about 90 minutes. You do not need to return any box, and there are no extra deposits or fees.`,
       suggestedReplies: [
-        "Check my deposit balance",
-        "Schedule box pickup",
-        "Order fresh cuts today"
+        "View fish cuts",
+        "View mutton cuts",
+        "Apply 20% OFF Deal"
       ]
     };
   }
 
-  // =========================================================================
   // 7. SURMAI & SEAFOOD SPECIFIC
   // =========================================================================
   if (lower.includes('surmai') || lower.includes('seer') || lower.includes('fish') || lower.includes('pomfret') || lower.includes('prawn') || lower.includes('tikka') || lower.includes('machli')) {
@@ -366,7 +355,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // =========================================================================
   if (lower.includes('chicken') || lower.includes('murga') || lower.includes('nati koli') || lower.includes('breast')) {
     return {
-      reply: `🍗 *Farm-Fresh Bio-Secured Chicken Cuts:*\n\n1. *${chickenBreast.name}* (₹299 / 500g)\n   • *Cut:* 100% Lean, fat-trimmed boneless breast fillets.\n   • *Nutrition:* ~31g protein per 100g. Ideal for gym diet, salads, and golden herb butter pan-searing.\n\n2. *${natiKoli.name}* (₹389 / 500g)\n   • *Cut:* Authentic free-range country chicken bone-in curry cuts.\n   • *Flavor Profile:* Firm muscle density with deep, organic rustic flavor.\n   • *Best For:* Spicy Andhra Pepper Roast or traditional village rasam curry.\n\n🌿 100% Antibiotic-free, vegetarian feed, and blast-chilled to 0°C–4°C within 90 minutes of processing!`,
+      reply: `🍗 *Farm-Fresh Bio-Secured Chicken Cuts:*\n\n1. *${chickenBreast.name}* (₹299 / 500g)\n   • *Cut:* Lean, fat-trimmed boneless breast fillets.\n   • *Nutrition:* ~31g protein per 100g. Ideal for gym diet, salads, and golden herb butter pan-searing.\n\n2. *${natiKoli.name}* (₹389 / 500g)\n   • *Cut:* Authentic free-range country chicken bone-in curry cuts.\n   • *Flavor Profile:* Firm muscle density with deep, organic rustic flavor.\n   • *Best For:* Spicy Andhra Pepper Roast or traditional village rasam curry.\n\n🌿 Antibiotic-free, vegetarian feed, and blast-chilled to 0°C–4°C within 90 minutes of processing!`,
       products: [chickenBreast, natiKoli],
       suggestedReplies: [
         "Add Chicken Breast (₹299)",
@@ -401,7 +390,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
         actionType: 'OPEN_TRACKING'
       },
       suggestedReplies: [
-        "How to return cold box after delivery?",
+        "Order delivery details",
         "Check today's specials",
         "Apply 20% OFF Deal"
       ]
@@ -409,14 +398,13 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   }
 
   // =========================================================================
-  // 11. DEFAULT INTELLIGENT MASTER BUTCHER HELPER
-  // =========================================================================
+  // 11. DEFAULT HELPER
   return {
-    reply: `👋 *Namaste! I am your GoMeat AI Master Butcher & Culinary Concierge.*\n\nI can do all the heavy lifting for you:\n\n1. 🛒 *Execute Orders:* Tell me what to add (e.g. *"Add 500g Surmai and 1kg Mutton"*).\n2. 👨‍🍳 *Chef Recipes:* Ask for step-by-step marinades, tawa fry methods, or Rogan Josh timings.\n3. ⚖️ *Party Estimator:* Tell me how many guests you're hosting (e.g. *"Dinner for 6 people"*).\n4. ❄️ *Cold-Chain Science:* Inquire about our 0°C blast-chilling, zero formalin guarantee, and FSSC-22000 specs.\n5. 📦 *₹250 Box Refunds:* Instant UPI deposit return protocol.\n6. 🎟️ *Deals & Coupons:* Ask for deals to unlock 20% OFF on your cart!\n\nWhat are you craving to cook today?`,
+    reply: `👋 *Welcome to GoMeat.*\n\nHere is what I can help you with:\n\n1. 🛒 *Orders:* Tell me what to add (for example *"Add 500g Surmai and 1kg Mutton"*).\n2. 👨‍🍳 *Recipes:* Ask how to cook any cut, from simple tawa fry to mutton curry.\n3. ⚖️ *Portions:* Tell me how many people you are cooking for.\n4. 🎟️ *Deals:* Ask for today's discount coupon.\n\nWhat would you like to cook today?`,
     suggestedReplies: [
-      "Surmai Tawa Steaks",
-      "Kashmiri Mutton Rogan Josh",
-      "Butter Garlic Jumbo Prawns",
+      "Surmai Tawa Fry",
+      "Mutton Rogan Josh",
+      "Jumbo Prawns",
       "Dinner for 4 people?",
       "Apply 20% OFF Deal"
     ]

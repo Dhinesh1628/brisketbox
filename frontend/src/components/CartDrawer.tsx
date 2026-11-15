@@ -26,7 +26,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [showCoolerFaq, setShowCoolerFaq] = useState(false);
+  
 
   useEffect(() => {
     if (isCartOpen) {
@@ -256,42 +256,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   })}
                 </div>
 
-                {/* Reusable Cold Box Deposit Card */}
-                <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 rounded-xl text-xs space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-1.5 font-extrabold text-sky-950 dark:text-sky-200">
-                      <span className="text-base">❄️</span>
-                      <div>
-                        <span>Reusable Cold Box</span>
-                        <span className="ml-1.5 px-1.5 py-0.2 rounded bg-sky-200/80 dark:bg-sky-900/80 text-sky-900 dark:text-sky-300 text-[10px] font-bold">
-                          100% Refundable
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-black">+₹{coolerDeposit}</span>
-                  </div>
-
-                  <p className="text-[11px] text-sky-900 dark:text-sky-300 leading-relaxed">
-                    Your order comes in a reusable cold box. Return the box after delivery and get ₹250 back once it's checked.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCoolerFaq(!showCoolerFaq)}
-                    className="text-[11px] font-bold text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-200 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>{showCoolerFaq ? 'Hide refund details' : 'How does the ₹250 refund work?'}</span>
-                    {showCoolerFaq ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
-
-                  {showCoolerFaq && (
-                    <div className="border-t border-sky-200/80 dark:border-sky-800/80 pt-2 text-[11px] text-sky-950 dark:text-sky-200 space-y-1">
-                      <p>• <strong>Give it back to the rider:</strong> Unpack your items and hand the box right back.</p>
-                      <p>• <strong>Return it later:</strong> Request a pickup anytime from the app to get ₹250 sent to your bank or wallet.</p>
-                    </div>
-                  )}
-                </div>
-
                 {/* Swiggy Style 1-Click Coupon Cards (No typing codes) */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -397,10 +361,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                     <span>Item Total:</span>
                     <span className="font-semibold text-gray-900 dark:text-white">₹{subtotal}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600 dark:text-gray-300">
-                    <span>Cold Box Deposit:</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-400">₹{coolerDeposit} (100% Refundable)</span>
-                  </div>
+                  
                   {couponDiscount > 0 && (
                     <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
                       <span>Coupon Discount ({couponCode}):</span>
@@ -424,7 +385,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold block">To Pay</span>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-xl font-black text-gray-950 dark:text-white">₹{total}</span>
-                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">Includes ₹250 refund</span>
+                    
                   </div>
                 </div>
 

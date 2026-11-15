@@ -26,10 +26,10 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
         {type === 'tos' ? (
           <div className="mt-4 space-y-4 text-xs leading-relaxed text-slate-300">
             <p>
-              <strong>1. Reusable Cold Box Deposit Policy:</strong> Each perishable delivery is packaged inside a sanitized reusable insulated EPP box containing phase-change ice gel bricks. A refundable deposit of ₹250 is collected at checkout. This deposit remains your property held in trust.
+              <strong>1. Fresh Delivery & Quality:</strong> Every order is cut fresh and packed with ice packs to stay chilled between 0°C and 4°C until delivery. If your order arrives damaged or warm, contact us within 2 hours for an immediate refund or replacement.
             </p>
             <p>
-              <strong>2. Deposit Refund Process:</strong> When you request a return through the portal or app, our delivery executive collects the empty box and gel packs from your address. Upon collection scan, ₹250 is credited back via UPI (Google Pay, PhonePe, Paytm) or original payment method within 2 hours.
+              <strong>2. Delivery Timing:</strong> Orders are prepared and delivered in about 90 minutes during operational hours. Delivery times may vary slightly based on traffic and local weather.
             </p>
             <p>
               <strong>3. Freshness & Cold-Chain SLA:</strong> All coastal fish and meats are dispatched in ice-slurry or chilled temperature ranges between 0°C and 3°C. In the event of cold-chain breakage or packaging compromise, customers are entitled to an immediate replacement or full refund under our FSSAI food safety compliance.
@@ -44,7 +44,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
         ) : (
           <div className="mt-4 space-y-4 text-xs leading-relaxed text-slate-300">
             <p>
-              <strong>1. Information Collection:</strong> We collect your name, delivery address, contact number, and UPI ID solely for order fulfillment, dispatch communication, and cooler deposit refunds.
+              <strong>1. Information Collection:</strong> We collect your name, delivery address, and contact number solely for order fulfillment, delivery updates, and customer support.
             </p>
             <p>
               <strong>2. Data Usage:</strong> Your delivery coordinates are shared only with the assigned local delivery partner (e.g. EV delivery executives in Bengaluru, Mumbai, or Hyderabad) to complete your drop-off.

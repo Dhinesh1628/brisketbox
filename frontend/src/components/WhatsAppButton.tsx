@@ -163,65 +163,22 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
                 <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#128C7E]" />
               </button>
 
-              <button
-                onClick={() => handleOpenWhatsAppDirect("Hi GoMeat, I would like to schedule a doorstep pickup for my ThermalVault cold box for my ₹250 UPI refund.")}
-                className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#128C7E] dark:hover:border-[#128C7E] rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <div>
-                    <div className="font-bold text-gray-900 dark:text-white text-[11px]">Return Cold Box (₹250 Refund)</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400">Doorstep pickup & instant reversal</div>
-                  </div>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#128C7E]" />
-              </button>
             </div>
           </div>
         )}
 
-        {/* DUAL FLOATING ACTIONS: 1. Chat with AI Butcher (Pill), 2. WhatsApp (Circular FAB) */}
-        <div className="flex items-center justify-end gap-2">
-          
-          {/* PRIMARY FLOATING BUTTON: "Chat with AI Butcher" */}
-          <button
-            onClick={openChatbot}
-            className="group flex items-center gap-2 bg-gradient-to-r from-gray-900 via-slate-900 to-emerald-950 hover:from-black hover:to-emerald-900 text-white pl-3 pr-3.5 py-2 sm:py-2.5 rounded-full border border-emerald-400/50 shadow-xl hover:shadow-2xl hover:scale-102 active:scale-95 transition-all duration-200 cursor-pointer"
-            aria-label="Chat with AI Butcher"
-          >
-            <div className="relative flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/40">
-              <Bot className="w-3.5 h-3.5 text-emerald-300 group-hover:rotate-12 transition-transform duration-200" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-              </span>
-            </div>
-            
-            <div className="flex flex-col text-left">
-              <span className="font-extrabold text-[11px] sm:text-xs text-white tracking-tight flex items-center gap-1">
-                AI Master Butcher
-                <Sparkles className="w-3 h-3 text-amber-300" />
-              </span>
-              <span className="text-[8px] sm:text-[9px] text-emerald-300 font-medium leading-none">
-                Recipes & fresh cuts 24/7
-              </span>
-            </div>
-          </button>
-
-          {/* SECONDARY FLOATING BUTTON: Circular WhatsApp Quick-Action FAB */}
+        {/* SINGLE FLOATING BUTTON */}
+        <div className="flex items-center justify-end">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="group relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer shrink-0"
-            aria-label="Order via WhatsApp"
-            title="Order via WhatsApp (Express 90-Min Delivery)"
+            className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            aria-label="Help and WhatsApp"
           >
-            <span className="relative flex h-2 w-2 absolute top-1.5 right-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            <MessageCircle className="w-4 h-4 fill-white" />
+            <span className="font-semibold text-xs tracking-wide">
+              Chat & Support
             </span>
-            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white text-[#25D366]" />
           </button>
-
         </div>
       </div>
 

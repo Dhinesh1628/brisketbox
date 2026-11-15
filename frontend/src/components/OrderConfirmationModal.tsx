@@ -90,7 +90,7 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           <div className="pt-2 border-t border-rose-100/60 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>0°C – 4°C FreshSeal™ Box</span>
+              <span>Packed fresh with ice packs</span>
             </span>
             {order.deliveryAddress && (
               <span className="truncate max-w-[180px] sm:max-w-[220px] text-right font-medium text-gray-700 dark:text-gray-300">

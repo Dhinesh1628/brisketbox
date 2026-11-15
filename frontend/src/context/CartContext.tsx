@@ -168,8 +168,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return sum + price * item.quantity;
   }, 0);
   
-  // Refundable cooler box deposit: ₹250 flat per order
-  const coolerDeposit = items.length > 0 ? 250 : 0;
+  // No cooler box deposit
+  const coolerDeposit = 0;
   // Free delivery threshold: ₹499 (Swiggy style)
   const shippingFee = items.length === 0 ? 0 : (subtotal >= 499 ? 0 : 40);
   const effectiveDiscount = Math.min(couponDiscount, subtotal);

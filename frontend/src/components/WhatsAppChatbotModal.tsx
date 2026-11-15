@@ -73,15 +73,14 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
     {
       id: 'msg_welcome',
       sender: 'bot',
-      text: `👋 *Namaste! Welcome to GoMeat — Freshness We Can Trust.*\n\nI am your *24/7 AI Master Butcher & Culinary Concierge* 👨‍🍳✨\n\nI don't just answer questions — *tell me what you need and I will do all the work:*\n\n• 🛒 *"Add 500g Surmai and 1kg Mutton to my cart"*\n• 🛍️ *"View my cart"* (check items & total)\n• 👨‍🍳 *"How to cook Surmai Tawa Fry?"* or *"Mutton Rogan Josh recipe"*\n• ⚖️ *"Dinner for 6 people, how much meat should I order?"*\n• 🎟️ *"Apply 20% discount coupon"*\n• 📦 *"How do I get my ₹250 box refund?"*\n• ❄️ *"Is the meat fresh or frozen?"*\n\nHow can I serve you today?`,
+      text: `Welcome to GoMeat.\n\nTell me what you'd like to order or ask any question:\n\n• "Add 500g Surmai and 1kg Mutton to my cart"\n• "View my cart"\n• "How to cook Surmai Tawa Fry"\n• "Dinner for 6 people, how much to order?"\n• "Apply 20% discount coupon"\n• "Is the meat fresh or frozen?"\n\nHow can I help you today?`,
       time: getCurrentTime(),
       suggestedReplies: [
         "View my cart",
-        "Today's Harbor Seafood",
-        "Kashmiri Mutton Rogan Josh",
+        "Today's fish",
+        "Mutton Rogan Josh",
         "Dinner for 4 people?",
-        "Apply 20% OFF Deal",
-        "How to get ₹250 box refund?"
+        "Apply 20% OFF Deal"
       ]
     }
   ]);
