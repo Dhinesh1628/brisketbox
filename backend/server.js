@@ -376,7 +376,7 @@ app.post('/api/products', authenticate, requireAdmin, (req, res) => {
     id: `prod_${uuidv4().slice(0, 8)}`,
     name,
     category,
-    description: description || 'Fresh daily morning inward, scale-scraped and chilled to 0°C - 4°C.',
+    description: description || 'Fresh cut, cleaned and packed on ice.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
@@ -385,7 +385,7 @@ app.post('/api/products', authenticate, requireAdmin, (req, res) => {
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
     eta: '⚡ Today in 90 mins',
-    chillingMethod: chillingMethod || '0°C to 4°C FreshSeal™ Cold Chain',
+    chillingMethod: chillingMethod || '0°C to 4°C chilled pack Cold Chain',
     catchDate: catchDate || 'Daily Harbor Lot',
     origin: origin || 'Indian Coastal Waters / Certified Farm',
     cutStyle: cutStyle || 'Standard Curry Cut',
@@ -466,7 +466,7 @@ app.post('/api/orders', authenticate, (req, res) => {
     assignedCooler = {
       id: newId,
       qrCode: `GOMEAT-${newId}`,
-      model: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
+      model: 'insulated bag 18L - Reusable EPP Cold-Gel Box',
       status: 'assigned',
       currentOrderId: null,
       currentUserId: req.user.id,
@@ -848,7 +848,7 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), (req, re
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
     eta: '⚡ Today in 90 mins',
-    chillingMethod: '0°C to 4°C FreshSeal™ Cold Chain',
+    chillingMethod: '0°C to 4°C chilled pack Cold Chain',
     origin: origin || 'Certified Farm / Coastal Lot',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 30,
@@ -1358,7 +1358,7 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
           amount: refundAmt,
           type: 'credit',
           title: 'Cooler Box Deposit Refund',
-          description: `ThermalVault™ box #${returnItem.coolerId} returned & verified. Instant refund added to GoMeat Wallet.`,
+          description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to GoMeat Wallet.`,
           date: new Date().toISOString(),
           balanceAfter: newBal,
           coolerId: returnItem.coolerId
@@ -1410,7 +1410,7 @@ const handleCoolerHealthDiagnostic = (req, res) => {
         cooler = db.insert('coolers', {
           id: normalizedBoxId,
           qrCode: `GOMEAT-${normalizedBoxId}`,
-          model: 'ThermalVault Ultra-3L EPP',
+          model: 'insulated bag Ultra-3L EPP',
           status: 'available',
           cyclesUsed: 4,
           lastSanitizedDate: new Date().toISOString().split('T')[0],
@@ -1518,7 +1518,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
         qrCode: `GOMEAT-${normalizedBoxId}`,
-        model: 'ThermalVault Ultra-3L EPP',
+        model: 'insulated bag Ultra-3L EPP',
         status: isBreach ? 'damaged' : (normalizedBoxId.includes('182') ? 'assigned' : 'with_customer'),
         currentOrderId: isBreach ? 'ORD-103-BREACH' : 'ORD-9281',
         currentUserId: 'usr_customer',
@@ -1530,7 +1530,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
         assignedHub: 'Mahadevapura Dark Hub'
       });
     } else {
-      return res.status(404).json({ error: `ThermalVault Cold Box "${rawId}" not found in fleet directory.` });
+      return res.status(404).json({ error: `insulated bag Cold Box "${rawId}" not found in fleet directory.` });
     }
   }
 
@@ -1551,7 +1551,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
   
   const tempLog = order?.tempLog && order.tempLog.length > 0 ? order.tempLog : [
     { time: '07:15 AM', temp: 0.8, event: 'Sealed with chilled ice-gel bricks at Mahadevapura Dark Hub' },
-    { time: '07:30 AM', temp: isDamagedBox ? 2.4 : 1.2, event: 'FreshSeal digital latch engaged; EV Cold Courier dispatched' },
+    { time: '07:30 AM', temp: isDamagedBox ? 2.4 : 1.2, event: 'chilled pack digital latch engaged; EV Cold Courier dispatched' },
     { time: '07:55 AM', temp: isDamagedBox ? 4.6 : 1.6, event: 'IoT Ping: Temperature checked mid-route (Outer Ring Road)' },
     { time: '08:15 AM', temp: liveTemp, event: isCompliant ? 'Delivered at customer doorstep (Sub-4°C guaranteed)' : '⚠️ Alert: Temperature rose above 4°C safe threshold' }
   ];
@@ -1611,7 +1611,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
       isEligible,
       depositAmount: refundAmount,
       reason: isEligible 
-        ? 'ThermalVault deposit verified and approved for instant reversal.' 
+        ? 'insulated bag deposit verified and approved for instant reversal.' 
         : (cooler.status === 'available' ? 'Box already returned & deposit refunded.' : 'Box under sanitization.'),
       recommendedAction: isDamagedBox 
         ? 'APPROVE_REFUND_AND_REPAIR_BOX' 
@@ -1644,7 +1644,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
         qrCode: `GOMEAT-${normalizedBoxId}`,
-        model: 'ThermalVault Ultra-3L EPP',
+        model: 'insulated bag Ultra-3L EPP',
         status: 'available',
         currentUserId: 'usr_customer',
         currentUserName: 'Pooja Sundaram',
@@ -1706,7 +1706,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
         amount: refundAmt,
         type: 'credit',
         title: 'Cooler Box Deposit Refund',
-        description: `ThermalVault™ box #${cooler.id} QR inspected & verified. Instant refund added to GoMeat Wallet.`,
+        description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to GoMeat Wallet.`,
         date: new Date().toISOString(),
         balanceAfter: newBal,
         coolerId: cooler.id
@@ -1754,7 +1754,7 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
         qrCode: `GOMEAT-${normalizedBoxId}`,
-        model: 'ThermalVault Ultra-3L EPP',
+        model: 'insulated bag Ultra-3L EPP',
         status: 'available',
         currentUserId: 'usr_customer',
         currentUserName: 'Pooja Sundaram',
@@ -1907,7 +1907,7 @@ app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
   const newCooler = {
     id,
     qrCode: qrCode || `GOMEAT-${id}`,
-    model: model || 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
+    model: model || 'insulated bag 18L - Reusable EPP Cold-Gel Box',
     status: 'available',
     currentOrderId: null,
     currentUserId: null,

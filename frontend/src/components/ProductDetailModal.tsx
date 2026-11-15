@@ -50,7 +50,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       id: 'Biryani Cut (Large Juicy Pieces)',
       name: 'Biryani Cut - Large',
       badge: 'Chef Favorite',
-      description: 'Generous succulent cuts that absorb fragrant marinades for slow dum biryani.'
+      description: 'Even cuts that cook well in curries and dum biryani.'
     },
     {
       id: 'Boneless Cubes & Fillets',
@@ -62,7 +62,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       id: 'Keema / Fresh Minced',
       name: 'Keema / Mince Fine Cut',
       badge: 'Hand-Minced',
-      description: 'Double-ground texture suited for succulent seekh kebabs, keema pav, and patties.'
+      description: 'Minced texture suited for kebabs, keema pav, and patties.'
     }
   ];
 
@@ -398,7 +398,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span>Our Freshness Promise</span>
                 </div>
                 <p className="text-[11px] text-emerald-800 dark:text-emerald-300/90 leading-relaxed">
-                  Cleaned with RO water and kept chilled between 0°C and 4°C. Delivered fresh and ready to cook.
+                  Cleaned and kept chilled on ice. Delivered fresh and ready to cook.
                 </p>
               </div>
             </div>

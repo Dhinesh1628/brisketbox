@@ -162,7 +162,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     return 0; // featured
   });
 
-  // Partitioned Curated Sections for "All" view
+  // Product sections
   const bestSellerIds = ['prod_1', 'prod_4', 'prod_3', 'prod_5'];
   const trendingNowIds = ['prod_7', 'prod_6', 'prod_2', 'prod_8'];
   const customerFavouriteIds = ['prod_5', 'prod_4', 'prod_2', 'prod_1'];
@@ -643,7 +643,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </div>
       ) : (
-        /* 4 Partitioned Curated Sections as Requested */
+        /* Category sections */
         <div className="space-y-14 sm:space-y-18">
           
           {/* SECTION 1: BEST SELLERS */}
@@ -662,7 +662,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Bangalore's most loved cuts • 0°C Blast-Chilled & Delivered in 90 mins
+                  Most ordered cuts • Delivered in about 90 minutes
                 </p>
               </div>
               <button 
@@ -795,7 +795,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Arrived this morning from Mangalore harbor & certified bio-secure pastures
+                  Daily fresh arrivals from trusted local partners
                 </p>
               </div>
               <button 
@@ -815,175 +815,17 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. FIGMA COMBINED SECTION: INTEGRATED ASSURANCE & ECO-BOX RETURN PROTOCOL */}
-      {/* Replaces 3 disjointed blocks with unified 2-column Figma-matched design   */}
-      {/* ========================================================================= */}
+      {/* Freshness & Quality Note */}
       <section className="pt-8">
-        <div className="rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm overflow-hidden">
-          
-          {/* Header pill strip */}
-          <div className="px-3.5 sm:px-8 py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <span className="font-black text-gray-950 dark:text-white uppercase tracking-wider text-[10px] sm:text-[11px] truncate">
-                The GoMeat Freshness & Circular Sustainability Protocol
-              </span>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-gray-500 dark:text-gray-400 shrink-0">
-              <span>0°C Blast-Chilled</span>
-              <span>•</span>
-              <span>100% RO Washed</span>
-              <span>•</span>
-              <span className="text-emerald-600 dark:text-emerald-400">FSSC-22000 Certified</span>
-            </div>
+        <div className="rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-6 sm:p-8 shadow-sm">
+          <div className="max-w-2xl space-y-2">
+            <h3 className="text-lg sm:text-xl font-black text-gray-950 dark:text-white">
+              Fresh cuts, prepared daily
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              All our meat and seafood is cut and cleaned fresh every morning. Packed on ice and delivered to your door in about 90 minutes.
+            </p>
           </div>
-
-          {/* 2-Column Integrated Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-slate-800">
-            
-            {/* LEFT COLUMN: ThermalVault Reusable Box & ₹250 Refund Protocol */}
-            <div className="lg:col-span-6 p-4 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 bg-gradient-to-br from-emerald-50/40 via-white to-transparent dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900">
-              <div className="space-y-2.5 sm:space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] sm:text-[11px] font-black border border-emerald-300 dark:border-emerald-800">
-                  <Leaf className="w-3.5 h-3.5" />
-                  <span>Zero Thermocol Waste • 100% Circular Cooler</span>
-                </div>
-                
-                <h3 className="text-lg sm:text-2xl font-black text-gray-950 dark:text-white tracking-tight leading-tight">
-                  Return Your Empty Cold Box. Get ₹250 Back Instantly.
-                </h3>
-                
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Every order arrives packed in our insulated <strong className="text-gray-900 dark:text-white">ThermalVault™</strong> cold box maintaining 0°C to 4°C for 48 hours without messy melting ice. Help us eliminate plastic waste and get your full security deposit refunded.
-                </p>
-              </div>
-
-              {/* 3 Step Protocol Cards */}
-              <div className="space-y-2.5">
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-800/70 border border-gray-200/80 dark:border-slate-700/80 flex items-start gap-3 shadow-2xs">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">Delivered in 0°C ThermalVault™</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Dual-seal latch keeps seafood and meat pristine at 0°C–4°C at your doorstep.</p>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-800/70 border border-gray-200/80 dark:border-slate-700/80 flex items-start gap-3 shadow-2xs">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">1-Tap Scan or Hand Over to Rider</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Scan the QR code on the box lid or simply hand it over to your delivery executive on your next order.</p>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-800/70 border border-gray-200/80 dark:border-slate-700/80 flex items-start gap-3 shadow-2xs">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">Instant ₹250 Deposit Reversal</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Refunded instantly into your GoMeat wallet balance or directly back to your original UPI account.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Call to action buttons */}
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={onNavigateToReturns}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-extrabold text-xs transition cursor-pointer shadow-xs flex items-center justify-center gap-2"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Scan QR / Return Box for ₹250</span>
-                </button>
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span>48,000+ boxes recycled in Bengaluru</span>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN: Farm-to-Kitchen 3 Certified Steps */}
-            <div className="lg:col-span-6 p-4 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-300 text-[11px] font-black border border-rose-300 dark:border-rose-900">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>The Freshness Guarantee</span>
-                </div>
-
-                <h3 className="text-xl sm:text-2xl font-black text-gray-950 dark:text-white tracking-tight">
-                  Farm-to-Kitchen in 3 Certified Steps
-                </h3>
-
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  We have eliminated middlemen, artificial preservatives, and wet-market stalls. All cuts flow directly from daily morning arrivals through our strict temperature-controlled hubs.
-                </p>
-              </div>
-
-              {/* 3 Quality Steps */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 shadow-2xs flex items-center justify-center text-[#d11243] dark:text-rose-400 shrink-0 font-black">
-                    <Droplets className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">1. Choose Your Fresh Cut</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      Daily 4:00 AM Mangalore harbor catch and antibiotic-free country herds. Handpicked for optimal marbling and texture.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 shadow-2xs flex items-center justify-center text-[#d11243] dark:text-rose-400 shrink-0 font-black">
-                    <ThermometerSnowflake className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">2. 0°C Blast Chilled & RO Cleaned</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      Hand-trimmed by master butchers, washed only in double-filtered RO water, and vacuum-sealed at 0°C to 4°C with zero chemical preservatives.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 shadow-2xs flex items-center justify-center text-[#d11243] dark:text-rose-400 shrink-0 font-black">
-                    <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">3. Doorstep Delivery in 90 Mins</h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      Dispatched across Bangalore in dedicated EV cold couriers. IoT sensors ensure your cut stays below 4°C right until your frying pan.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trust Badges Bar */}
-              <div className="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                <div className="py-2 px-1 rounded-xl bg-gray-100/70 dark:bg-slate-800/70 text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                  🛡️ Antibiotic Free
-                </div>
-                <div className="py-2 px-1 rounded-xl bg-gray-100/70 dark:bg-slate-800/70 text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                  💧 100% RO Washed
-                </div>
-                <div className="py-2 px-1 rounded-xl bg-gray-100/70 dark:bg-slate-800/70 text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                  ❄️ Never Frozen
-                </div>
-                <div className="py-2 px-1 rounded-xl bg-gray-100/70 dark:bg-slate-800/70 text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                  ⚡ 90-Min Express
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-
         </div>
       </section>
 

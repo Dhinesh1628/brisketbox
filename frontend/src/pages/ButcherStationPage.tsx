@@ -80,7 +80,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   const [newProductForm, setNewProductForm] = useState({
     name: '',
     category: 'Fish & Seafood',
-    description: 'Fresh dressed cut scale-scraped and chilled to 0°C - 4°C.',
+    description: 'Fresh dressed cut, cleaned and chilled.',
     price: 499,
     mrp: 549,
     unit: '500g',
@@ -697,7 +697,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               </div>
               <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-gray-400 uppercase font-bold block">Station Temperature</span>
-                <span className="text-2xl font-black text-sky-400">1.2°C FreshSeal</span>
+                <span className="text-2xl font-black text-sky-400">1.2°C Chilled Seal</span>
               </div>
             </div>
 
@@ -739,7 +739,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                         className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                       >
                         <Scale className="w-3.5 h-3.5" />
-                        <span>Open Scale Tare & FreshSeal</span>
+                        <span>Open Scale Tare & Chilled Seal</span>
                       </button>
                     </div>
                   </div>
@@ -823,7 +823,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 text-gray-100 z-10 space-y-4 text-xs shadow-2xl">
             <div className="flex justify-between items-center pb-2 border-b border-slate-800">
               <h3 className="font-black text-white text-sm">
-                Butcher Prep & FreshSeal • #{selectedOrder.orderNumber || selectedOrder.id}
+                Butcher Prep & Chilled Seal • #{selectedOrder.orderNumber || selectedOrder.id}
               </h3>
               <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-white">✕</button>
             </div>
@@ -846,10 +846,10 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               </div>
             </div>
 
-            {/* FreshSeal Tag & Barcode */}
+            {/* Chilled Seal Tag & Barcode */}
             <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-white">FreshSeal™ Tamper Tag:</span>
+                <span className="font-bold text-white">Safety Seal Tag:</span>
                 <span className="font-mono font-bold text-emerald-400">{freshSealTag}</span>
               </div>
               <div className="flex justify-between items-center">

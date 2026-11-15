@@ -12,7 +12,7 @@ export const PRODUCT_VISUALS_MAP: Record<string, ProductVisualMeta> = {
     rawImage: '/images/products/prod_1.jpg',
     cookedImage: '/images/products/cooked_surmai_tawa_fry.jpg',
     cookedDishName: 'Mangalore Surmai Tawa Fry',
-    cookedDescription: 'Crispy rava-crusted Seer fish steaks sizzling with Byadagi chili, curry leaves, and lemon.',
+    cookedDescription: 'Crispy rava-crusted seer fish steaks with chili, curry leaves, and lemon.',
     cookingTime: '8 mins pan fry',
     flavorProfile: ['Spicy', 'Tangy', 'Crisp Edge']
   },
@@ -20,7 +20,7 @@ export const PRODUCT_VISUALS_MAP: Record<string, ProductVisualMeta> = {
     rawImage: '/images/products/prod_2.jpg',
     cookedImage: '/images/products/cooked_white_pomfret.jpg',
     cookedDishName: 'Rechado White Pomfret Fry',
-    cookedDescription: 'Whole scored pomfret stuffed with tangy Konkani red rechado masala, pan-fried to crisp perfection.',
+    cookedDescription: 'Whole scored pomfret stuffed with red rechado masala and pan-fried.',
     cookingTime: '10 mins shallow fry',
     flavorProfile: ['Tangy', 'Rechado Spiced', 'Flaky White']
   },
@@ -28,7 +28,7 @@ export const PRODUCT_VISUALS_MAP: Record<string, ProductVisualMeta> = {
     rawImage: '/images/products/prod_3.jpg',
     cookedImage: '/images/products/cooked_tiger_prawns.jpg',
     cookedDishName: 'Butter Garlic Jumbo Prawns',
-    cookedDescription: 'Succulent jumbo tiger prawns wok-tossed in melted butter, roasted garlic, green chili & cilantro.',
+    cookedDescription: 'Tender jumbo prawns tossed in butter, garlic, and fresh herbs.',
     cookingTime: '5 mins quick toss',
     flavorProfile: ['Garlic Butter', 'Juicy Crunch', 'Mild Chili']
   },
@@ -36,7 +36,7 @@ export const PRODUCT_VISUALS_MAP: Record<string, ProductVisualMeta> = {
     rawImage: '/images/products/prod_4.jpg',
     cookedImage: '/images/products/cooked_mutton_rogan_josh.jpg',
     cookedDishName: 'Kashmiri Mutton Rogan Josh',
-    cookedDescription: 'Slow-simmered tender goat meat in rich aromatic crimson gravy infused with maval petals & fennel.',
+    cookedDescription: 'Tender goat meat slow-simmered in rich gravy with whole spices.',
     cookingTime: '45 mins dum simmer',
     flavorProfile: ['Rich Rogan', 'Melt-in-mouth', 'Aromatic']
   },
