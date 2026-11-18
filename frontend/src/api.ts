@@ -612,6 +612,29 @@ export const api = {
     return res.json();
   },
 
+  async checkCoolerHealth(coolerId: string, orderId?: string): Promise<{
+    coolerId: string;
+    orderId: string | null;
+    stage: 'GOOD' | 'NORMAL' | 'CRITICAL' | 'DISCARD';
+    isColdChainMaintained: boolean;
+    finalTemp: number;
+    outOfRangeCount: number;
+    refundApproved: boolean;
+    refundAmount: number;
+    message: string;
+  }> {
+    const res = await fetch(`${API_BASE}/rider/cooler-check`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ coolerId, orderId })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Cooler compliance check failed');
+    }
+    return res.json();
+  },
+
   // --- BUTCHER / PARTNER SHOP ECOSYSTEM ---
   async partnerRegister(data: any): Promise<any> {
     const res = await fetch(`${API_BASE}/partner/register`, {

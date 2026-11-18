@@ -70,7 +70,8 @@ export const AdminDashboardPage: React.FC = () => {
   // Modals & Drawers State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderToAssignCourier, setOrderToAssignCourier] = useState<Order | null>(null);
-  const [courierName, setCourierName] = useState('Sunil Gowda (Depot Partner #104)');
+  const [selectedRiderId, setSelectedRiderId] = useState<string>('');
+  const [courierName, setCourierName] = useState('Rajesh Kumar (Ather 450X EV)');
   const [assignedCoolerId, setAssignedCoolerId] = useState('');
 
   // Product Editing Modal
@@ -211,18 +212,31 @@ export const AdminDashboardPage: React.FC = () => {
     e.preventDefault();
     if (!orderToAssignCourier) return;
     try {
-      await api.assignOrderCourier(orderToAssignCourier.id, courierName, assignedCoolerId || orderToAssignCourier.coolerId);
-      showNotification(`Courier "${courierName}" assigned to Order #${orderToAssignCourier.id}`);
+      const rider = adminRiders.find(r => r.id === selectedRiderId);
+      const riderDisplay = rider ? `${rider.name} (${rider.vehicleType || 'EV Fleet'})` : courierName;
+
+      if (selectedRiderId) {
+        await api.assignOrderRiderPartner(orderToAssignCourier.id, { riderId: selectedRiderId });
+      }
+      await api.assignOrderCourier(orderToAssignCourier.id, riderDisplay, assignedCoolerId || orderToAssignCourier.coolerId);
+
+      showNotification(`Order #${orderToAssignCourier.id} assigned to Fleet Executive "${rider ? rider.name : riderDisplay}"`);
       setOrders(prev => prev.map(o => o.id === orderToAssignCourier.id ? { 
         ...o, 
-        deliveryExecutive: courierName, 
+        riderId: selectedRiderId || o.riderId,
+        riderFullName: rider ? rider.name : o.riderFullName,
+        riderName: rider ? rider.name.split(' ')[0] : o.riderName,
+        riderPhone: rider ? rider.phone : o.riderPhone,
+        riderVehicle: rider?.vehicleType ? `${rider.vehicleType} (${rider.vehicleNumber || ''})` : o.riderVehicle,
+        deliveryExecutive: riderDisplay, 
         coolerId: assignedCoolerId || o.coolerId,
-        orderStatus: 'OUT_FOR_DELIVERY',
-        status: 'OUT_FOR_DELIVERY'
+        orderStatus: 'RIDER_ASSIGNED',
+        lifecycleStatus: 'RIDER_ASSIGNED',
+        status: 'Rider Assigned'
       } : o));
       setOrderToAssignCourier(null);
     } catch (err: any) {
-      alert(err.message || 'Failed to assign courier');
+      alert(err.message || 'Failed to assign rider');
     }
   };
 
@@ -2290,17 +2304,27 @@ export const AdminDashboardPage: React.FC = () => {
 
               <div>
                 <label className="block text-gray-700 dark:text-gray-300 font-bold mb-1">
-                  Select Delivery Executive
+                  Assign Approved Fleet Rider
                 </label>
                 <select
-                  value={courierName}
-                  onChange={(e) => setCourierName(e.target.value)}
+                  value={selectedRiderId}
+                  onChange={(e) => {
+                    setSelectedRiderId(e.target.value);
+                    const r = adminRiders.find(rider => rider.id === e.target.value);
+                    if (r) setCourierName(`${r.name} (${r.vehicleType || 'EV Fleet'})`);
+                  }}
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white font-bold focus:outline-none focus:border-[#d11243]"
+                  required
                 >
-                  <option value="Sunil Gowda (Depot Partner #104)">Sunil Gowda (Indiranagar Hub #104)</option>
-                  <option value="Ramesh Kumar (Depot Partner #108)">Ramesh Kumar (Koramangala Darkstore #108)</option>
-                  <option value="Rajesh Naik (Depot Partner #112)">Rajesh Naik (Whitefield Depot #112)</option>
-                  <option value="Manjunath Reddy (Depot Partner #119)">Manjunath Reddy (HSR Layout #119)</option>
+                  <option value="">-- Choose Approved Delivery Rider --</option>
+                  {adminRiders.filter(r => r.approvalStatus === 'approved').map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} • {r.vehicleType || 'EV Scooter'} ({r.phone || 'Verified'}) {r.online ? '🟢 Online' : '⚪ Offline'}
+                    </option>
+                  ))}
+                  {adminRiders.filter(r => r.approvalStatus === 'approved').length === 0 && (
+                    <option disabled value="">No approved riders found. Please approve a rider in the Fleet tab.</option>
+                  )}
                 </select>
               </div>
 

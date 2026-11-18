@@ -54,7 +54,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     address: 'Bengaluru, Karnataka',
     vehicleType: 'Electric 2-Wheeler (EV)',
     vehicleNumber: 'KA-04-EV-',
-    licenseNumber: 'DL-042026'
+    licenseNumber: 'DL-042026',
+    upiId: ''
   });
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
 
@@ -81,6 +82,14 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // Reverse Logistics (ThermalVault Cold Box Return)
   const [isReturningBox, setIsReturningBox] = useState(true);
   const [scannedBoxId, setScannedBoxId] = useState('BOX-BLR-417');
+  const [coolerCheckResult, setCoolerCheckResult] = useState<{
+    stage: string;
+    isColdChainMaintained: boolean;
+    finalTemp: number;
+    refundApproved: boolean;
+    message: string;
+  } | null>(null);
+  const [isCheckingCooler, setIsCheckingCooler] = useState(false);
   const [boxInspection, setBoxInspection] = useState({
     lidIntact: true,
     gelPackInside: true,
@@ -257,8 +266,23 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     setHandoverSuccess(false);
     setPodPhoto(null);
     setIsReturningBox(true);
+    setCoolerCheckResult(null);
     setScannedBoxId(order.coolerId || 'BOX-BLR-417');
     setTimeout(() => pinInputRefs[0].current?.focus(), 150);
+  };
+
+  const handleRunCoolerInspection = async () => {
+    if (!selectedOrder) return;
+    try {
+      setIsCheckingCooler(true);
+      const res = await api.checkCoolerHealth(scannedBoxId || selectedOrder.coolerId, selectedOrder.id);
+      setCoolerCheckResult(res);
+      showNotification(res.message);
+    } catch (e: any) {
+      alert(e.message || 'Cooler compliance audit failed');
+    } finally {
+      setIsCheckingCooler(false);
+    }
   };
 
   const handleFillDemoPin = () => {
@@ -540,6 +564,18 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   value={regForm.licenseNumber}
                   onChange={(e) => setRegForm({ ...regForm, licenseNumber: e.target.value })}
                   placeholder="DL-0420240091823"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-bold mb-1">UPI ID for Payouts</label>
+                <input
+                  type="text"
+                  required
+                  value={regForm.upiId}
+                  onChange={(e) => setRegForm({ ...regForm, upiId: e.target.value })}
+                  placeholder="rider@oksbi or phone@paytm"
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -1026,15 +1062,36 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   </div>
 
                   {isReturningBox && (
-                    <div className="text-[11px] text-gray-400 space-y-1 pt-1 border-t border-slate-800">
+                    <div className="text-[11px] text-gray-400 space-y-2 pt-1 border-t border-slate-800">
                       <div className="flex items-center justify-between">
-                        <span>Tag:</span>
+                        <span>Cold Box Tag:</span>
                         <strong className="text-white font-mono">{scannedBoxId}</strong>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span>Condition:</span>
-                        <span className="text-emerald-400">EPP Intact + Gel Packs Sanitized</span>
-                      </div>
+
+                      {/* Temperature Compliance Audit Button */}
+                      <button
+                        type="button"
+                        onClick={handleRunCoolerInspection}
+                        disabled={isCheckingCooler}
+                        className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700 text-xs font-bold text-sky-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <Thermometer className="w-3.5 h-3.5 text-sky-400" />
+                        <span>{isCheckingCooler ? 'Analyzing Cold Chain Data...' : 'Audit Cold-Chain (0°C - 4°C Rule)'}</span>
+                      </button>
+
+                      {coolerCheckResult && (
+                        <div className={`p-2.5 rounded-xl border text-[11px] space-y-1 ${
+                          coolerCheckResult.refundApproved
+                            ? 'bg-emerald-950/70 border-emerald-700/80 text-emerald-200'
+                            : 'bg-rose-950/70 border-rose-700/80 text-rose-200'
+                        }`}>
+                          <div className="flex justify-between items-center font-bold">
+                            <span>Cooler Status: {coolerCheckResult.stage}</span>
+                            <span className="font-mono">{coolerCheckResult.finalTemp}°C</span>
+                          </div>
+                          <p className="text-[10px] leading-relaxed">{coolerCheckResult.message}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -565,18 +565,32 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 
   // Sanitize rider data for customer view (Privacy Guardrail)
   let assignedRider = null;
-  if (order.riderId || order.riderName || order.deliveryExecutive) {
-    const rawRider = order.riderId ? db.findById('users', order.riderId) : null;
-    const fullName = order.riderFullName || rawRider?.name || order.riderName || 'Rahul';
+  if (order.riderId) {
+    const rawRider = db.findById('users', order.riderId);
+    const fullName = order.riderFullName || rawRider?.name || 'Assigned Rider';
     assignedRider = {
+      fullName,
       firstName: fullName.split(' ')[0],
-      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : 'RD-819',
-      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler (KA-04-EV-819)'),
-      status: order.lifecycleStatus || order.status || 'Out for Delivery',
+      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : (order.riderId || 'RD-FLEET'),
+      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler'),
+      status: order.lifecycleStatus || order.status || 'Rider Assigned',
       estimatedArrival: order.riderEta || '25–35 minutes',
       maskedPhone: order.riderPhone || (rawRider?.phone ? `${rawRider.phone.slice(0, 9)} •••${rawRider.phone.slice(-2)}` : '+91 97412 •••01'),
       secureCall: true,
       profilePhoto: rawRider?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+    };
+  } else if (order.riderName || order.riderFullName) {
+    const fullName = order.riderFullName || order.riderName;
+    assignedRider = {
+      fullName,
+      firstName: fullName.split(' ')[0],
+      riderId: 'RD-FLEET',
+      vehicle: order.riderVehicle || 'EV 2-Wheeler',
+      status: order.lifecycleStatus || order.status || 'Rider Assigned',
+      estimatedArrival: order.riderEta || '25–35 minutes',
+      maskedPhone: order.riderPhone || '+91 97412 •••01',
+      secureCall: true,
+      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     };
   }
 
@@ -592,7 +606,7 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 // ==========================================
 
 app.post('/api/rider/register', (req, res) => {
-  const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber } = req.body;
+  const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body;
   if (!name || !email || !password || !phone) {
     return res.status(400).json({ error: 'Name, email, phone, and password are required for rider onboarding' });
   }
@@ -614,6 +628,7 @@ app.post('/api/rider/register', (req, res) => {
     vehicleType: vehicleType || 'Electric 2-Wheeler (EV)',
     vehicleNumber: vehicleNumber || 'KA-04-EV-TEMP',
     licenseNumber: licenseNumber || 'DL-TEMP-PENDING',
+    upiId: upiId || `${phone.replace(/\D/g, '').slice(-10)}@okaxis`,
     online: false,
     earningsToday: 0,
     deliveriesToday: 0,
@@ -638,7 +653,8 @@ app.post('/api/rider/login', (req, res) => {
 
   const user = db.get('users').find(u => {
     if (u.email && u.email.toLowerCase() === input) return true;
-    if (u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(input.replace(/[^0-9]/g, ''))) return true;
+    const cleanDigits = input.replace(/[^0-9]/g, '');
+    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
     return false;
   });
 
@@ -709,15 +725,36 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     return handleOrderHandover(req, res);
   }
 
+  const nowIso = new Date().toISOString();
+  const timestamps = { ...(order.lifecycleTimestamps || {}) };
+
+  let statusLabel = order.status;
+  if (lifecycleStatus === 'PICKED_UP') {
+    timestamps.pickedUpAt = timestamps.pickedUpAt || nowIso;
+    statusLabel = 'Picked Up from Hub';
+  } else if (lifecycleStatus === 'OUT_FOR_DELIVERY') {
+    timestamps.outForDeliveryAt = timestamps.outForDeliveryAt || nowIso;
+    statusLabel = 'Out for Delivery';
+  } else if (lifecycleStatus === 'COOLER_RETURNED') {
+    timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
+    statusLabel = 'Cooler Returned';
+  }
+
   const updates = {
     lifecycleStatus: lifecycleStatus || order.lifecycleStatus,
-    status: lifecycleStatus === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : (order.status || lifecycleStatus),
+    status: statusLabel,
     riderId: req.user.id,
     riderName: req.user.name.split(' ')[0],
     riderFullName: req.user.name,
     riderPhone: req.user.phone || '+91 97412 •••01',
-    riderVehicle: req.user.vehicleType ? `${req.user.vehicleType} (${req.user.vehicleNumber || ''})` : 'EV 2-Wheeler'
+    riderVehicle: req.user.vehicleType ? `${req.user.vehicleType} (${req.user.vehicleNumber || ''})` : 'EV 2-Wheeler',
+    lifecycleTimestamps: timestamps
   };
+
+  if (coolerReturned) {
+    updates.coolerReturned = true;
+    timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
+  }
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -726,12 +763,48 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     {
       time: timeStr,
       temp: order.liveTemp || 1.4,
-      event: `Rider update: ${lifecycleStatus} by ${req.user.name}`
+      event: `Fleet Executive (${req.user.name}) updated: ${lifecycleStatus.replace(/_/g, ' ')}`
     }
   ];
 
   const updatedOrder = db.update('orders', order.id, updates);
   res.json(updatedOrder);
+});
+
+// Cold-chain compliance scan per analytical-scripts/cooler_health.py
+app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, res) => {
+  const { coolerId, orderId } = req.body;
+  if (!coolerId) {
+    return res.status(400).json({ error: 'Cooler ID is required' });
+  }
+
+  const order = orderId ? db.findById('orders', orderId) : null;
+  const logs = order?.tempLog || order?.temperatureLog || [];
+  
+  // Script rule: temperature must stay between 0.0°C and 4.0°C
+  const outOfRange = logs.filter(r => typeof r.temp === 'number' && (r.temp < 0.0 || r.temp > 4.0));
+  const isColdChainMaintained = outOfRange.length === 0;
+  const finalTemp = logs.length > 0 && typeof logs[logs.length - 1].temp === 'number'
+    ? logs[logs.length - 1].temp 
+    : (order?.liveTemp || 1.8);
+
+  const stage = isColdChainMaintained ? 'GOOD' : 'CRITICAL';
+  const refundApproved = isColdChainMaintained;
+  const refundAmount = refundApproved ? 250 : 0;
+
+  res.json({
+    coolerId,
+    orderId: order?.id || null,
+    stage,
+    isColdChainMaintained,
+    finalTemp,
+    outOfRangeCount: outOfRange.length,
+    refundApproved,
+    refundAmount,
+    message: refundApproved
+      ? `Cold-chain maintained at ${finalTemp}°C (Safe Range: 0°C - 4°C). ₹250 security deposit approved for instant refund.`
+      : `Temperature breach detected (${outOfRange.map(o => `${o.temp}°C at ${o.time}`).join(', ')}). Retained for hub audit.`
+  });
 });
 
 // ==========================================
@@ -785,7 +858,8 @@ app.post('/api/partner/login', (req, res) => {
 
   const user = db.get('users').find(u => {
     if (u.email && u.email.toLowerCase() === input) return true;
-    if (u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(input.replace(/[^0-9]/g, ''))) return true;
+    const cleanDigits = input.replace(/[^0-9]/g, '');
+    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
     return false;
   });
 
@@ -966,7 +1040,13 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
       updates.riderFullName = rider.name;
       updates.riderPhone = rider.phone;
       updates.riderVehicle = rider.vehicleType ? `${rider.vehicleType} (${rider.vehicleNumber || ''})` : 'EV 2-Wheeler';
+      updates.deliveryExecutive = `${rider.name} (${rider.phone || ''})`;
       updates.lifecycleStatus = 'RIDER_ASSIGNED';
+      updates.status = 'Rider Assigned';
+      updates.lifecycleTimestamps = {
+        ...(order.lifecycleTimestamps || {}),
+        assignedAt: new Date().toISOString()
+      };
     }
   }
 
@@ -1001,7 +1081,14 @@ const handleOrderHandover = (req, res) => {
   }
 
   const now = new Date();
+  const nowIso = now.toISOString();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const timestamps = { ...(order.lifecycleTimestamps || {}) };
+  timestamps.deliveredAt = timestamps.deliveredAt || nowIso;
+  if (coolerReturned) {
+    timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
+  }
 
   const updatedLog = [
     ...(order.tempLog || []),
@@ -1015,10 +1102,12 @@ const handleOrderHandover = (req, res) => {
   const updatedOrder = db.update('orders', order.id, {
     status: 'Delivered',
     orderStatus: 'DELIVERED',
+    lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
+    lifecycleTimestamps: timestamps,
     coolerReturned: !!coolerReturned,
     podImage: podImage || order.podImage,
     handoverNotes: notes || order.handoverNotes,
-    deliveredAt: new Date().toISOString(),
+    deliveredAt: nowIso,
     liveTemp: 1.8,
     tempLog: updatedLog
   });

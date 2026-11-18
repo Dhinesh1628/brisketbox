@@ -123,6 +123,23 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
 
   useEffect(() => {
     fetchOrders();
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.getOrders();
+        if (data && data.length > 0) {
+          setOrders(data);
+          setSelectedOrder(prev => {
+            if (!prev) return data[0];
+            const updated = data.find(o => o.id === prev.id) || data[0];
+            if (updated.liveTemp) setLiveTemp(updated.liveTemp);
+            return updated;
+          });
+        }
+      } catch {
+        // Quiet poll
+      }
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   // Simulate probe ping
@@ -598,7 +615,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   </span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-black text-sm text-gray-950 dark:text-white">
-                      Rider: {currentOrder.assignedRider.firstName}
+                      Rider: {currentOrder.assignedRider.fullName || currentOrder.assignedRider.firstName}
                     </span>
                     <span className="px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-[#d11243] dark:text-rose-300 text-[10px] font-bold font-mono">
                       {currentOrder.assignedRider.riderId}

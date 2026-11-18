@@ -66,6 +66,7 @@ const INITIAL_DATA = {
       vehicleType: "EV 2-Wheeler (Ather 450X)",
       vehicleNumber: "KA-04-EV-819",
       licenseNumber: "KA0420220019281",
+      upiId: "suresh.patil@okaxis",
       idDocType: "Driving License (Smart Card)",
       assignedHub: "Bengaluru Central Hub Depot",
       isOnline: true,
@@ -87,6 +88,7 @@ const INITIAL_DATA = {
       vehicleType: "Motorcycle (Hero Splendor Plus)",
       vehicleNumber: "KA-03-HA-4412",
       licenseNumber: "KA0320230099182",
+      upiId: "mahesh.kumar@oksbi",
       idDocType: "Aadhaar + DL",
       assignedHub: "Mahadevapura Dark Hub",
       isOnline: false,
@@ -749,6 +751,14 @@ class Database {
           if (breachOrder) this.data.orders.push({ ...breachOrder });
         }
 
+        // Guarantee default riders exist in users
+        const defaultRiders = INITIAL_DATA.users.filter(u => u.role === 'rider');
+        defaultRiders.forEach(r => {
+          if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
+            this.data.users.push({ ...r });
+          }
+        });
+
         // Guarantee every order in persistent database has non-empty items array
         this.data.orders.forEach(o => {
           if (!o.items || !Array.isArray(o.items) || o.items.length === 0) {
@@ -806,7 +816,19 @@ class Database {
         CoolerReturn.find().lean()
       ]);
 
-      if (users.length) this.data.users = users;
+      if (users.length) {
+        this.data.users = users;
+        // Ensure default riders exist in cache and MongoDB
+        const defaultRiders = INITIAL_DATA.users.filter(u => u.role === 'rider');
+        for (const r of defaultRiders) {
+          if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
+            this.data.users.push({ ...r });
+            try {
+              await User.create(r);
+            } catch {}
+          }
+        }
+      }
       if (products.length) this.data.products = products;
       if (coolers.length) this.data.coolers = coolers;
       if (orders.length) this.data.orders = orders;

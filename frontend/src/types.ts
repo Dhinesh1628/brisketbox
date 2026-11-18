@@ -149,8 +149,11 @@ export type OrderPipelineStatus =
   | 'PREPARING'
   | 'QUALITY_CHECK'
   | 'PACKED'
+  | 'RIDER_ASSIGNED'
+  | 'PICKED_UP'
   | 'OUT_FOR_DELIVERY'
   | 'DELIVERED'
+  | 'COOLER_RETURNED'
   | 'CANCELLED';
 
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PENDING';
@@ -224,6 +227,7 @@ export interface Order {
   partnerName?: string;
   lifecycleStatus?: string;
   assignedRider?: {
+    fullName?: string;
     firstName: string;
     riderId: string;
     vehicle: string;
