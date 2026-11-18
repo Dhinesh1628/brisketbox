@@ -7,7 +7,7 @@ import {
   Phone, 
   ExternalLink, 
   CheckCheck, 
-  Bot, 
+  UtensilsCrossed, 
   ShoppingBag, 
   Zap, 
   Flame, 
@@ -45,7 +45,7 @@ interface RecipeData {
 
 interface Message {
   id: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'concierge';
   text: string;
   time: string;
   suggestedReplies?: string[];
@@ -72,7 +72,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg_welcome',
-      sender: 'bot',
+      sender: 'concierge',
       text: `Welcome to BrisketBox.\n\nTell me what you'd like to order or ask any question:\n\n• "Add 500g Surmai and 1kg Mutton to my cart"\n• "View my cart"\n• "How to cook Surmai Tawa Fry"\n• "Dinner for 6 people, how much to order?"\n• "Apply 20% discount coupon"\n• "Is the meat fresh or frozen?"\n\nHow can I help you today?`,
       time: getCurrentTime(),
       suggestedReplies: [
@@ -210,9 +210,9 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
         // Execute automated action if returned
         const executedNote = executeBotAction(data.action, data.products);
 
-        const botMsg: Message = {
-          id: `bot_${Date.now()}`,
-          sender: 'bot',
+        const conciergeMsg: Message = {
+          id: `concierge_${Date.now()}`,
+          sender: 'concierge',
           text: data.reply,
           time: getCurrentTime(),
           suggestedReplies: data.suggestedReplies,
@@ -221,14 +221,14 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
           recipe: data.recipe,
           actionExecuted: executedNote || undefined
         };
-        setMessages(prev => [...prev, botMsg]);
+        setMessages(prev => [...prev, conciergeMsg]);
       } else {
         throw new Error('Invalid response');
       }
     } catch (err) {
       const errorMsg: Message = {
-        id: `bot_err_${Date.now()}`,
-        sender: 'bot',
+        id: `concierge_err_${Date.now()}`,
+        sender: 'concierge',
         text: "I am synchronizing cuts with our 0°C harbor cold hub. You can also message our master butcher directly on WhatsApp!",
         time: getCurrentTime(),
         suggestedReplies: ["Today's seafood catch", "Mutton cuts", "Apply 20% coupon"]
@@ -405,7 +405,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                   </div>
                 )}
 
-                {/* Products Cards embedded in Bot reply with + Add to Cart */}
+                {/* Products Cards embedded in Concierge reply with + Add to Cart */}
                 {msg.products && msg.products.length > 0 && (
                   <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-slate-700/80 space-y-2">
                     <span className="text-[10px] font-black uppercase text-[#d11243] dark:text-rose-400 block tracking-wider">
@@ -462,7 +462,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                 </div>
               </div>
 
-              {/* Quick Action Chips below Bot message */}
+              {/* Quick Action Chips below Concierge message */}
               {msg.suggestedReplies && msg.suggestedReplies.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 max-w-[88%] pt-0.5">
                   {msg.suggestedReplies.map((chip, idx) => (

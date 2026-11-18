@@ -128,7 +128,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
         </div>
       </div>
 
-      {/* Interactive AI Chatbot Modal */}
+      {/* Interactive Master Butcher Concierge Modal */}
       <WhatsAppChatbotModal
         isOpen={isChatbotOpen}
         onClose={closeChatbot}

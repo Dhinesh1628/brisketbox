@@ -56,7 +56,7 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
         console.log(`[WhatsApp Inbound] From ${fromPhone}: "${messageText}"`);
 
-        // Process with BrisketBox AI Chatbot Engine
+        // Process with BrisketBox Master Butcher Concierge Engine
         const botResponse = await processCustomerMessage(messageText, fromPhone);
 
         // Send Reply Back to WhatsApp if Cloud API token is configured
@@ -79,7 +79,7 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
 /**
  * 3. Direct API Endpoint for Live Web Simulator & Chat Widget
- * Allows users, interns, and PM to chat with the BrisketBox AI directly
+ * Allows customers and team to message the BrisketBox Master Butcher Concierge
  * in the interactive web WhatsApp widget!
  */
 router.post('/chatbot/chat', async (req, res) => {

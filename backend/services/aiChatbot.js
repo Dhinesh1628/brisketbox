@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 
 /**
- * Enterprise AI Master Butcher & Culinary Concierge Engine
+ * Master Butcher & Culinary Concierge Engine
  * Provides comprehensive butcher knowledge, step-by-step chef recipes,
  * portion planning, cold-chain telemetry, and automated cart execution.
  */

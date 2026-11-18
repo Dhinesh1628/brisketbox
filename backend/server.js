@@ -139,7 +139,7 @@ app.use(express.json({
 // Razorpay Payments Router
 app.use('/api/payments', paymentsRouter);
 
-// WhatsApp Cloud API Webhook & AI Chatbot Router
+// WhatsApp Cloud API Webhook & Master Butcher Concierge Router
 app.use('/api', whatsappWebhookRouter);
 
 // Serve static frontend in production
