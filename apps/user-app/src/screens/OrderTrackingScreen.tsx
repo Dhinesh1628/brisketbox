@@ -194,14 +194,14 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
               <Truck size={18} color="#ffffff" />
             </View>
             <View>
-              <Text style={styles.riderName}>Ramesh Kumar</Text>
+              <Text style={styles.riderName}>{order?.assignedRider?.fullName || order?.riderFullName || (order?.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Suresh Patil')}</Text>
               <Text style={styles.riderRole}>BrisketBox Cold-Fleet Specialist</Text>
-              <Text style={styles.riderVehicle}>KA-03-HD-2041 • Hero Electric</Text>
+              <Text style={styles.riderVehicle}>{order?.assignedRider?.vehicle || order?.riderVehicle || 'KA-04-EV-819 • Ather 450X'}</Text>
             </View>
           </View>
           <Pressable
             style={styles.callBtn}
-            onPress={() => Linking.openURL('tel:9876543210')}
+            onPress={() => Linking.openURL('tel:+919741288301')}
           >
             <Phone size={16} color="#ffffff" />
             <Text style={styles.callBtnText}>Call</Text>

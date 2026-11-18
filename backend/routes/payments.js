@@ -688,7 +688,12 @@ function createOrderRecord(params) {
     coolerModel: assignedCooler.model,
     coldBoxRefundStatus: 'NOT_REQUESTED',
     liveTemp: initialTemp,
-    deliveryExecutive: 'Sunil Gowda (EV Delivery #14)',
+    riderId: 'usr_rider_1',
+    riderFullName: 'Suresh Patil',
+    riderName: 'Suresh',
+    riderPhone: '+91 97412 88301',
+    riderVehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
+    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)',
     tempLog: [
       { time: timeStr, temp: initialTemp, event: `Order Confirmed. Chilled cut locked inside ${assignedCooler.id}.` }
     ],

@@ -485,13 +485,15 @@ app.post('/api/orders', authenticate, (req, res) => {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  const executives = [
-    "Sunil Gowda (EV Delivery #14, +91 97412 88301)",
-    "Manjunath K (+91 98801 44520)",
-    "Ramesh Kumar (+91 94481 02911)",
-    "Karthik S (+91 99014 55210)"
-  ];
-  const assignedExecutive = executives[Math.floor(Math.random() * executives.length)];
+  // Assign an approved fleet rider from database
+  const approvedRiders = db.get('users').filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+  const defaultRider = approvedRiders.length > 0 ? approvedRiders[0] : {
+    id: 'usr_rider_1',
+    name: 'Suresh Patil',
+    phone: '+91 97412 88301',
+    vehicleType: 'EV 2-Wheeler (Ather 450X)'
+  };
+  const assignedExecutive = `${defaultRider.name} (${defaultRider.vehicleType || 'EV Fleet'}, ${defaultRider.phone || '+91 97412 88301'})`;
 
   const initialTemp = 0.6;
   const order = {
@@ -510,13 +512,24 @@ app.post('/api/orders', authenticate, (req, res) => {
     coolerDeposit: COOLER_DEPOSIT,
     shippingFee,
     total,
-    status: 'Cold Box Packed',
+    status: 'Rider Assigned',
+    lifecycleStatus: 'RIDER_ASSIGNED',
+    riderId: defaultRider.id,
+    riderName: defaultRider.name.split(' ')[0],
+    riderFullName: defaultRider.name,
+    riderPhone: defaultRider.phone || '+91 97412 88301',
+    riderVehicle: defaultRider.vehicleType || 'EV 2-Wheeler (Ather 450X)',
     coolerId: assignedCooler.id,
     coolerModel: assignedCooler.model,
     liveTemp: initialTemp,
     deliveryExecutive: assignedExecutive,
+    lifecycleTimestamps: {
+      confirmedAt: now.toISOString(),
+      packedAt: now.toISOString(),
+      assignedAt: now.toISOString()
+    },
     tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Packed in sanitized box ${assignedCooler.id}.` }
+      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Packed in sanitized box ${assignedCooler.id}. Assigned to Fleet Partner ${defaultRider.name}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
     trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -541,13 +554,52 @@ app.post('/api/orders', authenticate, (req, res) => {
   res.status(201).json(order);
 });
 
+// Helper to format consistent privacy-preserving assigned rider details
+function sanitizeAssignedRider(order) {
+  if (!order) return null;
+  if (order.riderId) {
+    const rawRider = db.findById('users', order.riderId);
+    const fullName = order.riderFullName || rawRider?.name || 'Suresh Patil';
+    return {
+      fullName,
+      firstName: fullName.split(' ')[0],
+      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : (order.riderId || 'RD-FLEET'),
+      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler (Ather 450X)'),
+      status: order.lifecycleStatus || order.status || 'Rider Assigned',
+      estimatedArrival: order.riderEta || '25–35 minutes',
+      maskedPhone: order.riderPhone || (rawRider?.phone ? `${rawRider.phone.slice(0, 9)} •••${rawRider.phone.slice(-2)}` : '+91 97412 •••01'),
+      secureCall: true,
+      profilePhoto: rawRider?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+    };
+  } else if (order.riderName || order.riderFullName || order.deliveryExecutive) {
+    const cleanExec = order.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : '';
+    const fullName = order.riderFullName || cleanExec || 'Suresh Patil';
+    return {
+      fullName,
+      firstName: fullName.split(' ')[0],
+      riderId: 'RD-FLEET',
+      vehicle: order.riderVehicle || 'EV 2-Wheeler (Ather 450X)',
+      status: order.lifecycleStatus || order.status || 'Rider Assigned',
+      estimatedArrival: order.riderEta || '25–35 minutes',
+      maskedPhone: order.riderPhone || '+91 97412 •••01',
+      secureCall: true,
+      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+    };
+  }
+  return null;
+}
+
 app.get('/api/orders', authenticate, (req, res) => {
   let orders = db.get('orders');
-  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'partner' || req.query.all === 'true';
+  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'partner' || req.user.role === 'rider' || req.query.all === 'true';
   if (!isFleetOrPartner) {
     orders = orders.filter(o => o.userId === req.user.id);
   }
-  res.json(orders);
+  const enriched = orders.map(o => ({
+    ...o,
+    assignedRider: sanitizeAssignedRider(o)
+  }));
+  res.json(enriched);
 });
 
 app.get('/api/orders/:id', authenticate, (req, res) => {
@@ -563,41 +615,10 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 
   const cooler = db.findById('coolers', order.coolerId);
 
-  // Sanitize rider data for customer view (Privacy Guardrail)
-  let assignedRider = null;
-  if (order.riderId) {
-    const rawRider = db.findById('users', order.riderId);
-    const fullName = order.riderFullName || rawRider?.name || 'Assigned Rider';
-    assignedRider = {
-      fullName,
-      firstName: fullName.split(' ')[0],
-      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : (order.riderId || 'RD-FLEET'),
-      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler'),
-      status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || (rawRider?.phone ? `${rawRider.phone.slice(0, 9)} •••${rawRider.phone.slice(-2)}` : '+91 97412 •••01'),
-      secureCall: true,
-      profilePhoto: rawRider?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-    };
-  } else if (order.riderName || order.riderFullName) {
-    const fullName = order.riderFullName || order.riderName;
-    assignedRider = {
-      fullName,
-      firstName: fullName.split(' ')[0],
-      riderId: 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler',
-      status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || '+91 97412 •••01',
-      secureCall: true,
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-    };
-  }
-
   res.json({
     ...order,
     coolerDetails: cooler,
-    assignedRider
+    assignedRider: sanitizeAssignedRider(order)
   });
 });
 
@@ -706,7 +727,11 @@ app.patch('/api/rider/status', authenticate, requireRole('rider'), (req, res) =>
 
 app.get('/api/rider/orders', authenticate, requireRole('rider'), (req, res) => {
   const allOrders = db.get('orders');
-  const assigned = allOrders.filter(o => o.riderId === req.user.id || (o.riderFullName === req.user.name));
+  const assigned = allOrders.filter(o => 
+    o.riderId === req.user.id || 
+    (o.riderFullName === req.user.name) ||
+    (!o.riderId && (o.status === 'Cold Box Packed' || o.lifecycleStatus === 'PACKED' || o.status === 'Rider Assigned'))
+  );
   res.json(assigned);
 });
 

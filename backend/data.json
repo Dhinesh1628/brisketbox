@@ -141,7 +141,7 @@
       "earningsToday": 0,
       "totalDeliveries": 0,
       "lastLogin": "2026-11-18T14:06:33.395Z",
-      "updatedAt": "2026-11-18T14:09:59.583Z",
+      "updatedAt": "2026-11-18T14:12:29.580Z",
       "__v": 0
     }
   ],
@@ -535,7 +535,7 @@
       "createdAt": "2026-11-09T03:50:53.106Z",
       "shippingFee": 0,
       "temperatureLog": [],
-      "updatedAt": "2026-11-18T14:09:59.683Z",
+      "updatedAt": "2026-11-18T14:12:29.671Z",
       "__v": 0,
       "lifecycleStatus": "RIDER_ASSIGNED",
       "lifecycleTimestamps": {

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { Order } from '../types';
 import { api } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { generateAndPrintInvoice } from '../utils/invoiceGenerator';
 import { getOrderDeliveryPin } from '../utils/pinHelper';
 
@@ -28,6 +29,7 @@ interface OrderTrackingPageProps {
 }
 
 export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigateToReturns }) => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,16 +37,21 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
   const [liveTemp, setLiveTemp] = useState<number>(2.3);
   const [isDemoOrder, setIsDemoOrder] = useState<boolean>(false);
 
+  // Synchronized Customer & Rider Profiles matching database records
+  const activeCustomerName = user?.name || 'Pooja Sundaram';
+  const activeCustomerPhone = user?.phone || '+91 98765 43210';
+  const activeCustomerEmail = user?.email || 'pooja.sundaram@gmail.com';
+
   // Fallback demo order for previewing when database has 0 customer orders
   const demoOrder: Order = {
-    id: 'ORD-84920',
-    orderNumber: 'GM-20261102-84920',
-    userId: 'demo-user',
-    customerName: 'Dinesh Kandukuri',
-    customerEmail: 'dinesh@example.com',
-    customerPhone: '+91 97412 88301',
-    deliveryAddress: 'Flat 402, Alpine Eco Apartments, Outer Ring Road, Doddanekkundi, Bengaluru - 560037',
-    city: 'Bengaluru',
+    id: 'ORD-1406',
+    orderNumber: 'BB-20261118-1406',
+    userId: user?.id || 'usr_customer',
+    customerName: activeCustomerName,
+    customerEmail: activeCustomerEmail,
+    customerPhone: activeCustomerPhone,
+    deliveryAddress: user?.address || 'Flat 402, Alpine Eco Apartments, Outer Ring Road, Doddanekkundi, Bengaluru - 560037',
+    city: user?.city || 'Bengaluru',
     items: [
       {
         productId: 'prod_chicken_curry',
@@ -70,27 +77,44 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       }
     ],
     subtotal: 997,
-    coolerDeposit: 0,
+    coolerDeposit: 250,
     shippingFee: 0,
-    total: 997,
+    total: 1247,
     orderStatus: 'OUT_FOR_DELIVERY',
     status: 'Out for Delivery',
+    lifecycleStatus: 'OUT_FOR_DELIVERY',
     paymentStatus: 'PAID',
     paymentMethod: 'Razorpay Online (UPI)',
     razorpayPaymentId: 'pay_P1r9demo84920',
-    coolerId: 'BOX-BLR-412',
-    coolerModel: 'Insulated Cold Pack',
+    coolerId: 'BOX-BLR-417',
+    coolerModel: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
     liveTemp: 2.3,
-    deliveryExecutive: 'Ramesh Kumar (EV Cold Fleet #12, +91 94481 02911)',
+    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)',
+    riderId: 'usr_rider_1',
+    riderFullName: 'Suresh Patil',
+    riderName: 'Suresh',
+    riderPhone: '+91 97412 88301',
+    riderVehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
+    assignedRider: {
+      fullName: 'Suresh Patil',
+      firstName: 'Suresh',
+      riderId: 'RD-819',
+      vehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
+      status: 'Out for Delivery',
+      estimatedArrival: '18–25 mins',
+      maskedPhone: '+91 97412 •••01',
+      secureCall: true,
+      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+    },
     tempLog: [
       { time: '07:15 AM', temp: 0.8, event: 'Order confirmed & cut inspected at Bio-Secure Dark Depot' },
-      { time: '07:30 AM', temp: 1.2, event: 'Packed inside insulated bag with fresh ice packs' },
-      { time: '07:45 AM', temp: 1.8, event: 'Assigned to courier for express delivery' },
-      { time: '08:05 AM', temp: 2.3, event: 'Courier in transit on Outer Ring Road (1.8 km from doorstep)' }
+      { time: '07:30 AM', temp: 1.2, event: 'Packed inside sanitized ThermalVault box with fresh cold gel bricks' },
+      { time: '07:45 AM', temp: 1.8, event: 'Assigned to Fleet Partner Suresh Patil (Ather 450X)' },
+      { time: '08:05 AM', temp: 2.3, event: 'Suresh Patil is in transit on Outer Ring Road (1.8 km away)' }
     ],
     deliverySlot: '⚡ Express Delivery in 90 Mins (Live EV Courier)',
     trackingCode: 'BRISKETBOX-TRK-84920',
-    deliveryPin: '6133',
+    deliveryPin: '4291',
     createdAt: new Date().toISOString(),
     deliveryNotes: 'Leave with building security or ring Flat 402 doorbell.'
   };
@@ -379,7 +403,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                         <span className="font-black text-sm text-gray-950 dark:text-white">
                           #{ord.orderNumber || ord.id}
                         </span>
-                        {ord.id === 'ORD-84920' && (
+                        {(ord.id === 'ORD-84920' || ord.id === 'ORD-1406') && isDemoOrder && (
                           <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 rounded text-[9px] font-bold border border-amber-200 dark:border-amber-800">
                             Demo
                           </span>
@@ -615,7 +639,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   </span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-black text-sm text-gray-950 dark:text-white">
-                      Rider: {currentOrder.assignedRider.fullName || currentOrder.assignedRider.firstName}
+                      Rider: {currentOrder.assignedRider.fullName || currentOrder.assignedRider.firstName || 'Suresh Patil'}
                     </span>
                     <span className="px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-[#d11243] dark:text-rose-300 text-[10px] font-bold font-mono">
                       {currentOrder.assignedRider.riderId}
@@ -636,7 +660,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               <div className="flex items-center gap-2">
                 <button 
                   type="button"
-                  onClick={() => alert(`Secure call connected to Delivery Partner ${currentOrder.assignedRider?.firstName || 'Rider'}`)}
+                  onClick={() => alert(`Secure call connected to Delivery Partner ${currentOrder.assignedRider?.fullName || currentOrder.riderFullName || 'Suresh Patil'}`)}
                   className="flex-1 sm:flex-none px-3.5 py-2 bg-gray-900 dark:bg-slate-800 hover:bg-black dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
                 >
                   <Phone className="w-3.5 h-3.5 text-emerald-400" />
@@ -664,7 +688,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                     YOUR DELIVERY PARTNER
                   </span>
                   <div className="font-black text-sm text-gray-950 dark:text-white">
-                    {currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.split(' ')[0] : 'Assigning Fleet Executive...'}
+                    {currentOrder.riderFullName || (currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Suresh Patil')}
                   </div>
                   <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -726,9 +750,12 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   <MapPin className="w-3 h-3 text-[#d11243]" />
                   <span>Delivery Address</span>
                 </span>
-                <p className="font-bold text-gray-900 dark:text-white">{currentOrder.customerName}</p>
+                <p className="font-bold text-gray-900 dark:text-white">{currentOrder.customerName || activeCustomerName}</p>
                 <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
                   {typeof currentOrder.deliveryAddress === 'object' && currentOrder.deliveryAddress !== null ? `${(currentOrder.deliveryAddress as any).flatNo || (currentOrder.deliveryAddress as any).line1 || ''} ${(currentOrder.deliveryAddress as any).street || ''}, ${(currentOrder.deliveryAddress as any).city || ''}` : String(currentOrder.deliveryAddress || '')}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400 font-mono text-[11px]">
+                  Contact: <strong className="text-gray-700 dark:text-gray-300">{currentOrder.customerPhone || activeCustomerPhone}</strong>
                 </p>
                 {currentOrder.deliveryNotes && (
                   <p className="text-[10px] text-amber-700 dark:text-amber-400 italic pt-1">

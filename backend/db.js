@@ -672,7 +672,9 @@ const INITIAL_DATA = {
       createdAt: "2026-11-08T09:00:00.000Z",
       deliveredAt: "2026-11-08T10:45:00.000Z",
       coolerReturned: false,
-      deliveryExecutive: "Sunil Gowda (Fleet #09)",
+      deliveryExecutive: "Suresh Patil (EV Fleet #14, +91 97412 88301)",
+      riderFullName: "Suresh Patil",
+      riderId: "usr_rider_1",
       paymentMethod: "UPI (Google Pay)",
       tempLog: [
         { time: "09:00", temp: 1.4, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" },

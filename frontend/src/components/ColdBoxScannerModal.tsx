@@ -79,7 +79,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
     {
       id: 'BOX-BLR-182',
       title: 'Active Delivery In-Transit',
-      subtitle: 'Assigned to EV Partner Sunil Gowda',
+      subtitle: 'Assigned to EV Partner Suresh Patil',
       temp: '0.6°C',
       tempStatus: 'Actively Chilled',
       statusBadge: 'In Transit',

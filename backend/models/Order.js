@@ -108,7 +108,7 @@ const orderSchema = new mongoose.Schema({
   temperatureLog: [tempLogSchema],
   trackingCode: { type: String, default: '' },
   etaMinutes: { type: Number, default: 35 },
-  deliveryExecutive: { type: String, default: 'Sunil Gowda (EV Delivery #14)' }
+  deliveryExecutive: { type: String, default: 'Suresh Patil (EV Fleet #14, +91 97412 88301)' }
 }, {
   timestamps: true,
   strict: false

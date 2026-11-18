@@ -97,7 +97,7 @@ export const EarningsScreen: React.FC = () => {
           </View>
           <View style={styles.upiTexts}>
             <Text style={styles.upiTitle}>Linked Payout VPA</Text>
-            <Text style={styles.upiVpa}>ramesh.rider@okhdfcbank</Text>
+            <Text style={styles.upiVpa}>suresh.patil@okaxis</Text>
           </View>
           <View style={styles.verifiedTag}>
             <ShieldCheck size={12} color="#15803d" />
