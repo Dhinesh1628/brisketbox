@@ -143,6 +143,53 @@
       "lastLogin": "2026-11-18T14:06:33.395Z",
       "updatedAt": "2026-11-18T14:12:29.580Z",
       "__v": 0
+    },
+    {
+      "id": "usr_partner_1",
+      "name": "Abdul Rahim (Master Butcher)",
+      "email": "partner@brisketbox.in",
+      "password": "$2b$10$hMbM69VLQWTAWoi.nOuFHe4/7cuEZ8djYHPAX8cOfc.GvNPP2UToG",
+      "role": "partner",
+      "approvalStatus": "approved",
+      "phone": "+91 98860 33445",
+      "city": "Bengaluru",
+      "address": "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
+      "shopId": "shop_central_butcher",
+      "shopName": "Halal Cuts & Coastal Harbor Station #14",
+      "shopAddress": "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
+      "fssaiNumber": "FSSAI-11223344556677",
+      "operatingHours": "06:00 AM - 10:00 PM",
+      "categories": [
+        "Fish & Seafood",
+        "Mutton & Lamb",
+        "Farm Fresh Chicken"
+      ],
+      "rating": 4.95,
+      "totalOrdersHandled": 890,
+      "createdAt": "2026-02-01T08:00:00.000Z"
+    },
+    {
+      "id": "usr_partner_pending",
+      "name": "Karthik Gowda (Owner)",
+      "email": "karthik.poultry@gmail.com",
+      "password": "$2b$10$4tJr7yxQdfg7b2oa1w7a1O2AJXcRz/tyN7VMgP88jBaEe5pVw0.v6",
+      "role": "partner",
+      "approvalStatus": "pending_approval",
+      "phone": "+91 97310 99887",
+      "city": "Bengaluru",
+      "address": "NH 48, Nelamangala Rural, Bengaluru 562123",
+      "shopId": "shop_nelamangala_fresh",
+      "shopName": "Nelamangala Organic Broiler & Country Birds",
+      "shopAddress": "NH 48, Nelamangala Rural, Bengaluru 562123",
+      "fssaiNumber": "FSSAI-22446688001122",
+      "operatingHours": "07:00 AM - 09:00 PM",
+      "categories": [
+        "Farm Fresh Chicken",
+        "Eggs & Specialties"
+      ],
+      "rating": 5,
+      "totalOrdersHandled": 0,
+      "createdAt": "2026-11-10T10:30:00.000Z"
     }
   ],
   "products": [

@@ -791,6 +791,46 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                     )}
 
+                    {(user.role === 'partner' || user.role === 'admin') && (
+                      <div className="border-t border-gray-100 dark:border-slate-800 my-1 pt-1">
+                        <button
+                          onClick={() => {
+                            setCurrentTab('butcher');
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span>🥩</span>
+                            <span>Butcher Station KDS</span>
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-black">
+                            Station
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
+                    {(user.role === 'rider' || user.role === 'admin') && (
+                      <div className="border-t border-gray-100 dark:border-slate-800 my-1 pt-1">
+                        <button
+                          onClick={() => {
+                            setCurrentTab('rider');
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-semibold flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span>🛵</span>
+                            <span>Rider Deliveries</span>
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[9px] font-black">
+                            Fleet
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
                     <div className="border-t border-gray-100 dark:border-slate-800 my-1"></div>
 
                     <button

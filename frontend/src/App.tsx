@@ -401,6 +401,16 @@ const MainApp: React.FC = () => {
                   </button>
                 </li>
                 <li>
+                  <button onClick={() => handleTabChange('rider')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                    Fleet Rider Partner App
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => handleTabChange('butcher')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                    Master Butcher Station & KDS
+                  </button>
+                </li>
+                <li>
                   <button onClick={() => {
                     if (user?.role === 'admin') handleTabChange('admin');
                     else handleOpenAuth('admin');

@@ -820,9 +820,9 @@ class Database {
 
       if (users.length) {
         this.data.users = users;
-        // Ensure default riders exist in cache and MongoDB
-        const defaultRiders = INITIAL_DATA.users.filter(u => u.role === 'rider');
-        for (const r of defaultRiders) {
+        // Ensure default riders and partners exist in cache and MongoDB
+        const defaultRidersAndPartners = INITIAL_DATA.users.filter(u => u.role === 'rider' || u.role === 'partner');
+        for (const r of defaultRidersAndPartners) {
           if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
             this.data.users.push({ ...r });
             try {

@@ -246,9 +246,11 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
       setIsPacking(true);
       const updated = await api.updatePartnerOrderStatus(selectedOrder.id, {
         status: 'Cold Box Packed',
-        lifecycleStatus: 'READY_FOR_PICKUP',
+        lifecycleStatus: 'PACKED',
         weighedWeight: `${weighedGrams}g`,
-        sealTag: freshSealTag
+        sealTag: freshSealTag,
+        batchLotId: selectedBatch,
+        coolerId: coldBoxId
       });
 
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));

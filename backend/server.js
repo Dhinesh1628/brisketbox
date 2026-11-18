@@ -981,29 +981,41 @@ app.get('/api/partner/orders', authenticate, requireRole('partner'), (req, res) 
 });
 
 app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), (req, res) => {
-  const { status, lifecycleStatus, prepStage, weighedWeight, sealTag } = req.body;
+  const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
   const now = new Date();
+  const nowIso = now.toISOString();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+  const resolvedLifecycle = (lifecycleStatus === 'READY_FOR_PICKUP' || status === 'Cold Box Packed') ? 'PACKED' : (lifecycleStatus || order.lifecycleStatus || 'PREPARING');
+
+  const timestamps = { ...(order.lifecycleTimestamps || {}) };
+  if (resolvedLifecycle === 'PACKED' || status === 'Cold Box Packed') {
+    timestamps.packedAt = timestamps.packedAt || nowIso;
+  }
+
   const updates = {
-    lifecycleStatus: lifecycleStatus || order.lifecycleStatus || 'PREPARING',
-    status: status || 'Preparing',
+    lifecycleStatus: resolvedLifecycle,
+    status: status || 'Cold Box Packed',
     prepStage: prepStage || status,
     partnerId: req.user.shopId || order.partnerId,
     partnerName: req.user.shopName || req.user.name || order.partnerName,
     weighedWeight: weighedWeight || order.weighedWeight,
-    sealTag: sealTag || order.sealTag
+    sealTag: sealTag || order.sealTag,
+    coolerId: coolerId || order.coolerId,
+    batchLotId: batchLotId || order.batchLotId,
+    butcherName: req.user.name || order.butcherName,
+    lifecycleTimestamps: timestamps
   };
 
   updates.tempLog = [
     ...(order.tempLog || []),
     {
       time: timeStr,
-      temp: order.liveTemp || 1.0,
-      event: `Butcher station: ${status || lifecycleStatus} (Cut & Sealed)`
+      temp: order.liveTemp || 1.2,
+      event: `Butcher Station (${req.user.name}): Cut & FreshSealed #${sealTag || 'FS-101'} (${weighedWeight || '500g'}). Ready for rider pickup.`
     }
   ];
 
