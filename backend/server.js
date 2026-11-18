@@ -981,7 +981,7 @@ app.get('/api/partner/orders', authenticate, requireRole('partner'), (req, res) 
 });
 
 app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), (req, res) => {
-  const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId } = req.body;
+  const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId, itemPrepList, dressingLossLog } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
@@ -1007,15 +1007,18 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
     coolerId: coolerId || order.coolerId,
     batchLotId: batchLotId || order.batchLotId,
     butcherName: req.user.name || order.butcherName,
+    itemPrepList: itemPrepList || order.itemPrepList,
+    dressingLossLog: dressingLossLog || order.dressingLossLog,
     lifecycleTimestamps: timestamps
   };
 
+  const lossText = dressingLossLog ? ` [Dressing Loss: ${dressingLossLog.lossPercent}% on ${dressingLossLog.carcassType}]` : '';
   updates.tempLog = [
     ...(order.tempLog || []),
     {
       time: timeStr,
       temp: order.liveTemp || 1.2,
-      event: `Butcher Station (${req.user.name}): Cut & FreshSealed #${sealTag || 'FS-101'} (${weighedWeight || '500g'}). Ready for rider pickup.`
+      event: `Butcher Station (${req.user.name}): Cut & FreshSealed #${sealTag || 'FS-101'} (${weighedWeight || '500g'})${lossText}. Ready for rider pickup.`
     }
   ];
 
@@ -1099,9 +1102,12 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
   res.json(updatedOrder);
 });
 
+// Security PIN Verification Tracker (3-attempt lockout & fraud protection)
+const pinAttemptTracker = new Map();
+
 // Swiggy-Grade Handover PIN Verification & Cooler Refund Endpoint
 const handleOrderHandover = (req, res) => {
-  const { pin, deliveryPin, coolerReturned, podImage, notes } = req.body;
+  const { pin, deliveryPin, coolerReturned, podImage, notes, cashCollected, cashAmount } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
@@ -1109,13 +1115,40 @@ const handleOrderHandover = (req, res) => {
 
   const enteredPin = String(pin || deliveryPin || '').trim();
   const validPin = String(order.deliveryPin || '').trim();
+  const nowTime = Date.now();
+  const attemptRecord = pinAttemptTracker.get(order.id) || { count: 0, lockedUntil: 0 };
 
-  // If a PIN is configured, verify it (or accept if matches)
-  if (validPin && enteredPin !== validPin) {
-    return res.status(400).json({
-      error: `Invalid 4-digit handover PIN. Customer's screen shows PIN: ${validPin}`
+  // Check if order is under PIN lockout
+  if (attemptRecord.lockedUntil > nowTime) {
+    const remainingSec = Math.ceil((attemptRecord.lockedUntil - nowTime) / 1000);
+    return res.status(429).json({
+      error: `Handover locked due to 3 failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+      locked: true,
+      remainingSec
     });
   }
+
+  // If a PIN is configured, verify it
+  if (validPin && enteredPin !== validPin) {
+    attemptRecord.count += 1;
+    if (attemptRecord.count >= 3) {
+      attemptRecord.lockedUntil = nowTime + 300000; // 5 minute security lockout
+      pinAttemptTracker.set(order.id, attemptRecord);
+      return res.status(429).json({
+        error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
+        locked: true,
+        remainingSec: 300
+      });
+    }
+    pinAttemptTracker.set(order.id, attemptRecord);
+    return res.status(400).json({
+      error: `Invalid 4-digit PIN. ${3 - attemptRecord.count} attempt(s) remaining before security lockout.`,
+      remainingAttempts: 3 - attemptRecord.count
+    });
+  }
+
+  // PIN verified successfully: reset security tracker
+  pinAttemptTracker.delete(order.id);
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1127,12 +1160,15 @@ const handleOrderHandover = (req, res) => {
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
+  const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
+  const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
+
   const updatedLog = [
     ...(order.tempLog || []),
     {
       time: timeStr,
       temp: 1.8,
-      event: `Delivered & Verified via 4-digit PIN. Cooler Box returned: ${coolerReturned ? 'YES (₹250 Refunded)' : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
+      event: `Delivered & Verified via 4-digit PIN.${collectedCashNum > 0 ? ` Cash Collected: ₹${collectedCashNum}.` : ''} Cooler Box returned: ${coolerReturned ? 'YES (₹250 Refunded)' : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
     }
   ];
 
@@ -1145,9 +1181,20 @@ const handleOrderHandover = (req, res) => {
     podImage: podImage || order.podImage,
     handoverNotes: notes || order.handoverNotes,
     deliveredAt: nowIso,
+    cashCollected: collectedCashNum,
+    paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
     liveTemp: 1.8,
     tempLog: updatedLog
   });
+
+  // If cash was collected by rider, update rider's floating cash in hand balance
+  if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
+    const rider = db.findById('users', req.user.id);
+    if (rider) {
+      const currentCash = rider.cashInHand || 0;
+      db.update('users', rider.id, { cashInHand: currentCash + collectedCashNum });
+    }
+  }
 
   // If customer returned cooler box, automatically refund ₹250 to customer's wallet!
   if (coolerReturned && order.userId) {
@@ -1165,14 +1212,13 @@ const handleOrderHandover = (req, res) => {
         title: 'Cold Box Deposit Refund',
         description: `Doorstep cooler returned for Order #${order.id}`,
         date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        balanceAfter: newWallet
+        timestamp: nowIso
       };
 
-      const existingTxs = customer.walletTransactions || [];
       db.update('users', customer.id, {
         walletBalance: newWallet,
         depositBalance: newDep,
-        walletTransactions: [refundTx, ...existingTxs],
+        walletTransactions: [refundTx, ...(customer.walletTransactions || [])],
         activeCoolersCount: Math.max(0, (customer.activeCoolersCount || 1) - 1)
       });
     }
@@ -1182,8 +1228,28 @@ const handleOrderHandover = (req, res) => {
     }
   }
 
-  res.json(updatedOrder);
+  res.json({
+    success: true,
+    message: 'Delivery handover completed and verified',
+    order: updatedOrder
+  });
 };
+
+app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), (req, res) => {
+  const { amount, depotId } = req.body;
+  const rider = db.findById('users', req.user.id);
+  const currentCash = rider?.cashInHand || 0;
+  const depositAmt = Math.min(Number(amount) || currentCash, currentCash);
+  const updatedRider = db.update('users', req.user.id, {
+    cashInHand: Math.max(0, currentCash - depositAmt)
+  });
+  res.json({
+    success: true,
+    depositedAmount: depositAmt,
+    remainingCashInHand: updatedRider.cashInHand || 0,
+    receiptNo: `DEP-RCP-${Math.floor(10000 + Math.random() * 90000)}`
+  });
+});
 
 app.post('/api/orders/:id/handover', authenticate, handleOrderHandover);
 app.put('/api/orders/:id/handover', authenticate, handleOrderHandover);

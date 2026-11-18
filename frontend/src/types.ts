@@ -40,6 +40,7 @@ export interface User {
   emailVerified?: boolean;
   totalOrders?: number;
   totalSpent?: number;
+  cashInHand?: number;
   createdAt?: string;
 }
 
@@ -241,6 +242,22 @@ export interface Order {
     lat: number;
     lng: number;
     heading?: number;
+  };
+  cashCollected?: number;
+  itemPrepList?: Array<{
+    productId: string;
+    name?: string;
+    cutDone: boolean;
+    netWeight?: string;
+    batchLotId?: string;
+    cutStyle?: string;
+  }>;
+  dressingLossLog?: {
+    carcassType: string;
+    grossWeight: number;
+    dressedWeight: number;
+    lossGrams: number;
+    lossPercent: number;
   };
 }
 

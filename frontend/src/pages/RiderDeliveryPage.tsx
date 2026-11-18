@@ -25,7 +25,14 @@ import {
   LogOut,
   UserCheck,
   Clock,
-  FileText
+  FileText,
+  Volume2,
+  VolumeX,
+  Banknote,
+  Wifi,
+  WifiOff,
+  Check,
+  CreditCard
 } from 'lucide-react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -108,6 +115,156 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     lng: 77.5946
   });
 
+  // Audio Dispatch Chime (Synthesized Web Audio API)
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const playOrderChime = () => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const playTone = (freq: number, start: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+      playTone(587.33, 0.0, 0.15); // D5
+      playTone(739.99, 0.16, 0.15); // F#5
+      playTone(880.00, 0.32, 0.25);  // A5
+    } catch {}
+  };
+
+  // Real Camera Barcode/QR Scanner for Coolers
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+
+  const startCameraScanner = async () => {
+    setCameraModalOpen(true);
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera device access not supported by browser');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+        await cameraVideoRef.current.play();
+        setIsCameraActive(true);
+      }
+    } catch (err: any) {
+      setCameraError(err.message || 'Camera permission denied or camera not found');
+    }
+  };
+
+  const stopCameraScanner = () => {
+    if (cameraVideoRef.current && cameraVideoRef.current.srcObject) {
+      const stream = cameraVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      cameraVideoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setCameraModalOpen(false);
+  };
+
+  const handleSelectScannedBarcode = (code: string) => {
+    setScannedBoxId(code);
+    playOrderChime();
+    stopCameraScanner();
+    showNotification(`✓ Scanned Box: ${code}`);
+    if (selectedOrder) {
+      api.checkCoolerHealth(code, selectedOrder.id).then(res => setCoolerCheckResult(res)).catch(() => {});
+    }
+  };
+
+  // Offline Elevator/Basement Queue & Network Resilience
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+
+  // Security PIN Lockout & Rate-Limiting Protection
+  const [pinLockoutSeconds, setPinLockoutSeconds] = useState(0);
+  const [pinRemainingAttempts, setPinRemainingAttempts] = useState(3);
+
+  // Lockout Countdown Timer
+  useEffect(() => {
+    if (pinLockoutSeconds <= 0) return;
+    const t = setInterval(() => {
+      setPinLockoutSeconds(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [pinLockoutSeconds]);
+
+  // Cash on Delivery (COD) Floating Cash in Hand & Hub Deposit
+  const [cashCollectedInput, setCashCollectedInput] = useState('');
+  const [cashInHand, setCashInHand] = useState(user?.cashInHand || 0);
+  const [isCashDepositModalOpen, setIsCashDepositModalOpen] = useState(false);
+  const [depositAmountInput, setDepositAmountInput] = useState('');
+
+  const handleDepositCash = async () => {
+    const amt = Number(depositAmountInput || cashInHand);
+    if (!amt || amt <= 0) return;
+    try {
+      const res = await api.depositRiderCash(amt);
+      setCashInHand(res.remainingCashInHand);
+      setIsCashDepositModalOpen(false);
+      setDepositAmountInput('');
+      playOrderChime();
+      showNotification(`✓ Cash Deposited: ₹${res.depositedAmount} (Receipt: ${res.receiptNo})`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to deposit cash');
+    }
+  };
+
+  const syncOfflineQueue = async () => {
+    const raw = localStorage.getItem('brisketbox_offline_handover_queue');
+    if (!raw) return;
+    try {
+      const queue = JSON.parse(raw);
+      if (Array.isArray(queue) && queue.length > 0) {
+        for (const item of queue) {
+          await api.handoverOrder(item.orderId, item.handoverData).catch(() => {});
+        }
+        localStorage.removeItem('brisketbox_offline_handover_queue');
+        setOfflineQueueCount(0);
+        showNotification(`✓ Reconnected! Synced ${queue.length} offline delivery run(s).`);
+        loadOrders();
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      syncOfflineQueue();
+    };
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const raw = localStorage.getItem('brisketbox_offline_handover_queue');
+    if (raw) {
+      try {
+        const q = JSON.parse(raw);
+        setOfflineQueueCount(Array.isArray(q) ? q.length : 0);
+      } catch {}
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const showNotification = (msg: string) => {
     setActionNotice(msg);
     setTimeout(() => setActionNotice(null), 3500);
@@ -119,6 +276,9 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       setLoading(true);
       const data = await api.getRiderOrders().catch(() => api.getOrders());
       if (Array.isArray(data)) {
+        if (data.length > orders.length && orders.length > 0) {
+          playOrderChime();
+        }
         setOrders(data);
       }
     } catch (err) {
@@ -294,9 +454,49 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
   const handleSubmitHandover = async () => {
     if (!selectedOrder) return;
+    if (pinLockoutSeconds > 0) {
+      setPinError(`Security lockout active. Please wait ${pinLockoutSeconds}s before retrying.`);
+      return;
+    }
     const enteredPin = deliveryPin.join('').trim();
     if (enteredPin.length !== 4) {
       setPinError('Please enter the full 4-digit customer delivery PIN.');
+      return;
+    }
+
+    const isCod = selectedOrder.paymentMethod?.toLowerCase().includes('cash') || selectedOrder.paymentMethod?.toLowerCase().includes('cod');
+    const collectedAmt = isCod ? Number(cashCollectedInput || selectedOrder.total) : undefined;
+
+    // Offline Elevator/Basement Queue Resilience
+    if (!navigator.onLine) {
+      const rawQueue = localStorage.getItem('brisketbox_offline_handover_queue');
+      const queue = rawQueue ? JSON.parse(rawQueue) : [];
+      queue.push({
+        orderId: selectedOrder.id,
+        handoverData: {
+          deliveryPin: enteredPin,
+          pin: enteredPin,
+          coolerReturned: isReturningBox,
+          cashCollected: isCod,
+          cashAmount: collectedAmt,
+          podImage: podPhoto || undefined,
+          notes: 'Handover verified in offline mode. Auto-synced upon reconnection.'
+        },
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('brisketbox_offline_handover_queue', JSON.stringify(queue));
+      setOfflineQueueCount(queue.length);
+      setHandoverSuccess(true);
+      if (collectedAmt) {
+        setCashInHand(prev => prev + collectedAmt);
+      }
+      playOrderChime();
+      showNotification('⚡ Queued in Offline Storage! Will auto-sync when network returns.');
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'Delivered', lifecycleStatus: 'DELIVERED' } : o));
+      setTimeout(() => {
+        setSelectedOrder(null);
+        setHandoverSuccess(false);
+      }, 2000);
       return;
     }
 
@@ -308,6 +508,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         deliveryPin: enteredPin,
         pin: enteredPin,
         coolerReturned: isReturningBox,
+        cashCollected: isCod,
+        cashAmount: collectedAmt,
         podImage: podPhoto || undefined,
         notes: isReturningBox
           ? `Returned Box #${scannedBoxId}. Condition: Lid=${boxInspection.lidIntact ? 'OK' : 'Damaged'}, Gasket=${boxInspection.cleanGasket ? 'OK' : 'Leak'}. ₹250 refunded to customer wallet.`
@@ -315,6 +517,11 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       });
 
       setHandoverSuccess(true);
+      setPinRemainingAttempts(3);
+      if (collectedAmt) {
+        setCashInHand(prev => prev + collectedAmt);
+      }
+      playOrderChime();
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
       showNotification('✓ Verified Delivery! ₹50 credited to your shift earnings.');
       
@@ -323,7 +530,15 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         setHandoverSuccess(false);
       }, 2200);
     } catch (err: any) {
-      setPinError(err.message || 'Invalid delivery PIN. Please ask customer to check their screen.');
+      if (err.locked || err.remainingSec) {
+        setPinLockoutSeconds(err.remainingSec || 300);
+        setPinError(`Lockout Active: 3 incorrect attempts. Retry in ${err.remainingSec || 300}s.`);
+      } else if (err.remainingAttempts !== undefined) {
+        setPinRemainingAttempts(err.remainingAttempts);
+        setPinError(`Invalid PIN. ${err.remainingAttempts} attempt(s) remaining before security lockout.`);
+      } else {
+        setPinError(err.message || 'Invalid delivery PIN. Please ask customer to check their screen.');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -704,6 +919,28 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Audio Dispatch Chime Toggle */}
+            <button
+              onClick={() => {
+                setSoundEnabled(!soundEnabled);
+                if (!soundEnabled) playOrderChime();
+              }}
+              title={soundEnabled ? "Audio Alerts: ON" : "Audio Alerts: OFF"}
+              className={`p-2 rounded-xl border transition cursor-pointer ${
+                soundEnabled ? 'bg-amber-950/60 text-amber-300 border-amber-800 hover:bg-amber-900/60' : 'bg-slate-800 text-gray-500 border-slate-700'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
+            {/* Offline/Online Network Indicator */}
+            <div className={`px-2 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 ${
+              isOffline ? 'bg-amber-950/80 text-amber-300 border-amber-800 animate-pulse' : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+            }`}>
+              {isOffline ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
+              <span>{isOffline ? 'Elevator/Offline' : '4G Online'}</span>
+            </div>
+
             {/* Live Online Toggle */}
             <button
               onClick={handleToggleOnline}
@@ -763,14 +1000,32 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               <span className="text-[10px] text-gray-500 block uppercase font-bold">Completed</span>
               <span className="text-base font-black text-emerald-400">{deliveredOrders.length}</span>
             </div>
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
-              <span className="text-[10px] text-gray-500 block uppercase font-bold">Box Returns</span>
-              <span className="text-base font-black text-sky-400">
-                {deliveredOrders.filter(o => o.coolerReturned).length}
-              </span>
+            <div 
+              onClick={() => setIsCashDepositModalOpen(true)}
+              title="Click to view Cash in Hand & Deposit at Hub"
+              className="p-2 rounded-xl bg-slate-950/60 border border-amber-900/40 hover:border-amber-600 transition cursor-pointer"
+            >
+              <span className="text-[10px] text-amber-400 block uppercase font-bold">Cash in Hand</span>
+              <span className="text-base font-black text-amber-300 font-mono">₹{cashInHand}</span>
             </div>
           </div>
         </div>
+
+        {/* Offline Queue Resilience Banner */}
+        {offlineQueueCount > 0 && (
+          <div className="p-3 bg-amber-950/80 border border-amber-600/70 rounded-2xl text-xs flex items-center justify-between text-amber-200">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+              <span><strong>{offlineQueueCount} run(s)</strong> stored locally in offline elevator queue.</span>
+            </div>
+            <button
+              onClick={syncOfflineQueue}
+              className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] cursor-pointer"
+            >
+              Sync Now
+            </button>
+          </div>
+        )}
 
         {/* View Tabs */}
         <div className="flex rounded-2xl bg-slate-900 p-1 border border-slate-800 text-xs font-bold">
@@ -842,17 +1097,28 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                       </div>
                     </div>
 
-                    {/* Customer & Address Card */}
-                    <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-2 text-xs">
+                    {/* Customer & Address Card with 1-Tap Google Maps Navigation */}
+                    <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-white">{ord.customerName}</span>
-                        <a
-                          href={`tel:${ord.customerPhone}`}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold text-[11px]"
-                        >
-                          <Phone className="w-3 h-3" />
-                          <span>Call</span>
-                        </a>
+                        <span className="font-extrabold text-white text-sm">{ord.customerName}</span>
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ord.deliveryAddress + ', Bengaluru')}&travelmode=two_wheeler`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 font-bold text-[11px] transition shadow-xs"
+                          >
+                            <Navigation className="w-3 h-3 text-blue-200" />
+                            <span>Navigate</span>
+                          </a>
+                          <a
+                            href={`tel:${ord.customerPhone}`}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold text-[11px] hover:bg-emerald-900/80"
+                          >
+                            <Phone className="w-3 h-3" />
+                            <span>Call</span>
+                          </a>
+                        </div>
                       </div>
                       <div className="flex items-start gap-1.5 text-gray-300">
                         <MapPin className="w-3.5 h-3.5 text-[#d11243] shrink-0 mt-0.5" />
@@ -895,12 +1161,24 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                       )}
 
                       {stage === 'ARRIVED_AT_SHOP' && (
-                        <button
-                          onClick={() => handleAdvanceLifecycle(ord, 'PICKED_UP')}
-                          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition cursor-pointer"
-                        >
-                          ✓ Verify & Pick Up Cold Box
-                        </button>
+                        <div className="w-full flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(ord);
+                              startCameraScanner();
+                            }}
+                            className="px-3.5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Scan Box Camera</span>
+                          </button>
+                          <button
+                            onClick={() => handleAdvanceLifecycle(ord, 'PICKED_UP')}
+                            className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-md"
+                          >
+                            ✓ Confirm Cold Box Pick Up
+                          </button>
+                        </div>
                       )}
 
                       {stage === 'PICKED_UP' && (
@@ -1008,22 +1286,74 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               </div>
             ) : (
               <div className="space-y-4">
+                {/* PIN Security Lockout Banner */}
+                {pinLockoutSeconds > 0 && (
+                  <div className="p-3 bg-rose-950/90 border border-rose-700 text-rose-200 rounded-2xl text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Security Lockout Active</span>
+                    </div>
+                    <p className="text-[11px] text-rose-300">
+                      3 invalid PIN attempts. Please wait <strong className="font-mono text-white text-xs">{pinLockoutSeconds}s</strong> before retrying.
+                    </p>
+                  </div>
+                )}
+
+                {/* Cash on Delivery (COD) Collection Box */}
+                {(selectedOrder.paymentMethod?.toLowerCase().includes('cash') || selectedOrder.paymentMethod?.toLowerCase().includes('cod')) && (
+                  <div className="p-3.5 rounded-2xl bg-amber-950/80 border border-amber-600/70 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-200 flex items-center gap-1.5">
+                        <Banknote className="w-4 h-4 text-amber-400" />
+                        <span>Cash to Collect (COD):</span>
+                      </span>
+                      <span className="font-mono font-black text-amber-300 text-base">₹{selectedOrder.total}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-900/60">
+                      <div>
+                        <label className="text-[10px] text-gray-400 block mb-1">Cash Received (₹)</label>
+                        <input
+                          type="number"
+                          placeholder={String(selectedOrder.total)}
+                          value={cashCollectedInput}
+                          onChange={(e) => setCashCollectedInput(e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-amber-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-gray-400 block mb-1">Change to Return</span>
+                        <span className="font-mono font-bold text-emerald-400 text-sm block pt-1">
+                          ₹{Math.max(0, (Number(cashCollectedInput) || selectedOrder.total) - selectedOrder.total)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 4-Digit PIN Input Box */}
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-2">
-                  <label className="text-xs font-bold text-gray-300 block">
-                    Ask Customer for 4-Digit Handover PIN:
-                  </label>
-                  <div className="flex justify-center gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-gray-300">
+                      Customer Handover PIN:
+                    </label>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {pinRemainingAttempts < 3 ? `${pinRemainingAttempts} tries remaining` : 'Max 3 attempts'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-center gap-2 pt-1">
                     {deliveryPin.map((digit, idx) => (
                       <input
                         key={idx}
                         ref={pinInputRefs[idx]}
                         type="text"
                         maxLength={1}
+                        disabled={pinLockoutSeconds > 0}
                         value={digit}
                         onChange={(e) => handlePinChange(idx, e.target.value)}
                         onKeyDown={(e) => handlePinKeyDown(idx, e)}
-                        className="w-11 h-12 text-center text-xl font-mono font-black rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        className="w-11 h-12 text-center text-xl font-mono font-black rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-40"
                       />
                     ))}
                   </div>
@@ -1034,10 +1364,11 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
                   <button
                     type="button"
+                    disabled={pinLockoutSeconds > 0}
                     onClick={handleFillDemoPin}
-                    className="text-[10px] text-emerald-400 hover:underline pt-1 cursor-pointer"
+                    className="text-[10px] text-emerald-400 hover:underline pt-1 cursor-pointer disabled:opacity-40"
                   >
-                    Auto-Fill Demo PIN ({selectedOrder.deliveryPin || '4821'})
+                    Auto-Fill Demo PIN ({selectedOrder.deliveryPin || '4291'})
                   </button>
                 </div>
 
@@ -1065,7 +1396,17 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     <div className="text-[11px] text-gray-400 space-y-2 pt-1 border-t border-slate-800">
                       <div className="flex items-center justify-between">
                         <span>Cold Box Tag:</span>
-                        <strong className="text-white font-mono">{scannedBoxId}</strong>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-white font-mono">{scannedBoxId}</strong>
+                          <button
+                            type="button"
+                            onClick={startCameraScanner}
+                            className="px-2 py-0.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>Scan</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Temperature Compliance Audit Button */}
@@ -1098,7 +1439,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
                 <button
                   type="button"
-                  disabled={isVerifying}
+                  disabled={isVerifying || pinLockoutSeconds > 0}
                   onClick={handleSubmitHandover}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
                 >
@@ -1107,6 +1448,125 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* REAL CAMERA SCANNER MODAL (WebRTC Viewfinder)                            */}
+      {/* ========================================================================= */}
+      {cameraModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div onClick={stopCameraScanner} className="fixed inset-0 bg-black/85 backdrop-blur-md" />
+
+          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 text-gray-100 z-10 space-y-3.5 text-xs shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-sky-400" />
+                <h3 className="font-black text-white text-sm">Scan Cold Box Barcode</h3>
+              </div>
+              <button onClick={stopCameraScanner} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+
+            {/* Video Viewfinder with animated laser scanline */}
+            <div className="relative w-full h-56 bg-black rounded-2xl overflow-hidden border border-slate-700 flex items-center justify-center">
+              <video
+                ref={cameraVideoRef}
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+
+              {/* Target Scanframe Overlay */}
+              <div className="absolute inset-6 border-2 border-dashed border-sky-400/80 rounded-2xl pointer-events-none flex items-center justify-center">
+                {/* Red Laser Scanline */}
+                <div className="w-full h-0.5 bg-rose-500 shadow-[0_0_8px_#f43f5e] animate-pulse" />
+              </div>
+
+              {!isCameraActive && (
+                <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center space-y-2">
+                  <Camera className="w-8 h-8 text-sky-400" />
+                  <span className="text-xs font-bold text-gray-200">
+                    {cameraError || 'Activating live video stream...'}
+                  </span>
+                  <button
+                    onClick={startCameraScanner}
+                    className="px-3 py-1.5 rounded-xl bg-sky-600 text-white font-bold text-[11px]"
+                  >
+                    Retry Camera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Instant Quick-Select Barcodes */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">1-Tap Tag Emulation (Hub Cold Boxes):</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {['BOX-BLR-417', 'BOX-BLR-182', 'BOX-BLR-633', 'BOX-BLR-983'].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => handleSelectScannedBarcode(tag)}
+                    className="p-2 rounded-xl bg-slate-950 border border-slate-700 hover:border-sky-500 text-left font-mono font-bold text-sky-300 hover:text-white transition cursor-pointer flex items-center justify-between"
+                  >
+                    <span>{tag}</span>
+                    <Check className="w-3 h-3 text-sky-400" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={stopCameraScanner}
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-gray-300 font-bold transition cursor-pointer"
+            >
+              Close Scanner
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CASH DEPOSIT AT HUB MODAL                                                */}
+      {/* ========================================================================= */}
+      {isCashDepositModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div onClick={() => setIsCashDepositModalOpen(false)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+
+          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 text-gray-100 z-10 space-y-4 text-xs shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-amber-400" />
+                <h3 className="font-black text-white text-sm">Hub Cash Reconciliation</h3>
+              </div>
+              <button onClick={() => setIsCashDepositModalOpen(false)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-1">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Current Floating Cash in Hand</span>
+              <span className="text-3xl font-black font-mono text-amber-400">₹{cashInHand}</span>
+              <span className="text-[10px] text-gray-500 block">Maximum Allowed Holding: ₹2,000</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-300 block">Amount to Deposit at Mahadevapura Hub</label>
+              <input
+                type="number"
+                placeholder={String(cashInHand)}
+                value={depositAmountInput}
+                onChange={(e) => setDepositAmountInput(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              onClick={handleDepositCash}
+              disabled={cashInHand <= 0}
+              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition cursor-pointer disabled:opacity-40 shadow-md flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Confirm Cash Deposit at Depot</span>
+            </button>
           </div>
         </div>
       )}

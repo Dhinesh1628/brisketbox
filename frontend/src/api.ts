@@ -306,7 +306,7 @@ export const api = {
     return res.json();
   },
 
-  async handoverOrder(id: string, data: { pin?: string; deliveryPin?: string; coolerReturned?: boolean; podImage?: string; notes?: string }): Promise<Order> {
+  async handoverOrder(id: string, data: { pin?: string; deliveryPin?: string; coolerReturned?: boolean; podImage?: string; notes?: string; cashCollected?: boolean | number; cashAmount?: number }): Promise<Order> {
     const res = await fetch(`${API_BASE}/orders/${id}/handover`, {
       method: 'POST',
       headers: getHeaders(),
@@ -631,6 +631,19 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Cooler compliance check failed');
+    }
+    return res.json();
+  },
+
+  async depositRiderCash(amount?: number): Promise<{ success: boolean; depositedAmount: number; remainingCashInHand: number; receiptNo: string }> {
+    const res = await fetch(`${API_BASE}/rider/cash-deposit`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ amount })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to record cash deposit');
     }
     return res.json();
   },
