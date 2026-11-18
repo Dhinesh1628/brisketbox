@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MessageCircle, X, ChevronRight, Sparkles, RefreshCw, Bot, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageCircle, X, ChevronRight, Sparkles, UtensilsCrossed, ExternalLink } from 'lucide-react';
 import { WhatsAppChatbotModal } from './WhatsAppChatbotModal';
 import { useCart } from '../context/CartContext';
 
@@ -19,31 +19,11 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   const { totalItems } = useCart();
   const [internalChatbotOpen, setInternalChatbotOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const phoneNumber = '919741288301'; // Official BrisketBox Direct WhatsApp Concierge: +91 97412 88301
-
-  useEffect(() => {
-    // Only show gentle nudge after 4s if not previously dismissed in session
-    const dismissed = sessionStorage.getItem('brisketbox_tooltip_dismissed');
-    if (!dismissed) {
-      const showTimer = setTimeout(() => setShowTooltip(true), 3500);
-      const autoDismissTimer = setTimeout(() => setShowTooltip(false), 12000);
-      return () => {
-        clearTimeout(showTimer);
-        clearTimeout(autoDismissTimer);
-      };
-    }
-  }, []);
-
-  const dismissTooltip = () => {
-    setShowTooltip(false);
-    sessionStorage.setItem('brisketbox_tooltip_dismissed', 'true');
-  };
 
   const isChatbotOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalChatbotOpen;
 
   const openChatbot = () => {
-    dismissTooltip();
     setIsMenuOpen(false);
     if (onOpenChatbot) {
       onOpenChatbot();
@@ -71,42 +51,8 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
 
   return (
     <>
-      <div className={`fixed ${totalItems > 0 ? 'bottom-20 sm:bottom-5' : 'bottom-4 sm:bottom-5'} right-3 sm:right-6 z-40 flex flex-col items-end gap-2 transition-all duration-300`}>
+      <div className={`fixed ${totalItems > 0 ? 'bottom-20 sm:bottom-5' : 'bottom-4 sm:bottom-5'} right-3 sm:right-6 z-40 flex flex-col items-end gap-2 transition-all duration-300 pointer-events-auto`}>
         
-        {/* Floating Callout Tooltip */}
-        {showTooltip && !isMenuOpen && !isChatbotOpen && (
-          <div className="relative mb-2 bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900 border border-emerald-400/60 text-white rounded-2xl p-3 shadow-2xl max-w-[260px] animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <button
-              onClick={dismissTooltip}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-200 text-xs shadow-md cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-            </button>
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center flex-shrink-0 text-base">
-                🥩
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-white leading-tight">
-                  Need help picking fresh cuts?
-                </p>
-                <p className="text-[10px] text-emerald-300 mt-0.5">
-                  Ask our 24/7 AI Butcher for recipes & advice!
-                </p>
-                <button
-                  onClick={openChatbot}
-                  className="mt-2 text-[10px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 rounded-full inline-flex items-center gap-1 shadow-xs transition active:scale-95 cursor-pointer"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Chat with AI Butcher</span>
-                </button>
-              </div>
-            </div>
-            {/* Tooltip triangle pointer */}
-            <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-slate-800 border-b border-r border-emerald-400/60 rotate-45"></div>
-          </div>
-        )}
-
         {/* Quick WhatsApp Action Menu */}
         {isMenuOpen && (
           <div className="mb-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden text-gray-800 dark:text-gray-100 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -116,7 +62,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
                   <img src="/images/logo.png" alt="BrisketBox" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs leading-tight">BrisketBox WhatsApp Support</h4>
+                  <h4 className="font-bold text-xs leading-tight">BrisketBox Concierge Support</h4>
                   <div className="flex items-center gap-1 text-[10px] text-emerald-100">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Direct Concierge</span>
@@ -137,10 +83,10 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
                 className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <UtensilsCrossed className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <div>
                     <div className="font-bold text-gray-900 dark:text-white text-[11px] flex items-center gap-1">
-                      <span>AI Master Butcher</span>
+                      <span>Master Butcher Concierge</span>
                       <Sparkles className="w-3 h-3 text-amber-400" />
                     </div>
                     <div className="text-[10px] text-gray-500 dark:text-gray-400">Recipes, prep advice & instant answers</div>

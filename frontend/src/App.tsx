@@ -183,7 +183,7 @@ const MainApp: React.FC = () => {
   };
 
   const handleOpenAiButcher = () => {
-    window.history.pushState({ type: 'modal', name: 'ai-butcher' }, '');
+    window.history.pushState({ type: 'modal', name: 'butcher-concierge' }, '');
     setIsAiButcherOpen(true);
   };
 
@@ -490,7 +490,7 @@ const MainApp: React.FC = () => {
         onClose={() => setIsContactOpen(false)}
       />
 
-      {/* Floating AI Butcher & WhatsApp Concierge */}
+      {/* Floating Master Butcher Concierge & WhatsApp Concierge */}
       {!['rider', 'butcher', 'admin'].includes(currentTab) && (
         <WhatsAppButton 
           isChatbotOpen={isAiButcherOpen}
