@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Razorpay from 'razorpay';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db.js';
+import { assignFleetRiderForOrder } from '../dispatch.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
@@ -656,6 +657,8 @@ function createOrderRecord(params) {
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const initialTemp = 0.8;
 
+  const assignedRider = assignFleetRiderForOrder();
+
   const order = {
     id: orderNumber,
     orderNumber,
@@ -677,8 +680,11 @@ function createOrderRecord(params) {
     walletDeduction: Number(walletDeduction || 0),
     total: totalAmount,
     totalAmount,
-    status: orderStatus === 'CONFIRMED' ? 'Order Confirmed' : 'Blast-Chilling',
-    orderStatus: orderStatus || 'CONFIRMED',
+    status: 'Preparing',
+    orderStatus: 'CONFIRMED',
+    lifecycleStatus: 'CONFIRMED',
+    partnerId: 'shop_central_butcher',
+    partnerName: 'Halal Cuts & Coastal Harbor Station #14',
     paymentMethod,
     paymentStatus: paymentStatus || 'PENDING',
     razorpayOrderId,
@@ -688,14 +694,14 @@ function createOrderRecord(params) {
     coolerModel: assignedCooler.model,
     coldBoxRefundStatus: 'NOT_REQUESTED',
     liveTemp: initialTemp,
-    riderId: 'usr_rider_1',
-    riderFullName: 'Suresh Patil',
-    riderName: 'Suresh',
-    riderPhone: '+91 97412 88301',
-    riderVehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
-    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)',
+    riderId: assignedRider.riderId,
+    riderFullName: assignedRider.riderFullName,
+    riderName: assignedRider.riderName,
+    riderPhone: assignedRider.riderPhone,
+    riderVehicle: assignedRider.riderVehicle,
+    deliveryExecutive: assignedRider.deliveryExecutive,
     tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Chilled cut locked inside ${assignedCooler.id}.` }
+      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Cuts queued at Butcher Station. Assigned to Fleet Partner ${assignedRider.riderFullName}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
     trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,

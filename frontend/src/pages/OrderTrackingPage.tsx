@@ -639,20 +639,20 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   </span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-black text-sm text-gray-950 dark:text-white">
-                      Rider: {currentOrder.assignedRider.fullName || currentOrder.assignedRider.firstName || 'Suresh Patil'}
+                      Rider: {currentOrder.riderFullName || currentOrder.assignedRider?.fullName || 'Suresh Patil'}
                     </span>
                     <span className="px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-[#d11243] dark:text-rose-300 text-[10px] font-bold font-mono">
-                      {currentOrder.assignedRider.riderId}
+                      {currentOrder.riderId || currentOrder.assignedRider?.riderId || 'FLEET'}
                     </span>
                   </div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
-                    <span>Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.assignedRider.vehicle}</strong></span>
+                    <span>Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || currentOrder.assignedRider?.vehicle || 'EV 2-Wheeler'}</strong></span>
                     <span>•</span>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">⚡ Arrival: {currentOrder.assignedRider.estimatedArrival}</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">⚡ Express 90-Min Dispatch</span>
                   </div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.assignedRider.maskedPhone}</strong></span>
+                    <span>Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || currentOrder.assignedRider?.maskedPhone || '+91 97412 88301'}</strong></span>
                   </div>
                 </div>
               </div>
@@ -689,6 +689,9 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   </span>
                   <div className="font-black text-sm text-gray-950 dark:text-white">
                     {currentOrder.riderFullName || (currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Suresh Patil')}
+                  </div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || 'EV Fleet 2-Wheeler'}</strong> • Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || '+91 97412 88301'}</strong>
                   </div>
                   <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />

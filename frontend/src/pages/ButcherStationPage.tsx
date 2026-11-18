@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Beef, 
   Scale, 
@@ -272,26 +272,35 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   ];
 
   // Load orders & inventory for this shop
-  const loadPartnerData = async () => {
+  const ordersCountRef = useRef<number>(0);
+
+  const loadPartnerData = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const [orderList, prodList] = await Promise.all([
         api.getPartnerOrders().catch(() => api.getOrders()),
         api.getPartnerProducts().catch(() => api.getProducts())
       ]);
-      if (Array.isArray(orderList)) setOrders(orderList);
+      if (Array.isArray(orderList)) {
+        if (orderList.length > ordersCountRef.current && ordersCountRef.current > 0) {
+          playButcherChime();
+          showNotification('🔔 New Customer Order Placed! Added to Prep Queue.');
+        }
+        ordersCountRef.current = orderList.length;
+        setOrders(orderList);
+      }
       if (Array.isArray(prodList)) setProducts(prodList);
     } catch (err) {
       console.error('Failed to load partner data:', err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (user?.role === 'partner' && user.approvalStatus === 'approved') {
-      loadPartnerData();
-      const interval = setInterval(loadPartnerData, 10000);
+      loadPartnerData(true);
+      const interval = setInterval(() => loadPartnerData(false), 4000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -774,9 +783,23 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // =========================================================================
   // VIEW 3: APPROVED BUTCHER PARTNER DASHBOARD (KDS Terminal & Product Catalog)
   // =========================================================================
-  const pendingPrepOrders = orders.filter(
-    (o) => o.orderStatus === 'CONFIRMED' || o.orderStatus === 'PREPARING' || o.status === 'Preparing'
-  );
+  // Pending orders: Any confirmed customer order that has not yet been weighed/sealed by butcher
+  const pendingPrepOrders = orders.filter((o) => {
+    const isCompleted = (
+      o.lifecycleStatus && [
+        'READY_FOR_PICKUP', 
+        'PICKED_UP', 
+        'IN_TRANSIT', 
+        'OUT_FOR_DELIVERY', 
+        'DELIVERED', 
+        'COOLER_RETURNED', 
+        'CANCELLED'
+      ].includes(o.lifecycleStatus)
+    ) || (
+      o.status && ['Cold Box Packed', 'Delivered', 'Cancelled'].includes(o.status)
+    );
+    return !isCompleted;
+  });
   const readyOrders = orders.filter(
     (o) => o.lifecycleStatus === 'READY_FOR_PICKUP' || o.status === 'Cold Box Packed'
   );
@@ -928,6 +951,10 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                       <div>
                         <span className="font-mono font-bold text-sm text-white">#{ord.orderNumber || ord.id}</span>
                         <p className="text-xs text-gray-400 mt-0.5">{ord.customerName} • {ord.deliverySlot}</p>
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-bold">
+                          <span>🛵 Fleet Rider: {ord.riderFullName || ord.riderName || 'Assigned'}</span>
+                          {ord.riderPhone && <span className="text-gray-400 font-mono text-[10px]">({ord.riderPhone})</span>}
+                        </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black">
                         PREPARATION

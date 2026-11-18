@@ -601,9 +601,9 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 }}
                 className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
-                <div className="font-extrabold flex items-center gap-1">
+                <div className="font-extrabold flex items-center justify-between">
                   <span>Suresh Patil</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Approved</span>
+                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #1</span>
                 </div>
                 <div className="text-[10px] text-gray-400 font-mono mt-0.5">rider@brisketbox.in</div>
               </button>
@@ -614,13 +614,43 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   setLoginEmail('mahesh.rider@gmail.com');
                   setLoginPassword('rider123');
                 }}
-                className="p-2 rounded-xl bg-amber-950/60 border border-amber-800 text-amber-300 text-[11px] font-bold text-left hover:bg-amber-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
-                <div className="font-extrabold flex items-center gap-1">
+                <div className="font-extrabold flex items-center justify-between">
                   <span>Mahesh Kumar</span>
-                  <span className="text-[9px] px-1 bg-amber-500 text-black rounded font-black">Pending</span>
+                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #2</span>
                 </div>
                 <div className="text-[10px] text-gray-400 font-mono mt-0.5">mahesh.rider@gmail.com</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginEmail('ramesh.rider@brisketbox.in');
+                  setLoginPassword('rider123');
+                }}
+                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+              >
+                <div className="font-extrabold flex items-center justify-between">
+                  <span>Ramesh Gowda</span>
+                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #3</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono mt-0.5">ramesh.rider@brisketbox.in</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginEmail('imran.rider@brisketbox.in');
+                  setLoginPassword('rider123');
+                }}
+                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+              >
+                <div className="font-extrabold flex items-center justify-between">
+                  <span>Imran Pasha</span>
+                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #4</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono mt-0.5">imran.rider@brisketbox.in</div>
               </button>
             </div>
           </div>

@@ -10,6 +10,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import { connectMongoDB, getMongoStatus } from './mongo.js';
+import { assignFleetRiderForOrder } from './dispatch.js';
 import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
@@ -485,19 +486,13 @@ app.post('/api/orders', authenticate, (req, res) => {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  // Assign an approved fleet rider from database
-  const approvedRiders = db.get('users').filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
-  const defaultRider = approvedRiders.length > 0 ? approvedRiders[0] : {
-    id: 'usr_rider_1',
-    name: 'Suresh Patil',
-    phone: '+91 97412 88301',
-    vehicleType: 'EV 2-Wheeler (Ather 450X)'
-  };
-  const assignedExecutive = `${defaultRider.name} (${defaultRider.vehicleType || 'EV Fleet'}, ${defaultRider.phone || '+91 97412 88301'})`;
+  // Load-balance & round-robin assign an approved fleet rider from database
+  const assignedRider = assignFleetRiderForOrder();
 
   const initialTemp = 0.6;
   const order = {
     id: orderNumber,
+    orderNumber,
     deliveryPin,
     userId: req.user.id,
     customerName: req.user.name,
@@ -512,24 +507,26 @@ app.post('/api/orders', authenticate, (req, res) => {
     coolerDeposit: COOLER_DEPOSIT,
     shippingFee,
     total,
-    status: 'Rider Assigned',
-    lifecycleStatus: 'RIDER_ASSIGNED',
-    riderId: defaultRider.id,
-    riderName: defaultRider.name.split(' ')[0],
-    riderFullName: defaultRider.name,
-    riderPhone: defaultRider.phone || '+91 97412 88301',
-    riderVehicle: defaultRider.vehicleType || 'EV 2-Wheeler (Ather 450X)',
+    status: 'Preparing',
+    orderStatus: 'CONFIRMED',
+    lifecycleStatus: 'CONFIRMED',
+    partnerId: 'shop_central_butcher',
+    partnerName: 'Halal Cuts & Coastal Harbor Station #14',
+    riderId: assignedRider.riderId,
+    riderName: assignedRider.riderName,
+    riderFullName: assignedRider.riderFullName,
+    riderPhone: assignedRider.riderPhone,
+    riderVehicle: assignedRider.riderVehicle,
     coolerId: assignedCooler.id,
     coolerModel: assignedCooler.model,
     liveTemp: initialTemp,
-    deliveryExecutive: assignedExecutive,
+    deliveryExecutive: assignedRider.deliveryExecutive,
     lifecycleTimestamps: {
       confirmedAt: now.toISOString(),
-      packedAt: now.toISOString(),
       assignedAt: now.toISOString()
     },
     tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Packed in sanitized box ${assignedCooler.id}. Assigned to Fleet Partner ${defaultRider.name}.` }
+      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Cuts queued at Butcher Station. Assigned to Fleet Partner ${assignedRider.riderFullName}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
     trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
