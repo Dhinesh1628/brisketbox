@@ -22,7 +22,7 @@ async function generatePdf() {
   console.log('[PDF] Loading HTML:', htmlPath);
   await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
 
-  const outputPath = path.resolve('GoMeat_Full_Production_Presentation.pdf');
+  const outputPath = path.resolve('brisketbox_Full_Production_Presentation.pdf');
   console.log('[PDF] Printing to PDF:', outputPath);
 
   await page.pdf({
@@ -34,7 +34,7 @@ async function generatePdf() {
   });
 
   // Also copy to client/public so it's accessible via web
-  const publicPdf = path.resolve('client/public/GoMeat_Full_Production_Presentation.pdf');
+  const publicPdf = path.resolve('client/public/brisketbox_Full_Production_Presentation.pdf');
   fs.copyFileSync(outputPath, publicPdf);
 
   await browser.close();

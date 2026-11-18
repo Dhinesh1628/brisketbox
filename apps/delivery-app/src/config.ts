@@ -12,7 +12,7 @@ function getApiBaseUrl(): string {
 
 export const config = {
   apiBaseUrl: getApiBaseUrl(),
-  appName: 'GoMeat Fleet',
+  appName: 'BrisketBox Fleet',
   riderPerDropIncentive: 45,
   coolerReturnIncentive: 15,
   coldSafeTempMax: 4.0,

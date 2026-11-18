@@ -73,7 +73,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
     {
       id: 'msg_welcome',
       sender: 'bot',
-      text: `Welcome to GoMeat.\n\nTell me what you'd like to order or ask any question:\n\n• "Add 500g Surmai and 1kg Mutton to my cart"\n• "View my cart"\n• "How to cook Surmai Tawa Fry"\n• "Dinner for 6 people, how much to order?"\n• "Apply 20% discount coupon"\n• "Is the meat fresh or frozen?"\n\nHow can I help you today?`,
+      text: `Welcome to BrisketBox.\n\nTell me what you'd like to order or ask any question:\n\n• "Add 500g Surmai and 1kg Mutton to my cart"\n• "View my cart"\n• "How to cook Surmai Tawa Fry"\n• "Dinner for 6 people, how much to order?"\n• "Apply 20% discount coupon"\n• "Is the meat fresh or frozen?"\n\nHow can I help you today?`,
       time: getCurrentTime(),
       suggestedReplies: [
         "View my cart",
@@ -269,12 +269,12 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
               <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 p-1 flex items-center justify-center shadow-md">
                 <img 
                   src="/images/logo.png" 
-                  alt="GoMeat" 
+                  alt="BrisketBox" 
                   className="w-full h-full object-contain dark:hidden" 
                 />
                 <img 
                   src="/images/logo-dark.png" 
-                  alt="GoMeat" 
+                  alt="BrisketBox" 
                   className="w-full h-full object-contain hidden dark:block" 
                 />
               </div>
@@ -284,7 +284,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="font-extrabold text-sm leading-tight text-white flex items-center gap-1.5">
-                  <span>GoMeat AI Master Butcher</span>
+                  <span>BrisketBox AI Master Butcher</span>
                   <span className="text-[10px] bg-amber-400/90 text-amber-950 font-black px-1.5 py-0.2 rounded-full uppercase">
                     PRO
                   </span>
@@ -299,7 +299,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => handleLaunchWhatsApp("Hello GoMeat Master Butcher, I want to order fresh meat and seafood.")}
+              onClick={() => handleLaunchWhatsApp("Hello BrisketBox Master Butcher, I want to order fresh meat and seafood.")}
               title="Open chat in WhatsApp App"
               className="p-1.5 rounded-xl hover:bg-white/10 text-white/90 hover:text-white transition flex items-center gap-1 text-[11px] font-bold"
             >

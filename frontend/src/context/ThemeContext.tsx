@@ -13,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
-      const saved = localStorage.getItem('gomeat_theme');
+      const saved = localStorage.getItem('brisketbox_theme');
       if (saved === 'dark' || saved === 'light') return saved;
       // Check system preference
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -33,7 +33,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         root.classList.remove('dark');
       }
-      localStorage.setItem('gomeat_theme', theme);
+      localStorage.setItem('brisketbox_theme', theme);
     } catch {
       // ignore
     }

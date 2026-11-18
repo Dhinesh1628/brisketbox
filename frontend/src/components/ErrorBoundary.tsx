@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[GoMeat UI Runtime Error Caught]:', error, errorInfo);
+    console.error('[BrisketBox UI Runtime Error Caught]:', error, errorInfo);
   }
 
   private handleReset = () => {

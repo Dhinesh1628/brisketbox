@@ -22,7 +22,7 @@
   <rect width="960" height="480" rx="16" fill="url(#bg)" stroke="#334155" stroke-width="1.5"/>
 
   <!-- Title -->
-  <text x="40" y="48" font-family="system-ui, sans-serif" font-size="20" font-weight="800" fill="#f8fafc">GoMeat Full-Stack MERN System Architecture</text>
+  <text x="40" y="48" font-family="system-ui, sans-serif" font-size="20" font-weight="800" fill="#f8fafc">BrisketBox Full-Stack MERN System Architecture</text>
   <text x="40" y="70" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">End-to-End Component Boundaries, Protocol Interfaces, and Data Flow</text>
 
   <!-- Client Layer -->

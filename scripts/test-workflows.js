@@ -36,7 +36,7 @@ async function runTests() {
   const adminLogin = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ops@gomeat.in', password: 'admin123' })
+    body: JSON.stringify({ email: 'ops@brisketbox.in', password: 'admin123' })
   }).then(r => r.json());
 
   if (!adminLogin.token || adminLogin.user.role !== 'admin') {

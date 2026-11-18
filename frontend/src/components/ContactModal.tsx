@@ -87,7 +87,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
             </div>
             <div>
               <h3 className="font-black text-base text-gray-950 dark:text-white">
-                GoMeat Concierge Support
+                BrisketBox Concierge Support
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Fresh quality guarantee • 15-Min Response Time
@@ -125,7 +125,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
             <div className="p-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200 dark:border-slate-700/60 text-xs text-left space-y-1.5">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>GoMeat 100% Freshness Guarantee</span>
+                <span>BrisketBox 100% Freshness Guarantee</span>
               </div>
               <p className="text-[11px] text-gray-600 dark:text-gray-400">
                 If your order had temperature breaches, seal defects, or cut weight discrepancies, we issue immediate replacement or 100% wallet credit.
@@ -157,13 +157,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
               </a>
 
               <a
-                href="mailto:support@gomeat.in"
+                href="mailto:support@brisketbox.in"
                 className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center gap-2 hover:border-[#d11243] transition"
               >
                 <Mail className="w-3.5 h-3.5 text-blue-500" />
                 <div>
                   <span className="text-[10px] text-gray-400 block">Domain Email</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-200">support@gomeat.in</span>
+                  <span className="font-bold text-gray-900 dark:text-gray-200">support@brisketbox.in</span>
                 </div>
               </a>
             </div>
@@ -282,7 +282,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
               ) : (
                 <>
                   <Send className="w-3.5 h-3.5" />
-                  <span>Submit to GoMeat Concierge &rarr;</span>
+                  <span>Submit to BrisketBox Concierge &rarr;</span>
                 </>
               )}
             </button>

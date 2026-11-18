@@ -1,18 +1,18 @@
-# GoMeat
+# BrisketBox
 
-> **Fresh Quality. Delivered with Care.**  
+> **Freshness, Sealed with Flavour**  
 > *Farm-to-Fork Direct-to-Consumer Fresh Meat & Coastal Seafood Platform with Circular Reusable Cold-Box Logistics*
 
 ---
 
 ## 🌟 Overview
 
-**GoMeat** is an enterprise-grade full-stack e-commerce and cold-chain logistics platform modeled after tier-1 quick-commerce and meat delivery applications (Swiggy Instamart, Licious). GoMeat delivers 100% blast-chilled, never-frozen chicken, tender mutton, and daily coastal seafood directly to doorsteps within 90 minutes.
+**BrisketBox** is an enterprise-grade full-stack e-commerce and cold-chain logistics platform modeled after tier-1 quick-commerce and meat delivery applications (Swiggy Instamart, Licious). BrisketBox delivers 100% blast-chilled, never-frozen chicken, tender mutton, and daily coastal seafood directly to doorsteps within 90 minutes.
 
 ### Key Pillars
 - **Strict 0°C–4°C Cold Chain:** Guaranteed optimal freshness from bio-secure farms and night-trawl harbors to the customer's kitchen.
 - **ThermalVault™ Reusable Cold Box System:** High-density EPP insulated boxes with phase-change gel bricks eliminate single-use thermocol and plastic waste.
-- **Protected ₹250 Refundable Deposit:** Tracked transparently at checkout and refunded with 1-click doorstep pickup to the customer's UPI ID or in-app GoMeat Wallet.
+- **Protected ₹250 Refundable Deposit:** Tracked transparently at checkout and refunded with 1-click doorstep pickup to the customer's UPI ID or in-app BrisketBox Wallet.
 - **Swiggy-Grade Checkout & Tracking:**
   - Sticky floating bottom cart bar.
   - Tactile `- 1 +` stepper product card buttons.
@@ -34,7 +34,7 @@
 | **Backend** | Node.js (v20+), Express.js 4, RESTful Architecture |
 | **Database** | MongoDB Atlas (Mongoose ODM) with offline persistent document-store fallback |
 | **Authentication** | JWT (JSON Web Tokens), Google OAuth 2.0 (`google-auth-library`), bcryptjs |
-| **Payments** | Razorpay Payment Gateway (UPI, Cards, NetBanking), GoMeat Store Credit Wallet |
+| **Payments** | Razorpay Payment Gateway (UPI, Cards, NetBanking), BrisketBox Store Credit Wallet |
 | **Integrations** | Meta WhatsApp Cloud API Webhooks & Intelligent AI Chatbot Engine |
 | **DevOps & Deploy** | Vercel Serverless Edge, Node.js concurrently orchestrated Monorepo |
 
@@ -43,7 +43,7 @@
 ## 📁 Repository Structure
 
 ```
-GoMeat/
+BrisketBox/
 ├── frontend/                     # React 19 Client SPA
 │   ├── public/                   # Static assets, product cuts, branding
 │   ├── src/
@@ -87,7 +87,7 @@ GoMeat/
 ├── .gitattributes                # Line-ending normalization
 ├── .gitignore                    # Professional monorepo ignore rules
 ├── package.json                  # Root monorepo orchestration
-├── GoMeat.code-workspace         # VS Code multi-root workspace file
+├── BrisketBox.code-workspace         # VS Code multi-root workspace file
 └── README.md                     # This document
 ```
 
@@ -102,8 +102,8 @@ GoMeat/
 ### 2. Setup
 ```bash
 # Clone the repository
-git clone https://github.com/Dhinesh1628/sagarfresh.git GoMeat
-cd GoMeat
+git clone https://github.com/Dhinesh1628/sagarfresh.git BrisketBox
+cd BrisketBox
 
 # Setup environment variables
 cp .env.example .env
@@ -140,7 +140,7 @@ Visit **`http://localhost:5173/`** in your browser.
 | Role | Email / Phone | Password | Capabilities |
 |:---|:---|:---|:---|
 | **Customer** | `pooja.sundaram@gmail.com` (or `9876543210`) | `customer123` | Browsing, ordering, tracking, ₹250 cooler return |
-| **Operations Admin**| `ops@gomeat.in` (legacy `ops@sagarfresh.in`) | `admin123` | Order pipeline, courier dispatch, box fleet sanitization |
+| **Operations Admin**| `ops@brisketbox.in` (legacy `ops@sagarfresh.in`) | `admin123` | Order pipeline, courier dispatch, box fleet sanitization |
 
 ---
 
@@ -157,5 +157,5 @@ Visit **`http://localhost:5173/`** in your browser.
 
 ## 📄 License & Credits
 
-Copyright © 2026 **GoMeat Technologies Pvt. Ltd.** All rights reserved.  
-*Fresh Quality. Delivered with Care.*
+Copyright © 2026 **BrisketBox Technologies Pvt. Ltd.** All rights reserved.  
+*Freshness, Sealed with Flavour*

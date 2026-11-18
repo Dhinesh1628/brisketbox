@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "GoMeat",
-    "slug": "gomeat-user",
+    "name": "BrisketBox",
+    "slug": "brisketbox-user",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "gomeat",
+    "scheme": "brisketbox",
     "userInterfaceStyle": "light",
     "primaryColor": "#d11243",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gomeat.user"
+      "bundleIdentifier": "com.brisketbox.user"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.gomeat.user",
+      "package": "com.brisketbox.user",
       "predictiveBackGestureEnabled": false
     },
     "web": {

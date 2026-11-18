@@ -22,7 +22,7 @@ import {
 } from 'lucide-react-native';
 import { theme } from '../theme';
 import { api } from '../services/api';
-import { getOrderDeliveryPin } from '@gomeat/shared';
+import { getOrderDeliveryPin } from '@brisketbox/shared';
 
 interface OrderTrackingScreenProps {
   orderId?: string;
@@ -182,7 +182,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
           <View style={styles.boxDepositInfo}>
             <Box size={14} color={theme.colors.textMuted} />
             <Text style={styles.boxDepositInfoText}>
-              ₹250 Refundable Cooler Box: Return to rider now, or schedule doorstep pickup from your GoMeat Vault.
+              ₹250 Refundable Cooler Box: Return to rider now, or schedule doorstep pickup from your BrisketBox Vault.
             </Text>
           </View>
         </View>
@@ -195,7 +195,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
             </View>
             <View>
               <Text style={styles.riderName}>Ramesh Kumar</Text>
-              <Text style={styles.riderRole}>GoMeat Cold-Fleet Specialist</Text>
+              <Text style={styles.riderRole}>BrisketBox Cold-Fleet Specialist</Text>
               <Text style={styles.riderVehicle}>KA-03-HD-2041 • Hero Electric</Text>
             </View>
           </View>

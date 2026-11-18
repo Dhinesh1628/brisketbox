@@ -58,7 +58,7 @@ export const CoolerReturnsPage: React.FC = () => {
 
       setSelectedCooler(null);
       if (refundPreference === 'wallet') {
-        setNotice(`Doorstep pickup confirmed for box ${selectedCooler.id}. ₹250 will be credited directly to your GoMeat Wallet in 0 seconds once inspected!`);
+        setNotice(`Doorstep pickup confirmed for box ${selectedCooler.id}. ₹250 will be credited directly to your BrisketBox Wallet in 0 seconds once inspected!`);
       } else {
         setNotice(`Doorstep pickup confirmed for box ${selectedCooler.id}. ₹250 will be refunded to your UPI (${upiId}) upon courier scan.`);
       }
@@ -290,7 +290,7 @@ export const CoolerReturnsPage: React.FC = () => {
               <li>Take your meat cuts out and keep them in your fridge.</li>
               <li>Keep the ice packs inside the cold box.</li>
               <li>Hand the box back to the delivery partner on your next order, or request a pickup.</li>
-              <li>Get ₹250 back to your GoMeat Wallet or bank account once it's checked!</li>
+              <li>Get ₹250 back to your BrisketBox Wallet or bank account once it's checked!</li>
             </ol>
           </div>
 
@@ -330,7 +330,7 @@ export const CoolerReturnsPage: React.FC = () => {
                   How would you like to receive your ₹250 refund?
                 </label>
                 <div className="grid grid-cols-1 gap-2">
-                  {/* Option 1: GoMeat In-App Wallet */}
+                  {/* Option 1: BrisketBox In-App Wallet */}
                   <div
                     onClick={() => setRefundPreference('wallet')}
                     className={`p-3 rounded-xl border cursor-pointer transition text-left flex items-start gap-2.5 ${
@@ -352,14 +352,14 @@ export const CoolerReturnsPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-xs text-gray-950 dark:text-white flex items-center gap-1.5">
                           <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>GoMeat In-App Wallet</span>
+                          <span>BrisketBox In-App Wallet</span>
                         </span>
                         <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 px-1.5 py-0.2 rounded">
                           0 Seconds • Instant
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1">
-                        Credited directly into your GoMeat app balance in 0 seconds. Ready to use on your next order.
+                        Credited directly into your BrisketBox app balance in 0 seconds. Ready to use on your next order.
                       </p>
                     </div>
                   </div>

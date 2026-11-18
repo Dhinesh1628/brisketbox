@@ -20,11 +20,11 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   const [internalChatbotOpen, setInternalChatbotOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const phoneNumber = '919741288301'; // Official GoMeat Direct WhatsApp Concierge: +91 97412 88301
+  const phoneNumber = '919741288301'; // Official BrisketBox Direct WhatsApp Concierge: +91 97412 88301
 
   useEffect(() => {
     // Only show gentle nudge after 4s if not previously dismissed in session
-    const dismissed = sessionStorage.getItem('gomeat_tooltip_dismissed');
+    const dismissed = sessionStorage.getItem('brisketbox_tooltip_dismissed');
     if (!dismissed) {
       const showTimer = setTimeout(() => setShowTooltip(true), 3500);
       const autoDismissTimer = setTimeout(() => setShowTooltip(false), 12000);
@@ -37,7 +37,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
 
   const dismissTooltip = () => {
     setShowTooltip(false);
-    sessionStorage.setItem('gomeat_tooltip_dismissed', 'true');
+    sessionStorage.setItem('brisketbox_tooltip_dismissed', 'true');
   };
 
   const isChatbotOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalChatbotOpen;
@@ -113,10 +113,10 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
             <div className="bg-[#128C7E] text-white p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-0.5 shadow-xs">
-                  <img src="/images/logo.png" alt="GoMeat" className="w-full h-full object-contain" />
+                  <img src="/images/logo.png" alt="BrisketBox" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs leading-tight">GoMeat WhatsApp Support</h4>
+                  <h4 className="font-bold text-xs leading-tight">BrisketBox WhatsApp Support</h4>
                   <div className="flex items-center gap-1 text-[10px] text-emerald-100">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Direct Concierge</span>
@@ -150,7 +150,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
               </button>
 
               <button
-                onClick={() => handleOpenWhatsAppDirect("Hello GoMeat! I want to order fresh seafood/meat from today's harbor batch.")}
+                onClick={() => handleOpenWhatsAppDirect("Hello BrisketBox! I want to order fresh seafood/meat from today's harbor batch.")}
                 className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#128C7E] dark:hover:border-[#128C7E] rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
               >
                 <div className="flex items-center gap-2">

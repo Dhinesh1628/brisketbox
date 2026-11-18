@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const getSavedToken = () => localStorage.getItem('gomeat_token') || localStorage.getItem('frost_token');
+  const getSavedToken = () => localStorage.getItem('brisketbox_token') || localStorage.getItem('frost_token');
   const [token, setToken] = useState<string | null>(getSavedToken());
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.warn('Session expired or not authenticated:', err);
-      localStorage.removeItem('gomeat_token');
+      localStorage.removeItem('brisketbox_token');
       localStorage.removeItem('frost_token');
       setToken(null);
       setUser(null);
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<User> => {
     const data = await api.login(email, password);
-    localStorage.setItem('gomeat_token', data.token);
+    localStorage.setItem('brisketbox_token', data.token);
     setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -56,26 +56,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const googleLogin = async (credential: string) => {
     const data = await api.googleLogin(credential);
-    localStorage.setItem('gomeat_token', data.token);
+    localStorage.setItem('brisketbox_token', data.token);
     setToken(data.token);
     setUser(data.user);
   };
 
   const register = async (data: { name: string; email: string; password: string; phone?: string; address?: string }) => {
     const res = await api.register(data);
-    localStorage.setItem('gomeat_token', res.token);
+    localStorage.setItem('brisketbox_token', res.token);
     setToken(res.token);
     setUser(res.user);
   };
 
   const setAuthSession = (newUser: User, newToken: string) => {
-    localStorage.setItem('gomeat_token', newToken);
+    localStorage.setItem('brisketbox_token', newToken);
     setToken(newToken);
     setUser(newUser);
   };
 
   const logout = () => {
-    localStorage.removeItem('gomeat_token');
+    localStorage.removeItem('brisketbox_token');
     localStorage.removeItem('frost_token');
     setToken(null);
     setUser(null);

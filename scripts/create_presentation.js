@@ -3,9 +3,9 @@ import path from 'path';
 
 const pptx = new pptxgen();
 pptx.layout = 'LAYOUT_16x9';
-pptx.author = 'GoMeat Engineering Team';
-pptx.company = 'GoMeat Technologies Private Limited';
-pptx.title = 'GoMeat - MERN Stack Production E-Commerce Platform';
+pptx.author = 'BrisketBox Engineering Team';
+pptx.company = 'BrisketBox Technologies Private Limited';
+pptx.title = 'BrisketBox - MERN Stack Production E-Commerce Platform';
 
 // Brand Colors
 const CRIMSON = 'D11243';
@@ -21,7 +21,7 @@ const GRAY_TEXT = '64748B';
 const GRAY_LIGHT = '94A3B8';
 
 // Helper: Header on content slides
-function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
+function addSlideHeader(slide, title, category = 'BRISKETBOX E-COMMERCE PLATFORM') {
   slide.background = { color: 'F8FAFC' };
   
   // Category / Eyebrow
@@ -102,7 +102,7 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
   });
 
   // Main Title
-  slide.addText('GOMEAT', {
+  slide.addText('BRISKETBOX', {
     x: 1.3,
     y: 1.8,
     w: 10.5,
@@ -188,26 +188,26 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
 // =========================================================================
 {
   const slide = pptx.addSlide();
-  addSlideHeader(slide, 'Industry Challenges & The GoMeat Solution', 'The Opportunity');
+  addSlideHeader(slide, 'Industry Challenges & The BrisketBox Solution', 'The Opportunity');
 
   const pillars = [
     {
       num: '01',
       title: 'The Frozen Meat Illusion',
       problem: 'Conventional quick-commerce platforms deliver rock-frozen meat or defrosted cuts with broken cold-chains, destroying texture, moisture, and nutritional value.',
-      solution: 'GoMeat Guarantee: 0°C to 4°C active chilled cold chain from depot to doorstep in under 90 minutes. Never rock frozen.'
+      solution: 'BrisketBox Guarantee: 0°C to 4°C active chilled cold chain from depot to doorstep in under 90 minutes. Never rock frozen.'
     },
     {
       num: '02',
       title: 'Single-Use Styrofoam Waste',
       problem: 'Every standard meat order creates 1–2 kg of toxic thermocol and plastic bubble wrap waste that remains in city landfills for over 500 years.',
-      solution: 'GoMeat ThermalVault: Reusable EPP insulated boxes with frozen gel bricks and a signature ₹250 refundable deposit returned instantly via UPI.'
+      solution: 'BrisketBox ThermalVault: Reusable EPP insulated boxes with frozen gel bricks and a signature ₹250 refundable deposit returned instantly via UPI.'
     },
     {
       num: '03',
       title: 'Insecure & Tampered Checkouts',
       problem: 'Many small e-commerce stores rely on frontend price calculations, mock payment flows, or single static UPI QR codes prone to fraud.',
-      solution: 'GoMeat Enterprise Security: Server-side MongoDB price lookups, HMAC SHA-256 signatures, and cryptographic Razorpay webhooks.'
+      solution: 'BrisketBox Enterprise Security: Server-side MongoDB price lookups, HMAC SHA-256 signatures, and cryptographic Razorpay webhooks.'
     }
   ];
 
@@ -288,7 +288,7 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
       line: { color: 'A7F3D0', width: 0.5 }
     });
 
-    slide.addText('GOMEAT SOLUTION:', {
+    slide.addText('BRISKETBOX SOLUTION:', {
       x: x + 0.4,
       y: 4.7,
       w: 2.8,
@@ -1336,7 +1336,7 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
     [
       { text: 'Live Vercel Health Check', options: { bold: true, fontSize: 8.5 } },
       { text: 'Queried GET /api/health on production Vercel deployment', options: { fontSize: 8 } },
-      { text: 'HTTP 200 OK {"status":"ok","name":"GoMeat API"} uptime verified', options: { fontSize: 8 } },
+      { text: 'HTTP 200 OK {"status":"ok","name":"BrisketBox API"} uptime verified', options: { fontSize: 8 } },
       { text: 'PASSED', options: { bold: true, color: EMERALD, fontSize: 8.5 } }
     ]
   ];
@@ -1468,7 +1468,7 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
   });
 
   slide.addText(
-    '• Live Website: https://gomeat-git-main-dhinesh-s-projects1.vercel.app\n• API Production Health: https://gomeat-git-main-dhinesh-s-projects1.vercel.app/api/health\n• GitHub Repository: https://github.com/Dhinesh1628/sagarfresh (Branch: main)',
+    '• Live Website: https://brisketbox-git-main-dhinesh-s-projects1.vercel.app\n• API Production Health: https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/api/health\n• GitHub Repository: https://github.com/Dhinesh1628/sagarfresh (Branch: main)',
     {
       x: 1.6,
       y: 5.38,
@@ -1483,7 +1483,7 @@ function addSlideHeader(slide, title, category = 'GOMEAT E-COMMERCE PLATFORM') {
 }
 
 // Generate Presentation File
-const outputPath = path.resolve('GoMeat_Full_Production_Presentation.pptx');
+const outputPath = path.resolve('brisketbox_Full_Production_Presentation.pptx');
 pptx.writeFile({ fileName: outputPath })
   .then(() => {
     console.log(`[SUCCESS] PowerPoint slides generated at: ${outputPath}`);

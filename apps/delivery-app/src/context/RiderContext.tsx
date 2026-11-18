@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { deliveryApi } from '../services/api';
-import { getOrderDeliveryPin } from '@gomeat/shared';
+import { getOrderDeliveryPin } from '@brisketbox/shared';
 import { config } from '../config';
 
 interface RiderMetrics {
@@ -77,7 +77,7 @@ export const RiderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (enteredPin.trim() !== String(expectedPin).trim()) {
       return {
         success: false,
-        message: `Incorrect Handover PIN. Ask the customer to check their GoMeat App screen.`,
+        message: `Incorrect Handover PIN. Ask the customer to check their BrisketBox App screen.`,
       };
     }
 

@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onOpenWallet }) => 
           <Text style={styles.brandTitle}>
             Go<Text style={styles.brandAccent}>Meat</Text>
           </Text>
-          <Text style={styles.tagline}>Fresh Quality. Delivered with Care.</Text>
+          <Text style={styles.tagline}>Freshness, Sealed with Flavour</Text>
         </View>
 
         <View style={styles.actionsContainer}>

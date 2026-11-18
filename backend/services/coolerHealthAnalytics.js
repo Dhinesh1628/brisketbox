@@ -1,5 +1,5 @@
 /**
- * GoMeat Cooler Health Analytics Engine
+ * BrisketBox Cooler Health Analytics Engine
  * Directly implements and extends the Teammate Analytical Scripts:
  * - compliance_scan.py (0°C to 4°C FreshSeal cold-chain temperature SLA)
  * - fleet_scan.py (36-hour deadline, recovery rate, return latency, deposit evaluation)
@@ -51,10 +51,10 @@ export function findCooler(coolers = [], qr = '') {
     if (keys.includes(q)) return c;
   }
 
-  // 2. Strip standard prefixes (GOMEAT-, SAGAR-, TV-)
-  const cleanQ = q.replace(/^(GOMEAT-|SAGAR-|TV-)/i, '');
+  // 2. Strip standard prefixes (BRISKETBOX-, SAGAR-, TV-)
+  const cleanQ = q.replace(/^(BRISKETBOX-|SAGAR-|TV-)/i, '');
   for (const c of coolers) {
-    const cleanId = String(c.id || '').toUpperCase().replace(/^(GOMEAT-|SAGAR-|TV-)/i, '');
+    const cleanId = String(c.id || '').toUpperCase().replace(/^(BRISKETBOX-|SAGAR-|TV-)/i, '');
     if (cleanId === cleanQ) return c;
   }
 

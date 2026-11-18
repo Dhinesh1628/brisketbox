@@ -1,5 +1,5 @@
 /**
- * GoMeat Database Snapshot Backup Utility
+ * BrisketBox Database Snapshot Backup Utility
  * Exports JSON snapshots of all collections: users, products, orders, coolers, coolerReturns, and contacts
  */
 
@@ -28,14 +28,14 @@ export function createBackup() {
     const parsed = JSON.parse(rawData);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFileName = `gomeat_backup_${timestamp}.json`;
+    const backupFileName = `brisketbox_backup_${timestamp}.json`;
     const targetPath = path.join(BACKUPS_DIR, backupFileName);
 
     const payload = {
       meta: {
         exportedAt: new Date().toISOString(),
         version: '1.0.0',
-        platform: 'GoMeat Technologies',
+        platform: 'BrisketBox Technologies',
         counts: {
           users: parsed.users?.length || 0,
           products: parsed.products?.length || 0,

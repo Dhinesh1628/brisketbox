@@ -11,7 +11,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
   }
 
   const basePrice = Number(product.price) || 200;
-  // Local market price is typically 20-30% higher than GoMeat farm/harbor direct price
+  // Local market price is typically 20-30% higher than BrisketBox farm/harbor direct price
   const baseMrp = Number(product.mrp) > basePrice ? Number(product.mrp) : Math.round(basePrice * 1.25);
 
   const unitLower = (product.unit || '').toLowerCase();
@@ -69,12 +69,12 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
   const mrp500 = baseMrp;
   const disc500 = Math.round(((mrp500 - p500) / mrp500) * 100);
 
-  // 2. 800g Family Pack (1.6x multiplier, but GoMeat gives extra discount at 1.52x)
+  // 2. 800g Family Pack (1.6x multiplier, but BrisketBox gives extra discount at 1.52x)
   const p800 = Math.round(basePrice * 1.52);
   const mrp800 = Math.round(baseMrp * 1.6);
   const disc800 = Math.round(((mrp800 - p800) / mrp800) * 100);
 
-  // 3. 1kg Value Pack (2.0x multiplier, but GoMeat gives extra discount at 1.85x)
+  // 3. 1kg Value Pack (2.0x multiplier, but BrisketBox gives extra discount at 1.85x)
   const p1000 = Math.round(basePrice * 1.85);
   const mrp1000 = Math.round(baseMrp * 2.0);
   const disc1000 = Math.round(((mrp1000 - p1000) / mrp1000) * 100);

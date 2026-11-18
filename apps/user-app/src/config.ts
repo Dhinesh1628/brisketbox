@@ -14,8 +14,8 @@ function getApiBaseUrl(): string {
 
 export const config = {
   apiBaseUrl: getApiBaseUrl(),
-  appName: 'GoMeat',
-  tagline: 'Fresh Quality. Delivered with Care.',
+  appName: 'BrisketBox',
+  tagline: 'Freshness, Sealed with Flavour',
   coldBoxDeposit: 250,
   freeDeliveryThreshold: 499,
   standardDeliveryFee: 40,

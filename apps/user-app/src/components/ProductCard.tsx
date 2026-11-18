@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { Plus, Minus, Snowflake, Sparkles } from 'lucide-react-native';
 import { theme } from '../theme';
 import { useCart } from '../context/CartContext';
-import type { Product } from '@gomeat/shared';
+import type { Product } from '@brisketbox/shared';
 
 interface ProductCardProps {
   product: Product;

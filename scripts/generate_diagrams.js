@@ -35,7 +35,7 @@ const d1 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width=
   <rect width="960" height="480" rx="16" fill="url(#bg)" stroke="#334155" stroke-width="1.5"/>
 
   <!-- Title -->
-  <text x="40" y="48" font-family="system-ui, sans-serif" font-size="20" font-weight="800" fill="#f8fafc">GoMeat Full-Stack MERN System Architecture</text>
+  <text x="40" y="48" font-family="system-ui, sans-serif" font-size="20" font-weight="800" fill="#f8fafc">BrisketBox Full-Stack MERN System Architecture</text>
   <text x="40" y="70" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">End-to-End Component Boundaries, Protocol Interfaces, and Data Flow</text>
 
   <!-- Client Layer -->
@@ -161,9 +161,9 @@ const d2 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width=
   <text x="120" y="102" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#38bdf8" text-anchor="middle">Customer Client</text>
   <line x1="120" y1="114" x2="120" y2="480" stroke="#334155" stroke-dasharray="4 4"/>
 
-  <!-- Col 2: GoMeat Express API -->
+  <!-- Col 2: BrisketBox Express API -->
   <rect x="250" y="80" width="160" height="34" rx="6" fill="#1e293b" stroke="#10b981"/>
-  <text x="330" y="102" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#34d399" text-anchor="middle">GoMeat Express Server</text>
+  <text x="330" y="102" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#34d399" text-anchor="middle">BrisketBox Express Server</text>
   <line x1="330" y1="114" x2="330" y2="480" stroke="#334155" stroke-dasharray="4 4"/>
 
   <!-- Col 3: MongoDB Atlas -->

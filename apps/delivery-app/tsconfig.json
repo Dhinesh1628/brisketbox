@@ -6,8 +6,8 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@gomeat/shared": ["../../packages/shared/src/index.ts"],
-      "@gomeat/shared/*": ["../../packages/shared/src/*"]
+      "@brisketbox/shared": ["../../packages/shared/src/index.ts"],
+      "@brisketbox/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": [

@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('gomeat_recent_searches');
+      const saved = localStorage.getItem('brisketbox_recent_searches');
       return saved ? JSON.parse(saved) : ['Surmai', 'Biryani Cut', 'Boneless', 'Prawns'];
     } catch {
       return ['Surmai', 'Biryani Cut', 'Boneless', 'Prawns'];
@@ -162,14 +162,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     const updated = [cleanTerm, ...recentSearches.filter(s => s.toLowerCase() !== cleanTerm.toLowerCase())].slice(0, 6);
     setRecentSearches(updated);
     try {
-      localStorage.setItem('gomeat_recent_searches', JSON.stringify(updated));
+      localStorage.setItem('brisketbox_recent_searches', JSON.stringify(updated));
     } catch {}
   };
 
   const handleClearRecent = () => {
     setRecentSearches([]);
     try {
-      localStorage.removeItem('gomeat_recent_searches');
+      localStorage.removeItem('brisketbox_recent_searches');
     } catch {}
   };
 
@@ -178,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const updated = recentSearches.filter(s => s !== termToRemove);
     setRecentSearches(updated);
     try {
-      localStorage.setItem('gomeat_recent_searches', JSON.stringify(updated));
+      localStorage.setItem('brisketbox_recent_searches', JSON.stringify(updated));
     } catch {}
   };
 
@@ -216,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleOffersClick = () => {
     applyCoupon('FRESH20');
-    setOffersToast('🎉 GoMeat Exclusive Deal Applied: 20% OFF coupon (FRESH20) added to your cart!');
+    setOffersToast('🎉 BrisketBox Exclusive Deal Applied: 20% OFF coupon (FRESH20) added to your cart!');
     setTimeout(() => setOffersToast(null), 4000);
   };
 
@@ -479,7 +479,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     if (user.role !== 'admin') {
-      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an admin account (ops@gomeat.in / admin123).');
+      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an admin account (ops@brisketbox.in / admin123).');
       onOpenAuth('admin');
       return;
     }
@@ -499,11 +499,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="hidden sm:flex items-center gap-3 text-gray-600 dark:text-gray-300 shrink-0">
             <a 
-              href="https://wa.me/919741288301?text=Hello%20GoMeat%2C%20I%20need%20assistance%20with%20my%20order"
+              href="https://wa.me/919741288301?text=Hello%20BrisketBox%2C%20I%20need%20assistance%20with%20my%20order"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors text-gray-700 dark:text-gray-200"
-              title="Chat with GoMeat Customer Support"
+              title="Chat with BrisketBox Customer Support"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Support: +91 97412 88301</span>
@@ -525,13 +525,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <img 
                 src="/images/logo.png" 
-                alt="GoMeat - Fresh meat and seafood" 
-                className="h-7 sm:h-10 w-auto object-contain hover:opacity-95 transition dark:hidden" 
+                alt="BrisketBox - Freshness, Sealed with Flavour" 
+                className="h-8 sm:h-11 w-auto max-w-[160px] sm:max-w-[210px] object-contain hover:opacity-95 transition dark:hidden" 
               />
               <img 
                 src="/images/logo-dark.png" 
-                alt="GoMeat - Fresh meat and seafood" 
-                className="h-7 sm:h-10 w-auto object-contain hover:opacity-95 transition hidden dark:block" 
+                alt="BrisketBox - Freshness, Sealed with Flavour" 
+                className="h-8 sm:h-11 w-auto max-w-[160px] sm:max-w-[210px] object-contain hover:opacity-95 transition hidden dark:block" 
               />
             </div>
 
@@ -570,8 +570,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <input
                 ref={searchInputRef}
                 type="search"
-                name="gomeat_catalog_search"
-                id="gomeat_catalog_search"
+                name="brisketbox_catalog_search"
+                id="brisketbox_catalog_search"
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -607,7 +607,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Navigation & Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
-            {/* GoMeat Offers Button (Visible on extra-wide screens) */}
+            {/* BrisketBox Offers Button (Visible on extra-wide screens) */}
             <button
               onClick={handleOffersClick}
               title="Click to apply instant 20% OFF deals"
@@ -633,11 +633,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Your orders</span>
             </button>
 
-            {/* GoMeat Vault Wallet Live Pill */}
+            {/* BrisketBox Vault Wallet Live Pill */}
             {user && (
               <button
                 onClick={() => setCurrentTab('dashboard')}
-                title="GoMeat Vault Wallet - Click to view passbook"
+                title="BrisketBox Vault Wallet - Click to view passbook"
                 className="hidden 2xl:flex h-10 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0 whitespace-nowrap"
               >
                 <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -737,7 +737,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         Role: <strong className="text-gray-900 dark:text-white uppercase font-semibold">{user.role}</strong>
                       </p>
                       <p className="text-gray-600 dark:text-gray-400 text-[11px]">
-                        GoMeat Wallet: <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold">₹{user.walletBalance || 0}</strong>
+                        BrisketBox Wallet: <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold">₹{user.walletBalance || 0}</strong>
                         <span className="ml-1 text-[9px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-1 py-0.5 rounded font-semibold">Store Credit</span>
                       </p>
                       
@@ -749,7 +749,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span className="flex items-center gap-1.5">
                         <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                        GoMeat Vault Wallet
+                        BrisketBox Vault Wallet
                       </span>
                       <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 rounded text-[10px] font-bold">₹{user.walletBalance || 0}</span>
                     </button>
@@ -912,7 +912,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Mobile GoMeat Wallet Card */}
+          {/* Mobile BrisketBox Wallet Card */}
           {user && (
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
               <div className="flex items-center gap-2">
@@ -920,7 +920,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 tracking-wide">GoMeat Wallet</div>
+                  <div className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 tracking-wide">BrisketBox Wallet</div>
                   <div className="font-extrabold text-sm text-emerald-900 dark:text-emerald-100">₹{user.walletBalance ?? 0}</div>
                 </div>
               </div>

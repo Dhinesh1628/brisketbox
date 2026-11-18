@@ -106,7 +106,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [customTipInput, setCustomTipInput] = useState<string>('');
 
-  // GoMeat In-App Vault Wallet State & Calculations
+  // BrisketBox In-App Vault Wallet State & Calculations
   const [useWallet, setUseWallet] = useState<boolean>(true);
   const userWalletBalance = user?.walletBalance || 0;
   const isWalletEligible = userWalletBalance > 0;
@@ -275,7 +275,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           key: res.keyId,
           amount: res.amount,
           currency: res.currency,
-          name: 'GoMeat',
+          name: 'BrisketBox',
           description: `Order #${res.orderNumber} - 0°C to 4°C Fresh Cuts`,
           image: '/images/logo.png',
           order_id: res.razorpayOrderId,
@@ -317,7 +317,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               }
             } catch (vErr: any) {
               setPaymentFailedModal({
-                reason: vErr.message || 'Payment signature could not be verified by GoMeat security server.',
+                reason: vErr.message || 'Payment signature could not be verified by BrisketBox security server.',
                 orderId: res.orderId
               });
             } finally {
@@ -781,7 +781,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           </div>
 
-          {/* GoMeat Wallet Card */}
+          {/* BrisketBox Wallet Card */}
           <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/40 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -790,7 +790,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
                 <div>
                   <div className="font-extrabold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <span>Pay using GoMeat Wallet</span>
+                    <span>Pay using BrisketBox Wallet</span>
                     <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-[10px] rounded font-bold">
                       Available: ₹{userWalletBalance}
                     </span>
@@ -898,7 +898,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/70 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
                 <Wallet className="w-4 h-4 text-emerald-600" />
-                <span>Payment: Paid using GoMeat Wallet</span>
+                <span>Payment: Paid using BrisketBox Wallet</span>
               </div>
               <span className="text-[11px] font-black text-emerald-700 dark:text-emerald-300">₹0 to pay</span>
             </div>
@@ -1027,7 +1027,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/70 dark:bg-emerald-900/40 p-2 rounded-lg border border-emerald-300 dark:border-emerald-700">
                 <span className="flex items-center gap-1.5">
                   <Wallet className="w-4 h-4 text-emerald-600" />
-                  <span>GoMeat Wallet:</span>
+                  <span>BrisketBox Wallet:</span>
                 </span>
                 <span>-₹{walletDeduction}</span>
               </div>

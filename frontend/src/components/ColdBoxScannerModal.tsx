@@ -313,7 +313,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
           success: true,
           cooler: {
             id: matchSample.id,
-            qrCode: `GOMEAT-${matchSample.id}`,
+            qrCode: `BRISKETBOX-${matchSample.id}`,
             model: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
             status: isDamaged ? 'with_customer' : (isInTransit ? 'assigned' : (isDepot ? 'available' : 'with_customer')),
             cyclesUsed: 14,
@@ -950,7 +950,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                         }`}
                       >
                         <Wallet className="w-3.5 h-3.5" />
-                        <span>GoMeat Wallet</span>
+                        <span>BrisketBox Wallet</span>
                       </button>
 
                       <button

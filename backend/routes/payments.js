@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'gomeat-cuts-india-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
 
 const getUserFromReq = (req) => {
   const authHeader = req.headers.authorization;
@@ -20,9 +20,9 @@ const getUserFromReq = (req) => {
   }
 };
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_GoMeatDemoKey';
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'GoMeatTestSecret2026';
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'GoMeatWebhookSecret2026';
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_BrisketBoxDemoKey';
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'BrisketBoxTestSecret2026';
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'BrisketBoxWebhookSecret2026';
 
 // Initialize Razorpay instance
 let razorpayInstance = null;
@@ -36,7 +36,7 @@ try {
 }
 
 // Helper to determine if we are in test/simulation mode
-const isDemoKey = RAZORPAY_KEY_ID.includes('GoMeatDemoKey') || RAZORPAY_KEY_ID === 'rzp_test_placeholder';
+const isDemoKey = RAZORPAY_KEY_ID.includes('BrisketBoxDemoKey') || RAZORPAY_KEY_ID === 'rzp_test_placeholder';
 
 // ==========================================
 // 1. POST /api/payments/create-order
@@ -111,7 +111,7 @@ router.post('/create-order', async (req, res) => {
     const user = getUserFromReq(req) || req.user || { 
       id: 'guest_' + uuidv4().slice(0, 8), 
       name: addressDetails?.fullName || 'Valued Customer', 
-      email: addressDetails?.email || 'customer@gomeat.in', 
+      email: addressDetails?.email || 'customer@brisketbox.in', 
       phone: addressDetails?.phone || '+91 98765 43210',
       walletBalance: 0
     };
@@ -135,7 +135,7 @@ router.post('/create-order', async (req, res) => {
         amount: walletDeduction,
         type: 'debit',
         title: `Paid for Order #${orderNumber}`,
-        description: 'Order paid in full using GoMeat Wallet store credit.',
+        description: 'Order paid in full using BrisketBox Wallet store credit.',
         date: new Date().toISOString(),
         balanceAfter: newBal,
         orderId: orderNumber
@@ -171,7 +171,7 @@ router.post('/create-order', async (req, res) => {
         deliverySlot,
         deliveryNotes,
         city: city || 'Bengaluru',
-        paymentMethod: 'GoMeat Wallet (Fully Paid)',
+        paymentMethod: 'BrisketBox Wallet (Fully Paid)',
         paymentStatus: 'PAID',
         orderStatus: 'CONFIRMED'
       });
@@ -180,7 +180,7 @@ router.post('/create-order', async (req, res) => {
         success: true,
         isWalletPaid: true,
         order,
-        message: `Order placed successfully! ₹${walletDeduction} deducted from your GoMeat Wallet.`
+        message: `Order placed successfully! ₹${walletDeduction} deducted from your BrisketBox Wallet.`
       });
     }
 
@@ -193,7 +193,7 @@ router.post('/create-order', async (req, res) => {
           amount: walletDeduction,
           type: 'debit',
           title: `Paid for Order #${orderNumber}`,
-          description: `₹${walletDeduction} store credit deducted from GoMeat Wallet.`,
+          description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`,
           date: new Date().toISOString(),
           balanceAfter: newBal,
           orderId: orderNumber
@@ -412,7 +412,7 @@ router.post('/verify', async (req, res) => {
           amount: order.walletDeduction,
           type: 'debit',
           title: `Paid for Order #${order.orderNumber || order.id}`,
-          description: `₹${order.walletDeduction} store credit deducted from GoMeat Wallet.`,
+          description: `₹${order.walletDeduction} store credit deducted from BrisketBox Wallet.`,
           date: new Date().toISOString(),
           balanceAfter: newBal,
           orderId: order.orderNumber || order.id
@@ -558,7 +558,7 @@ router.post('/refund-coldbox', async (req, res) => {
         const rzpRefund = await razorpayInstance.payments.refund(order.razorpayPaymentId, {
           amount: REFUND_AMOUNT * 100, // paise
           notes: {
-            reason: 'GoMeat ThermalVault™ 100% Refundable Cold Box Return',
+            reason: 'BrisketBox ThermalVault™ 100% Refundable Cold Box Return',
             coolerId: order.coolerId || coolerId
           }
         });
@@ -637,7 +637,7 @@ function createOrderRecord(params) {
     const newId = `BOX-BLR-${newBoxNumber}`;
     assignedCooler = {
       id: newId,
-      qrCode: `GOMEAT-${newId}`,
+      qrCode: `BRISKETBOX-${newId}`,
       model: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
       status: 'assigned',
       currentOrderId: orderNumber,
@@ -693,7 +693,7 @@ function createOrderRecord(params) {
       { time: timeStr, temp: initialTemp, event: `Order Confirmed. Chilled cut locked inside ${assignedCooler.id}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
-    trackingCode: `GOMEAT-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
+    trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
     createdAt: new Date().toISOString(),
     deliveryNotes: deliveryNotes || ''
   };

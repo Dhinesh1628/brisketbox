@@ -1,7 +1,7 @@
 {
-  "name": "gomeat-backend",
+  "name": "brisketbox-backend",
   "version": "1.0.0",
-  "description": "GoMeat Core API - Fresh Quality. Delivered with Care.",
+  "description": "BrisketBox Core API - Freshness, Sealed with Flavour",
   "main": "server.js",
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 export const theme = {
   colors: {
-    primary: '#d11243',         // GoMeat Crimson
+    primary: '#d11243',         // BrisketBox Crimson
     primaryHover: '#b80f3b',
     primaryLight: '#fff1f2',
     

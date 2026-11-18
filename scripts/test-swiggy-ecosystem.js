@@ -7,7 +7,7 @@ async function runTest() {
   console.log('🚀 TESTING GO-MEAT SWIGGY-STYLE MULTI-APP INTERCONNECTION...\n');
 
   // Step 1: Customer Login
-  console.log('[Step 1] Customer logs into GoMeat User App...');
+  console.log('[Step 1] Customer logs into BrisketBox User App...');
   const customerLogin = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -56,7 +56,7 @@ async function runTest() {
   const adminLogin = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ops@gomeat.in', password: 'admin123' })
+    body: JSON.stringify({ email: 'ops@brisketbox.in', password: 'admin123' })
   }).then(r => r.json());
   const adminToken = adminLogin.token;
 
@@ -111,14 +111,14 @@ async function runTest() {
   console.log(`✓ Rider collected empty EPP cooler: Customer ₹250 refund triggered!\n`);
 
   // Step 6: Verify Customer Wallet Received ₹250 Instant Refund
-  console.log('[Step 6] Customer verifies GoMeat Vault in User App...');
+  console.log('[Step 6] Customer verifies BrisketBox Vault in User App...');
   const customerProfile = await fetch(`${API}/auth/me`, {
     headers: { 'Authorization': `Bearer ${customerToken}` }
   }).then(r => r.json());
 
   const userObj = customerProfile.user || customerProfile;
   const finalWallet = userObj.walletBalance;
-  console.log(`✓ Customer GoMeat Vault Updated: ₹${finalWallet}`);
+  console.log(`✓ Customer BrisketBox Vault Updated: ₹${finalWallet}`);
   console.log(`✓ Recent Transaction: ${userObj.walletTransactions?.[0]?.title} (+₹${userObj.walletTransactions?.[0]?.amount})\n`);
 
   console.log('============================================================');

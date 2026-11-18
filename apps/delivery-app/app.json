@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "GoMeat Delivery",
-    "slug": "gomeat-delivery",
+    "name": "BrisketBox Delivery",
+    "slug": "brisketbox-delivery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "gomeatdelivery",
+    "scheme": "brisketboxdelivery",
     "userInterfaceStyle": "light",
     "primaryColor": "#0f172a",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gomeat.delivery"
+      "bundleIdentifier": "com.brisketbox.delivery"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.gomeat.delivery",
+      "package": "com.brisketbox.delivery",
       "predictiveBackGestureEnabled": false
     },
     "web": {

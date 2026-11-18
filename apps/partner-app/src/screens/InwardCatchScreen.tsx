@@ -40,7 +40,7 @@ export const InwardCatchScreen: React.FC = () => {
     if (tempNum > 4.0) {
       Alert.alert(
         'Cold-Chain Breach Warning',
-        `Temperature reading ${tempNum}°C exceeds GoMeat sub-4°C threshold. Inward batch must be rejected or placed in blast chiller immediately.`
+        `Temperature reading ${tempNum}°C exceeds BrisketBox sub-4°C threshold. Inward batch must be rejected or placed in blast chiller immediately.`
       );
       return;
     }

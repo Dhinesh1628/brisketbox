@@ -60,7 +60,7 @@ export const WalletScreen: React.FC = () => {
       Alert.alert(
         'Return Scheduled!',
         refundMethod === 'wallet'
-          ? '₹250 will be credited directly to your GoMeat Vault upon pickup verification.'
+          ? '₹250 will be credited directly to your BrisketBox Vault upon pickup verification.'
           : `₹250 will be transferred to ${upiInput} upon pickup verification.`
       );
       setShowReturnModal(false);
@@ -119,7 +119,7 @@ export const WalletScreen: React.FC = () => {
         <View style={styles.vaultCard}>
           <View style={styles.vaultCardTop}>
             <View>
-              <Text style={styles.vaultLabel}>GoMeat Vault Balance</Text>
+              <Text style={styles.vaultLabel}>BrisketBox Vault Balance</Text>
               <Text style={styles.vaultAmount}>₹{vaultBalance}</Text>
             </View>
             <View style={styles.walletIconCircle}>
@@ -175,7 +175,7 @@ export const WalletScreen: React.FC = () => {
                       refundMethod === 'wallet' && styles.methodTextActive,
                     ]}
                   >
-                    GoMeat Vault (Instant)
+                    BrisketBox Vault (Instant)
                   </Text>
                 </Pressable>
 

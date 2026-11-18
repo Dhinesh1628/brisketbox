@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from '../config';
 
-const PARTNER_TOKEN_KEY = 'gomeat_partner_token';
+const PARTNER_TOKEN_KEY = 'brisketbox_partner_token';
 
 class PartnerApiService {
   private token: string | null = null;
@@ -58,7 +58,7 @@ class PartnerApiService {
       return data as T;
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        throw new Error('Connection timed out. Check network to GoMeat server.');
+        throw new Error('Connection timed out. Check network to BrisketBox server.');
       }
       throw err;
     }

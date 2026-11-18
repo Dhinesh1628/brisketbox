@@ -9,7 +9,7 @@
       "role": "admin",
       "phone": "+91 98450 12890",
       "city": "Bengaluru",
-      "address": "GoMeat Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
+      "address": "BrisketBox Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
       "depositBalance": 0,
       "upiId": "ops@icici",
       "createdAt": "2026-01-15T08:00:00.000Z",
@@ -313,8 +313,8 @@
     {
       "_id": "6af1431d8597919bceb1567f",
       "id": "BOX-BLR-417",
-      "qrCode": "GOMEAT-BOX-BLR-417",
-      "coolerCode": "GOMEAT-BOX-BLR-417",
+      "qrCode": "BRISKETBOX-BOX-BLR-417",
+      "coolerCode": "BRISKETBOX-BOX-BLR-417",
       "model": "Reusable Insulated Cold Box 18L",
       "status": "with_customer",
       "currentOrderId": "GM-100417",
@@ -332,8 +332,8 @@
     {
       "_id": "6af150b6e086b547a3347ce0",
       "id": "BOX-BLR-182",
-      "qrCode": "GOMEAT-BOX-BLR-182",
-      "coolerCode": "GOMEAT-BOX-BLR-182",
+      "qrCode": "BRISKETBOX-BOX-BLR-182",
+      "coolerCode": "BRISKETBOX-BOX-BLR-182",
       "model": "Reusable Insulated Cold Box 18L",
       "status": "assigned",
       "currentOrderId": null,
@@ -351,8 +351,8 @@
     {
       "_id": "6af1514de086b547a3347ce2",
       "id": "BOX-BLR-633",
-      "qrCode": "GOMEAT-BOX-BLR-633",
-      "coolerCode": "GOMEAT-BOX-BLR-633",
+      "qrCode": "BRISKETBOX-BOX-BLR-633",
+      "coolerCode": "BRISKETBOX-BOX-BLR-633",
       "model": "Reusable Insulated Cold Box 18L",
       "status": "available",
       "currentOrderId": "GM-102936",
@@ -370,8 +370,8 @@
     {
       "_id": "6af2d7cfc1e411658cdaeed1",
       "id": "BOX-BLR-103",
-      "qrCode": "GOMEAT-BOX-BLR-103",
-      "coolerCode": "GOMEAT-BOX-BLR-103",
+      "qrCode": "BRISKETBOX-BOX-BLR-103",
+      "coolerCode": "BRISKETBOX-BOX-BLR-103",
       "model": "Reusable Insulated Cold Box 24L",
       "status": "damaged",
       "currentOrderId": "GM-100103",
@@ -430,7 +430,7 @@
         }
       ],
       "deliverySlot": "Today, Express in 90 Mins",
-      "trackingCode": "GOMEAT-TRK-5745",
+      "trackingCode": "BRISKETBOX-TRK-5745",
       "paymentMethod": "UPI (Google Pay)",
       "createdAt": "2026-11-12T07:27:32.202Z",
       "deliveryNotes": "",
@@ -498,7 +498,7 @@
           "event": "Box delivered to Flat 402"
         }
       ],
-      "trackingCode": "GOMEAT-TRK-1388",
+      "trackingCode": "BRISKETBOX-TRK-1388",
       "etaMinutes": 35,
       "deliveryExecutive": "Karthik S (+91 99014 55210)",
       "createdAt": "2026-11-09T03:50:53.106Z",
@@ -564,7 +564,7 @@
           "event": "Order Confirmed. Packed in sanitized box BOX-BLR-182."
         }
       ],
-      "trackingCode": "GOMEAT-TRK-5721",
+      "trackingCode": "BRISKETBOX-TRK-5721",
       "etaMinutes": 35,
       "deliveryExecutive": "Sunil Gowda (EV Delivery #14, +91 97412 88301)",
       "createdAt": "2026-11-09T04:48:54.344Z",
@@ -646,7 +646,7 @@
           "event": "Delivered & Verified via 4-digit PIN. Cooler Box returned: YES (₹250 Refunded)"
         }
       ],
-      "trackingCode": "GOMEAT-TRK-9879",
+      "trackingCode": "BRISKETBOX-TRK-9879",
       "etaMinutes": 35,
       "deliveryExecutive": "Manjunath K (+91 98801 44520)",
       "createdAt": "2026-11-09T04:51:25.911Z",
@@ -730,7 +730,7 @@
           "event": "Delivered & Verified via 4-digit PIN. Cooler Box returned: YES (₹250 Refunded)"
         }
       ],
-      "trackingCode": "GOMEAT-TRK-4137",
+      "trackingCode": "BRISKETBOX-TRK-4137",
       "etaMinutes": 35,
       "deliveryExecutive": "Sunil Gowda (EV Delivery #14, +91 97412 88301)",
       "createdAt": "2026-11-09T04:52:31.174Z",

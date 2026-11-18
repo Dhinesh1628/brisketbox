@@ -55,7 +55,7 @@ const MainApp: React.FC = () => {
   // Customer Delivery Address State (saved in localStorage)
   const [currentAddress, setCurrentAddress] = useState<DeliveryAddress>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gomeat_active_address');
+      const saved = localStorage.getItem('brisketbox_active_address');
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -81,7 +81,7 @@ const MainApp: React.FC = () => {
   const handleSelectAddress = (addr: DeliveryAddress) => {
     setCurrentAddress(addr);
     setSelectedCity(addr.city);
-    localStorage.setItem('gomeat_active_address', JSON.stringify(addr));
+    localStorage.setItem('brisketbox_active_address', JSON.stringify(addr));
   };
 
   const handleOpenLocationModal = () => {
@@ -297,7 +297,7 @@ const MainApp: React.FC = () => {
           ) : (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
               <h3 className="font-bold text-gray-900 dark:text-white text-sm">Operations Admin Authentication Required</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials (ops@gomeat.in / admin123).</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials (ops@brisketbox.in / admin123).</p>
               <button
                 onClick={() => handleOpenAuth('admin')}
                 className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs"
@@ -327,17 +327,17 @@ const MainApp: React.FC = () => {
               <div className="flex items-center">
                 <img 
                   src="/images/logo.png" 
-                  alt="GoMeat - Freshness we can trust." 
-                  className="h-9 w-auto object-contain dark:hidden" 
+                  alt="BrisketBox - Freshness, Sealed with Flavour" 
+                  className="h-10 sm:h-12 w-auto max-w-[200px] object-contain dark:hidden" 
                 />
                 <img 
                   src="/images/logo-dark.png" 
-                  alt="GoMeat - Freshness we can trust." 
-                  className="h-9 w-auto object-contain hidden dark:block" 
+                  alt="BrisketBox - Freshness, Sealed with Flavour" 
+                  className="h-10 sm:h-12 w-auto max-w-[200px] object-contain hidden dark:block" 
                 />
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                India's finest cold-chain fresh meat & coastal seafood brand. Delivered farm-to-fork in reusable insulated cold-gel boxes at 0°C to 4°C with zero thermocol waste.
+                Fresh meat and seafood cut daily and delivered cold to your door in about 90 minutes. Freshness, sealed with flavour.
               </p>
               <div className="text-[10px] text-gray-400 dark:text-gray-500 space-y-0.5 pt-1">
                 <div>FSSAI Central Lic. No: 11224333000491</div>
@@ -415,7 +415,7 @@ const MainApp: React.FC = () => {
 
           <div className="border-t border-gray-100 dark:border-slate-800 pt-5 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 dark:text-gray-500 gap-2">
             <div>
-              © 2026 GoMeat Technologies Private Limited. All rights reserved.
+              © 2026 BrisketBox Technologies Private Limited. All rights reserved.
             </div>
             <div>
               Fulfillment Depot: Outer Ring Road, Mahadevapura, Bengaluru 560048

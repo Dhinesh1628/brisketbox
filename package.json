@@ -1,7 +1,7 @@
 {
-  "name": "gomeat-monorepo",
+  "name": "brisketbox-monorepo",
   "version": "1.0.0",
-  "description": "GoMeat - Fresh Quality. Delivered with Care. Full-Stack D2C Fresh Meat & Coastal Seafood Platform with Reusable Cold-Box Logistics",
+  "description": "BrisketBox - Freshness, Sealed with Flavour Full-Stack D2C Fresh Meat & Coastal Seafood Platform with Reusable Cold-Box Logistics",
   "private": true,
   "type": "module",
   "scripts": {

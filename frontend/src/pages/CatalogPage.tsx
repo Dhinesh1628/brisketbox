@@ -66,7 +66,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   // Load wishlist from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('gomeat_wishlist');
+      const saved = localStorage.getItem('brisketbox_wishlist');
       if (saved) setWishlist(JSON.parse(saved));
     } catch (e) {}
   }, []);
@@ -84,7 +84,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     }
     setWishlist(updated);
     try {
-      localStorage.setItem('gomeat_wishlist', JSON.stringify(updated));
+      localStorage.setItem('brisketbox_wishlist', JSON.stringify(updated));
     } catch (e) {}
   };
 
@@ -723,19 +723,19 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 FLAT 20% OFF ON ORDERS ABOVE ₹799
               </h3>
               <p className="text-xs sm:text-sm text-rose-100 font-medium">
-                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">GOMEAT20</span> at checkout. Hand-cut, 0°C chilled & delivered in 90 mins.
+                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">BRISKET20</span> at checkout. Hand-cut, 0°C chilled & delivered in 90 mins.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto shrink-0">
               <button
                 onClick={() => {
-                  navigator.clipboard?.writeText('GOMEAT20');
-                  showToast('Coupon code "GOMEAT20" copied to clipboard! 🎟️');
+                  navigator.clipboard?.writeText('BRISKET20');
+                  showToast('Coupon code "BRISKET20" copied to clipboard! 🎟️');
                 }}
                 className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
               >
-                Copy Code: GOMEAT20
+                Copy Code: BRISKET20
               </button>
               <button
                 onClick={handleScrollToCatalog}

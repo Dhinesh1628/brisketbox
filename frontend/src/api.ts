@@ -3,7 +3,7 @@ import { Product, Order, Cooler, CoolerReturn, AdminMetrics, User, WalletTransac
 const API_BASE = '/api';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('gomeat_token') || localStorage.getItem('frost_token');
+  const token = localStorage.getItem('brisketbox_token') || localStorage.getItem('frost_token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -42,7 +42,7 @@ async function safeFetchJson<T = any>(url: string, init?: RequestInit, fallbackE
       throw new Error('Too many requests. Please wait a few moments and try again.');
     }
     if (res.status >= 500) {
-      throw new Error('GoMeat cloud service is initializing. Please try again in a few moments.');
+      throw new Error('BrisketBox cloud service is initializing. Please try again in a few moments.');
     }
     throw new Error(fallbackError);
   }

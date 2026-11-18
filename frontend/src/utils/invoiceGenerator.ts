@@ -21,7 +21,7 @@ export function generateAndPrintInvoice(order: Order) {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>GoMeat Tax Invoice #${order.orderNumber || order.id}</title>
+      <title>BrisketBox Tax Invoice #${order.orderNumber || order.id}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 30px; color: #1e293b; background: #fff; }
         .invoice-box { max-width: 800px; margin: auto; border: 1px solid #e2e8f0; padding: 30px; border-radius: 12px; }
@@ -55,8 +55,8 @@ export function generateAndPrintInvoice(order: Order) {
       <div class="invoice-box">
         <div class="header">
           <div>
-            <div class="logo-text">GoMeat</div>
-            <div class="tagline">Fresh Quality. Delivered with Care. • 0°C to 4°C Cold Chain</div>
+            <div class="logo-text">BrisketBox</div>
+            <div class="tagline">Freshness, Sealed with Flavour • 0°C to 4°C Cold Chain</div>
             <div style="font-size: 10px; color: #64748b; margin-top: 6px;">
               FSSAI Central Lic: 11224333000491 | GSTIN: 29AAECS4912J1Z8
             </div>
@@ -73,10 +73,10 @@ export function generateAndPrintInvoice(order: Order) {
         <div class="parties">
           <div class="party">
             <h4>Billed By:</h4>
-            <strong>GoMeat Technologies Pvt. Ltd.</strong><br>
+            <strong>BrisketBox Technologies Pvt. Ltd.</strong><br>
             Central Cold Depot, Outer Ring Road,<br>
             Mahadevapura, Bengaluru, Karnataka 560048<br>
-            Support: concierge@gomeat.in | +91 97412 88301
+            Support: concierge@brisketbox.in | +91 97412 88301
           </div>
           <div class="party">
             <h4>Billed To:</h4>
@@ -145,11 +145,11 @@ export function generateAndPrintInvoice(order: Order) {
 
         <div class="deposit-highlight">
           <strong>♻️ ₹250 ThermalVault™ Deposit Refund Notice:</strong><br>
-          Your meat was delivered in an insulated ThermalVault cooler holding 0°C to 4°C. When empty, return it to the courier or schedule a 1-click doorstep pickup in your GoMeat customer dashboard to receive an instant ₹250 UPI refund.
+          Your meat was delivered in an insulated ThermalVault cooler holding 0°C to 4°C. When empty, return it to the courier or schedule a 1-click doorstep pickup in your BrisketBox customer dashboard to receive an instant ₹250 UPI refund.
         </div>
 
         <div class="footer">
-          This is a computer-generated tax invoice and does not require physical signature. Generated via GoMeat Cold-Chain Core Engine.
+          This is a computer-generated tax invoice and does not require physical signature. Generated via BrisketBox Cold-Chain Core Engine.
         </div>
 
         <div class="no-print" style="margin-top: 20px; text-align: center;">

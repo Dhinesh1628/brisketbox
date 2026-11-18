@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 Starting GoMeat Full-Stack Development Environment...');
+console.log('🚀 Starting BrisketBox Full-Stack Development Environment...');
 
 const isWindows = process.platform === 'win32';
 const npmCmd = isWindows ? 'npm.cmd' : 'npm';
@@ -26,7 +26,7 @@ const frontend = spawn(npmCmd, ['run', 'dev', '--', '--host'], {
 });
 
 const cleanup = () => {
-  console.log('\n🛑 Shutting down GoMeat servers...');
+  console.log('\n🛑 Shutting down BrisketBox servers...');
   backend.kill('SIGINT');
   frontend.kill('SIGINT');
   process.exit(0);

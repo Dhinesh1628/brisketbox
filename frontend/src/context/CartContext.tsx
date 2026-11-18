@@ -34,7 +34,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { playPopSound } = useSound();
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
-      const saved = localStorage.getItem('gomeat_cart') || localStorage.getItem('sagar_cart');
+      const saved = localStorage.getItem('brisketbox_cart') || localStorage.getItem('sagar_cart');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -46,7 +46,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
 
   useEffect(() => {
-    localStorage.setItem('gomeat_cart', JSON.stringify(items));
+    localStorage.setItem('brisketbox_cart', JSON.stringify(items));
   }, [items]);
 
   const applyCoupon = (code: string): { success: boolean; message: string } => {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { User } from '@gomeat/shared';
+import type { User } from '@brisketbox/shared';
 
 interface AuthContextType {
   user: User | null;

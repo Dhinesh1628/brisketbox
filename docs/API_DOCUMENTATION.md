@@ -1,6 +1,6 @@
-# GoMeat - API Architecture & Reference Documentation
+# BrisketBox - API Architecture & Reference Documentation
 
-**Official Project:** GoMeat  
+**Official Project:** BrisketBox  
 **Base URL:** `/api` (local: `http://localhost:5000/api`)  
 **Data Format:** `application/json`  
 **Authentication Scheme:** Bearer Token (`Authorization: Bearer <JWT>`)  

@@ -40,7 +40,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   
   // Auth Form State (when not authenticated as rider)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('rider@gomeat.in');
+  const [loginEmail, setLoginEmail] = useState('rider@brisketbox.in');
   const [loginPassword, setLoginPassword] = useState('rider123');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
@@ -328,7 +328,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#d11243] to-rose-700 flex items-center justify-center font-black text-white shadow-md">
                 <Bike className="w-4 h-4" />
               </div>
-              <span className="font-black text-sm tracking-tight text-white">GoMeat Fleet Partner</span>
+              <span className="font-black text-sm tracking-tight text-white">BrisketBox Fleet Partner</span>
             </div>
             {onBackToStore && (
               <button
@@ -357,7 +357,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               <button
                 type="button"
                 onClick={() => {
-                  setLoginEmail('rider@gomeat.in');
+                  setLoginEmail('rider@brisketbox.in');
                   setLoginPassword('rider123');
                 }}
                 className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
@@ -366,7 +366,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   <span>Suresh Patil</span>
                   <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Approved</span>
                 </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">rider@gomeat.in</div>
+                <div className="text-[10px] text-gray-400 font-mono mt-0.5">rider@brisketbox.in</div>
               </button>
 
               <button
@@ -429,7 +429,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="rider@gomeat.in or +91 97412 88301"
+                  placeholder="rider@brisketbox.in or +91 97412 88301"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -569,7 +569,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bike className="w-5 h-5 text-amber-400" />
-              <span className="font-black text-sm text-white">GoMeat Fleet Partner</span>
+              <span className="font-black text-sm text-white">BrisketBox Fleet Partner</span>
             </div>
             <button
               onClick={logout}
@@ -589,7 +589,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           <div className="space-y-1.5">
             <h2 className="text-lg font-black text-white">Application Under Review</h2>
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              Hello <strong className="text-white">{user.name}</strong>, your delivery rider application has been submitted to GoMeat Central Operations.
+              Hello <strong className="text-white">{user.name}</strong>, your delivery rider application has been submitted to BrisketBox Central Operations.
             </p>
           </div>
 

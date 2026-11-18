@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 const DATA_FILE = isVercel 
-  ? (fs.existsSync(path.join('/tmp', 'gomeat_data.json')) ? path.join('/tmp', 'gomeat_data.json') : path.join('/tmp', 'sagar_data.json')) 
+  ? (fs.existsSync(path.join('/tmp', 'brisketbox_data.json')) ? path.join('/tmp', 'brisketbox_data.json') : path.join('/tmp', 'sagar_data.json')) 
   : path.join(__dirname, 'data.json');
 
 const getModel = (collection) => {
@@ -30,12 +30,12 @@ const INITIAL_DATA = {
     {
       id: "usr_admin",
       name: "Rajeshwar Rao (Operations Head)",
-      email: "ops@gomeat.in",
+      email: "ops@brisketbox.in",
       password: hashPassword("admin123"),
       role: "admin",
       phone: "+91 90000 00000",
       city: "Bengaluru",
-      address: "GoMeat Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
+      address: "BrisketBox Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
       depositBalance: 0,
       upiId: "ops@icici",
       createdAt: "2026-01-15T08:00:00.000Z"
@@ -56,7 +56,7 @@ const INITIAL_DATA = {
     {
       id: "usr_rider_1",
       name: "Suresh Patil",
-      email: "rider@gomeat.in",
+      email: "rider@brisketbox.in",
       password: hashPassword("rider123"),
       role: "rider",
       approvalStatus: "approved",
@@ -98,7 +98,7 @@ const INITIAL_DATA = {
     {
       id: "usr_partner_1",
       name: "Abdul Rahim (Master Butcher)",
-      email: "partner@gomeat.in",
+      email: "partner@brisketbox.in",
       password: hashPassword("partner123"),
       role: "partner",
       approvalStatus: "approved",
@@ -325,7 +325,7 @@ const INITIAL_DATA = {
   coolers: [
     {
       id: "BOX-BLR-417",
-      qrCode: "GOMEAT-BOX-417",
+      qrCode: "BRISKETBOX-BOX-417",
       model: "Insulated Cold Bag",
       status: "with_customer",
       currentOrderId: "ORD-417-DELIVERED",
@@ -339,7 +339,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-182",
-      qrCode: "GOMEAT-BOX-182",
+      qrCode: "BRISKETBOX-BOX-182",
       model: "insulated bag 24L - Dual Phase ColdGel Box",
       status: "assigned",
       currentOrderId: "ORD-9281",
@@ -353,7 +353,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-633",
-      qrCode: "GOMEAT-BOX-633",
+      qrCode: "BRISKETBOX-BOX-633",
       model: "Insulated Cold Bag",
       status: "available",
       currentOrderId: null,
@@ -367,7 +367,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-983",
-      qrCode: "GOMEAT-BOX-983",
+      qrCode: "BRISKETBOX-BOX-983",
       model: "Insulated Cold Bag",
       status: "with_customer",
       currentOrderId: "ORD-9281",
@@ -381,8 +381,8 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-103",
-      qrCode: "GOMEAT-BOX-BLR-103",
-      coolerCode: "GOMEAT-BOX-BLR-103",
+      qrCode: "BRISKETBOX-BOX-BLR-103",
+      coolerCode: "BRISKETBOX-BOX-BLR-103",
       model: "insulated bag 24L - Dual Phase ColdGel Box",
       status: "damaged",
       currentOrderId: "ORD-103-BREACH",
@@ -397,8 +397,8 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-101",
-      qrCode: "GOMEAT-BOX-101",
-      qrCode: "GOMEAT-BOX-101",
+      qrCode: "BRISKETBOX-BOX-101",
+      qrCode: "BRISKETBOX-BOX-101",
       model: "Insulated Cold Bag",
       status: "with_customer",
       currentOrderId: "ord_101",
@@ -412,7 +412,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-102",
-      qrCode: "GOMEAT-BOX-102",
+      qrCode: "BRISKETBOX-BOX-102",
       model: "Insulated Cold Bag",
       status: "return_requested",
       currentOrderId: "ord_098",
@@ -426,7 +426,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-103",
-      qrCode: "GOMEAT-BOX-103",
+      qrCode: "BRISKETBOX-BOX-103",
       model: "insulated bag 24L - Dual Phase ColdGel Box",
       status: "in_transit",
       currentOrderId: "ord_102",
@@ -440,7 +440,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-104",
-      qrCode: "GOMEAT-BOX-104",
+      qrCode: "BRISKETBOX-BOX-104",
       model: "Insulated Cold Bag",
       status: "available",
       currentOrderId: null,
@@ -454,7 +454,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-105",
-      qrCode: "GOMEAT-BOX-105",
+      qrCode: "BRISKETBOX-BOX-105",
       model: "insulated bag 14L - Compact ColdGel Box",
       status: "available",
       currentOrderId: null,
@@ -468,7 +468,7 @@ const INITIAL_DATA = {
     },
     {
       id: "BOX-BLR-106",
-      qrCode: "GOMEAT-BOX-106",
+      qrCode: "BRISKETBOX-BOX-106",
       model: "Insulated Cold Bag",
       status: "sanitizing",
       currentOrderId: null,
@@ -534,7 +534,7 @@ const INITIAL_DATA = {
         { time: "07:45", temp: 1.2, event: "Delivery partner Suresh en route near Marathahalli" }
       ],
       deliverySlot: "Today, Express in 90 Mins",
-      trackingCode: "GOMEAT-TRK-4412",
+      trackingCode: "BRISKETBOX-TRK-4412",
       deliveryPin: "6314",
       paymentMethod: "UPI (Google Pay)",
       createdAt: "2026-10-30T01:30:00.000Z",
@@ -625,7 +625,7 @@ const INITIAL_DATA = {
       ],
       deliveryExecutive: "Suresh Patil (EV Fleet #14)",
       deliverySlot: "Today, Evening 5:00 PM - 7:00 PM",
-      trackingCode: "GOMEAT-TRK-7740",
+      trackingCode: "BRISKETBOX-TRK-7740",
       deliveryPin: "4918",
       paymentMethod: "Razorpay (Credit Card)",
       createdAt: new Date().toISOString(),
@@ -770,12 +770,12 @@ class Database {
         });
 
         this.save();
-        console.log('[DB] Loaded GoMeat database from persistence');
+        console.log('[DB] Loaded BrisketBox database from persistence');
         return;
       }
       this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
       this.save();
-      console.log('[DB] Initialized GoMeat database');
+      console.log('[DB] Initialized BrisketBox database');
     } catch (err) {
       console.error('[DB] Error initializing data:', err);
       this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
@@ -788,7 +788,7 @@ class Database {
     try {
       const prodCount = await Product.countDocuments();
       if (prodCount === 0) {
-        console.log('[MongoDB] Collections empty, auto-seeding GoMeat catalog into MongoDB...');
+        console.log('[MongoDB] Collections empty, auto-seeding BrisketBox catalog into MongoDB...');
         await User.insertMany(INITIAL_DATA.users);
         await Product.insertMany(INITIAL_DATA.products);
         await Cooler.insertMany(INITIAL_DATA.coolers);

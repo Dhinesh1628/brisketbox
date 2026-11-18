@@ -150,7 +150,7 @@ export const PinVerificationModal: React.FC<PinVerificationModalProps> = ({
               </View>
             ) : (
               <Text style={styles.helperText}>
-                Ask the customer for their unique 4-digit PIN from their GoMeat Tracking Screen.
+                Ask the customer for their unique 4-digit PIN from their BrisketBox Tracking Screen.
               </Text>
             )}
 

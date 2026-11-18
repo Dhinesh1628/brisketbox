@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import type { Product, CartItem } from '@gomeat/shared';
+import type { Product, CartItem } from '@brisketbox/shared';
 import { config } from '../config';
 
 interface CartContextType {

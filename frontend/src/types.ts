@@ -46,7 +46,7 @@ export interface User {
 export interface WeightOption {
   weight: string; // '500g' | '800g' | '1kg'
   label: string;
-  price: number; // GoMeat discounted price (less than market)
+  price: number; // BrisketBox discounted price (less than market)
   mrp: number;   // Local market price
   discountPercent: number;
   savings: number;

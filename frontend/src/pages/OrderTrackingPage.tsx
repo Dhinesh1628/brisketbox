@@ -89,7 +89,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       { time: '08:05 AM', temp: 2.3, event: 'Courier in transit on Outer Ring Road (1.8 km from doorstep)' }
     ],
     deliverySlot: '⚡ Express Delivery in 90 Mins (Live EV Courier)',
-    trackingCode: 'GOMEAT-TRK-84920',
+    trackingCode: 'BRISKETBOX-TRK-84920',
     deliveryPin: '6133',
     createdAt: new Date().toISOString(),
     deliveryNotes: 'Leave with building security or ring Flat 402 doorbell.'

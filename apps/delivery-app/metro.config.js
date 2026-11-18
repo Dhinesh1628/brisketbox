@@ -12,7 +12,7 @@ config.watchFolders = [
 ];
 
 config.resolver.extraNodeModules = {
-  '@gomeat/shared': path.resolve(monorepoRoot, 'packages/shared/src'),
+  '@brisketbox/shared': path.resolve(monorepoRoot, 'packages/shared/src'),
 };
 
 module.exports = config;

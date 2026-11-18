@@ -219,7 +219,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   const [savedAddresses, setSavedAddresses] = useState<DeliveryAddress[]>([]);
 
   useEffect(() => {
-    const raw = localStorage.getItem('gomeat_saved_addresses');
+    const raw = localStorage.getItem('brisketbox_saved_addresses');
     if (raw) {
       try {
         setSavedAddresses(JSON.parse(raw));
@@ -253,7 +253,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
         }
       ];
       setSavedAddresses(initial);
-      localStorage.setItem('gomeat_saved_addresses', JSON.stringify(initial));
+      localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(initial));
     }
   }, []);
 
@@ -526,7 +526,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
     // Save to list
     const updated = [newAddr, ...savedAddresses.filter(a => a.formattedAddress !== formatted)];
     setSavedAddresses(updated);
-    localStorage.setItem('gomeat_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(updated));
 
     onSelectAddress(newAddr);
     onCityChange(city.trim());
@@ -539,7 +539,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
     if (!id) return;
     const updated = savedAddresses.filter(a => a.id !== id);
     setSavedAddresses(updated);
-    localStorage.setItem('gomeat_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(updated));
   };
 
   return (

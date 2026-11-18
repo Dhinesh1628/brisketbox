@@ -14,7 +14,7 @@ export const config = {
   apiBaseUrl: getApiBaseUrl(),
   hubId: 'HUB-BLR-04',
   hubName: 'Indiranagar Cold Hub',
-  appName: 'GoMeat Partner',
+  appName: 'BrisketBox Partner',
   targetColdRoomTemp: 1.8,
   gelBrickTargetTemp: -18.0,
 };

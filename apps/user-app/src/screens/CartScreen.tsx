@@ -86,8 +86,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         paymentMethod: 'razorpay',
         paymentStatus: 'paid',
         deliveryNotes: selectedInstruction,
-        customerName: user?.name || 'GoMeat Guest Customer',
-        customerEmail: user?.email || 'customer@gomeat.com',
+        customerName: user?.name || 'BrisketBox Guest Customer',
+        customerEmail: user?.email || 'customer@brisketbox.com',
         customerPhone: user?.phone || '9876543210',
         shippingAddress: {
           address: user?.address || '100ft Road, Indiranagar',
@@ -212,7 +212,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 </View>
               </View>
               <Text style={styles.depositDesc}>
-                Guarantees sub-4°C chill during transit. Return the insulated cooler box anytime to rider or doorstep collection for instant ₹250 refund to your GoMeat Vault.
+                Guarantees sub-4°C chill during transit. Return the insulated cooler box anytime to rider or doorstep collection for instant ₹250 refund to your BrisketBox Vault.
               </Text>
             </View>
           </View>

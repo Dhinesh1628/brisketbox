@@ -55,7 +55,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   const [returns, setReturns] = useState<CoolerReturn[]>([]);
   const [loadingCoolers, setLoadingCoolers] = useState(false);
 
-  // GoMeat In-App Vault Wallet State
+  // BrisketBox In-App Vault Wallet State
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(user?.walletBalance || 0);
   const [loadingWallet, setLoadingWallet] = useState(false);
@@ -63,7 +63,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   // Wishlist State (persisted in localStorage)
   const [wishlist, setWishlist] = useState<Product[]>(() => {
     try {
-      const saved = localStorage.getItem('gomeat_wishlist');
+      const saved = localStorage.getItem('brisketbox_wishlist');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -82,7 +82,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<Array<{ id: string; type: 'home' | 'work' | 'other'; text: string; isDefault?: boolean }>>(() => {
     try {
-      const saved = localStorage.getItem('gomeat_saved_addresses');
+      const saved = localStorage.getItem('brisketbox_saved_addresses');
       if (saved) return JSON.parse(saved);
     } catch {}
     return [
@@ -207,7 +207,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   const handleRemoveFromWishlist = (productId: string) => {
     const updated = wishlist.filter(p => p.id !== productId);
     setWishlist(updated);
-    localStorage.setItem('gomeat_wishlist', JSON.stringify(updated));
+    localStorage.setItem('brisketbox_wishlist', JSON.stringify(updated));
   };
 
   const handleAddAddress = (e: React.FormEvent) => {
@@ -221,7 +221,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
     };
     const updated = [...savedAddresses, newAddr];
     setSavedAddresses(updated);
-    localStorage.setItem('gomeat_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(updated));
     setNewAddressText('');
     setIsAddingAddress(false);
   };
@@ -229,7 +229,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   const handleDeleteAddress = (id: string) => {
     const updated = savedAddresses.filter(a => a.id !== id);
     setSavedAddresses(updated);
-    localStorage.setItem('gomeat_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(updated));
   };
 
   const totalHeldDeposit = (coolers || []).length * 250;
@@ -276,11 +276,11 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
             <div 
               onClick={() => setActiveTab('wallet')}
               className="px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700/80 text-center cursor-pointer transition shadow-2xs"
-              title="GoMeat Vault Wallet - Click to view passbook"
+              title="BrisketBox Vault Wallet - Click to view passbook"
             >
               <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase block flex items-center justify-center gap-1">
                 <Wallet className="w-3 h-3 text-emerald-600" />
-                <span>GoMeat Wallet</span>
+                <span>BrisketBox Wallet</span>
               </span>
               <span className="text-base font-black text-emerald-700 dark:text-emerald-300">₹{user?.walletBalance ?? walletBalance}</span>
             </div>
@@ -292,7 +292,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
         {/* Dashboard Navigation Tabs */}
         <div className="flex items-center gap-1.5 mt-6 pt-5 border-t border-gray-100 dark:border-slate-800 overflow-x-auto pb-1">
           {[
-            { id: 'wallet', label: 'GoMeat Wallet', icon: Wallet, count: (user?.walletBalance || walletBalance) ? (user?.walletBalance || walletBalance) : undefined },
+            { id: 'wallet', label: 'BrisketBox Wallet', icon: Wallet, count: (user?.walletBalance || walletBalance) ? (user?.walletBalance || walletBalance) : undefined },
             { id: 'orders', label: 'My Orders', icon: Package, count: orders.length },
             { id: 'profile', label: 'Profile', icon: User },
             { id: 'payments', label: 'Payments', icon: CreditCard },
@@ -866,7 +866,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
 
       {/* ======================================================== */}
       {/* ======================================================== */}
-      {/* TAB 7: GOMEAT VAULT WALLET & REFUNDS PASSBOOK             */}
+      {/* TAB 7: BRISKETBOX VAULT WALLET & REFUNDS PASSBOOK             */}
       {/* ======================================================== */}
       {activeTab === 'wallet' && (
         <div className="space-y-6">
@@ -878,7 +878,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                   <Wallet className="w-4 h-4" />
                 </div>
                 <h3 className="font-black text-base text-gray-950 dark:text-white">
-                  GoMeat In-App Vault Wallet™
+                  BrisketBox In-App Vault Wallet™
                 </h3>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -915,7 +915,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                   <span className="text-sm font-semibold text-emerald-200">INR</span>
                 </div>
                 <p className="text-xs text-emerald-100/90 max-w-md pt-1">
-                  Ready to redeem on your next fresh meat order. At checkout, check <strong>"Use GoMeat Wallet"</strong> to deduct this amount directly.
+                  Ready to redeem on your next fresh meat order. At checkout, check <strong>"Use BrisketBox Wallet"</strong> to deduct this amount directly.
                 </p>
               </div>
 
@@ -942,7 +942,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
           {/* 3-Step Simple Explainer */}
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
             <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              How the GoMeat Wallet Works (Simple & Transparent)
+              How the BrisketBox Wallet Works (Simple & Transparent)
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 space-y-1.5">

@@ -1,6 +1,6 @@
-# GoMeat - Developer & DevOps Guide
+# BrisketBox - Developer & DevOps Guide
 
-**Official Project:** GoMeat  
+**Official Project:** BrisketBox  
 **Tagline:** Fresh Quality. Delivered with Care.  
 **Node.js Requirement:** v20.x or higher (Tested on Node v24.16.0)  
 **Package Manager:** `npm`  
@@ -13,8 +13,8 @@
 ### 1.1 Clone & Setup Environment
 ```bash
 # 1. Clone repository
-git clone https://github.com/Dhinesh1628/sagarfresh.git GoMeat
-cd GoMeat
+git clone https://github.com/Dhinesh1628/sagarfresh.git BrisketBox
+cd BrisketBox
 
 # 2. Copy environment template
 cp .env.example .env
@@ -54,24 +54,24 @@ Create a root `.env` file (configured according to `.env.example`):
 PORT=5000
 
 # JSON Web Token Secret
-JWT_SECRET=gomeat-cuts-india-secret-2026
+JWT_SECRET=brisketbox-cuts-india-secret-2026
 
 # MongoDB Connection String (Atlas URI or local document store)
-MONGODB_URI=mongodb://127.0.0.1:27017/gomeat
+MONGODB_URI=mongodb://127.0.0.1:27017/brisketbox
 
 # Google OAuth 2.0 Credentials
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 # Razorpay Online Payment Gateway
-RAZORPAY_KEY_ID=rzp_test_GoMeatDemoKey
-RAZORPAY_KEY_SECRET=GoMeatTestSecret2026
-RAZORPAY_WEBHOOK_SECRET=GoMeatWebhookSecret2026
+RAZORPAY_KEY_ID=rzp_test_BrisketBoxDemoKey
+RAZORPAY_KEY_SECRET=BrisketBoxTestSecret2026
+RAZORPAY_WEBHOOK_SECRET=BrisketBoxWebhookSecret2026
 
 # Meta WhatsApp Cloud API
 WHATSAPP_TOKEN=your_meta_token_here
 WHATSAPP_PHONE_NUMBER_ID=your_phone_id_here
-WHATSAPP_VERIFY_TOKEN=gomeat_whatsapp_verify_2026
+WHATSAPP_VERIFY_TOKEN=brisketbox_whatsapp_verify_2026
 ```
 
 ---
@@ -96,7 +96,7 @@ WHATSAPP_VERIFY_TOKEN=gomeat_whatsapp_verify_2026
 | Role | Username / Identifier | Password | Access Rights |
 |:---|:---|:---|:---|
 | **Customer** | `pooja.sundaram@gmail.com` (or mobile `9876543210`) | `customer123` | Storefront catalog, checkout, cart, active order tracking, cooler box return. |
-| **Admin** | `ops@gomeat.in` (legacy `ops@sagarfresh.in` supported) | `admin123` | Operations dashboard, cooler fleet management, dispatch orders, deposit refunds. |
+| **Admin** | `ops@brisketbox.in` (legacy `ops@sagarfresh.in` supported) | `admin123` | Operations dashboard, cooler fleet management, dispatch orders, deposit refunds. |
 
 ---
 

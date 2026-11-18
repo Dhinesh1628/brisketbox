@@ -27,7 +27,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'gomeat-cuts-india-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
 
 process.on('uncaughtException', (err) => {
   console.error('[Server Error: Uncaught Exception]:', err?.message || err);
@@ -152,7 +152,7 @@ if (!process.env.VERCEL) {
 
 // Health & Database Status check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', name: 'GoMeat API', uptime: process.uptime() });
+  res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
 
 app.get('/api/db/status', (req, res) => {
@@ -171,7 +171,7 @@ app.get('/api/db/status', (req, res) => {
 });
 
 app.get('/api', (req, res) => {
-  res.json({ status: 'ok', name: 'GoMeat API', uptime: process.uptime() });
+  res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
 
 // Middleware
@@ -280,13 +280,13 @@ app.post('/api/auth/login', authLimiter, (req, res) => {
     return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
   }
 
-  // Find user by email (supports ops@gomeat.in and legacy ops@sagarfresh.in) or by phone number match
+  // Find user by email (supports ops@brisketbox.in and legacy ops@sagarfresh.in) or by phone number match
   const cleanPhone = input.replace(/[^0-9]/g, '');
   const user = db.get('users').find(u => {
     if (u.email) {
       const uEmail = u.email.toLowerCase();
       if (uEmail === input) return true;
-      if ((input === 'ops@gomeat.in' && uEmail === 'ops@sagarfresh.in') || (input === 'ops@sagarfresh.in' && uEmail === 'ops@gomeat.in')) return true;
+      if ((input === 'ops@brisketbox.in' && uEmail === 'ops@sagarfresh.in') || (input === 'ops@sagarfresh.in' && uEmail === 'ops@brisketbox.in')) return true;
     }
     if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
       const uPhoneClean = u.phone.replace(/[^0-9]/g, '');
@@ -465,7 +465,7 @@ app.post('/api/orders', authenticate, (req, res) => {
     const newId = `BOX-BLR-${newBoxNumber}`;
     assignedCooler = {
       id: newId,
-      qrCode: `GOMEAT-${newId}`,
+      qrCode: `BRISKETBOX-${newId}`,
       model: 'insulated bag 18L - Reusable EPP Cold-Gel Box',
       status: 'assigned',
       currentOrderId: null,
@@ -519,7 +519,7 @@ app.post('/api/orders', authenticate, (req, res) => {
       { time: timeStr, temp: initialTemp, event: `Order Confirmed. Packed in sanitized box ${assignedCooler.id}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
-    trackingCode: `GOMEAT-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
+    trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
     paymentMethod: paymentMethod || 'UPI (Google Pay / PhonePe)',
     createdAt: new Date().toISOString(),
     deliveryNotes: deliveryNotes || ''
@@ -647,7 +647,7 @@ app.post('/api/rider/login', (req, res) => {
   }
 
   if (user.role !== 'rider' && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied: This login is exclusively for GoMeat Delivery Riders.' });
+    return res.status(403).json({ error: 'Access denied: This login is exclusively for BrisketBox Delivery Riders.' });
   }
 
   if (user.approvalStatus === 'pending_approval') {
@@ -799,7 +799,7 @@ app.post('/api/partner/login', (req, res) => {
 
   if (user.approvalStatus === 'pending_approval') {
     return res.status(403).json({
-      error: 'Your partner shop application is currently Pending Approval from GoMeat Operations Admin.',
+      error: 'Your partner shop application is currently Pending Approval from BrisketBox Operations Admin.',
       approvalStatus: 'pending_approval'
     });
   }
@@ -1212,7 +1212,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   res.json({
     success: true,
     ticketId,
-    message: 'Your message has been delivered to GoMeat Central Support. Response within 15 minutes.'
+    message: 'Your message has been delivered to BrisketBox Central Support. Response within 15 minutes.'
   });
 });
 
@@ -1278,7 +1278,7 @@ app.post('/api/coolers/request-return', authenticate, (req, res) => {
   }
 
   const refundMethodLabel = refundPreference === 'wallet'
-    ? 'GoMeat Wallet (Instant Store Credit)'
+    ? 'BrisketBox Wallet (Instant Store Credit)'
     : (upiId ? `Direct UPI / Bank (${upiId})` : (req.user.upiId ? `Direct UPI (${req.user.upiId})` : 'Direct Bank Transfer'));
 
   const returnRecord = {
@@ -1358,7 +1358,7 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
           amount: refundAmt,
           type: 'credit',
           title: 'Cooler Box Deposit Refund',
-          description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to GoMeat Wallet.`,
+          description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to BrisketBox Wallet.`,
           date: new Date().toISOString(),
           balanceAfter: newBal,
           coolerId: returnItem.coolerId
@@ -1405,11 +1405,11 @@ const handleCoolerHealthDiagnostic = (req, res) => {
 
     if (!cooler) {
       // Auto-provision standard test box if it matches standard naming format
-      const normalizedBoxId = qrOrId.toUpperCase().replace(/^(GOMEAT-|SAGAR-|TV-)/i, '');
+      const normalizedBoxId = qrOrId.toUpperCase().replace(/^(BRISKETBOX-|SAGAR-|TV-)/i, '');
       if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
         cooler = db.insert('coolers', {
           id: normalizedBoxId,
-          qrCode: `GOMEAT-${normalizedBoxId}`,
+          qrCode: `BRISKETBOX-${normalizedBoxId}`,
           model: 'insulated bag Ultra-3L EPP',
           status: 'available',
           cyclesUsed: 4,
@@ -1501,7 +1501,7 @@ app.post('/api/admin/coolers/:id/action', (req, res) => {
 app.get('/api/coolers/inspect/:coolerId', (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   // Strip URL or common prefixes if scanned as a full URL
-  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^GOMEAT-/i, '').replace(/^TV-/i, '');
+  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
   const coolers = db.get('coolers') || [];
   let cooler = coolers.find(c => 
@@ -1517,7 +1517,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
       const isBreach = normalizedBoxId.includes('103');
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
-        qrCode: `GOMEAT-${normalizedBoxId}`,
+        qrCode: `BRISKETBOX-${normalizedBoxId}`,
         model: 'insulated bag Ultra-3L EPP',
         status: isBreach ? 'damaged' : (normalizedBoxId.includes('182') ? 'assigned' : 'with_customer'),
         currentOrderId: isBreach ? 'ORD-103-BREACH' : 'ORD-9281',
@@ -1570,7 +1570,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
     success: true,
     cooler: {
       ...cooler,
-      qrUrl: `https://gomeat.in/coolers/${cooler.id}`
+      qrUrl: `https://brisketbox.in/coolers/${cooler.id}`
     },
     order: order ? {
       id: order.id,
@@ -1629,7 +1629,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
 
 app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
-  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^GOMEAT-/i, '').replace(/^TV-/i, '');
+  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
   const coolers = db.get('coolers') || [];
   let cooler = coolers.find(c => 
@@ -1643,7 +1643,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
     if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
-        qrCode: `GOMEAT-${normalizedBoxId}`,
+        qrCode: `BRISKETBOX-${normalizedBoxId}`,
         model: 'insulated bag Ultra-3L EPP',
         status: 'available',
         currentUserId: 'usr_customer',
@@ -1671,7 +1671,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
       status: 'refunded',
       conditionNotes: inspectorNotes,
       completedAt: new Date().toISOString(),
-      refundMode: refundPreference === 'wallet' ? 'GoMeat Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`
     });
   } else {
     returnRecord = {
@@ -1687,7 +1687,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
       completedAt: new Date().toISOString(),
       refundAmount: refundAmt,
       refundPreference,
-      refundMode: refundPreference === 'wallet' ? 'GoMeat Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`,
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`,
       conditionNotes: inspectorNotes,
       courierAssigned: 'Hub Inward Specialist Rajeshwar Rao'
     };
@@ -1706,7 +1706,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
         amount: refundAmt,
         type: 'credit',
         title: 'Cooler Box Deposit Refund',
-        description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to GoMeat Wallet.`,
+        description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to BrisketBox Wallet.`,
         date: new Date().toISOString(),
         balanceAfter: newBal,
         coolerId: cooler.id
@@ -1729,7 +1729,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
 
   res.json({
     success: true,
-    message: `🎉 ₹${refundAmt} deposit refund approved and disbursed to ${refundPreference === 'wallet' ? 'GoMeat Wallet' : 'UPI'}!`,
+    message: `🎉 ₹${refundAmt} deposit refund approved and disbursed to ${refundPreference === 'wallet' ? 'BrisketBox Wallet' : 'UPI'}!`,
     refundAmount: refundAmt,
     refundMode: refundPreference === 'wallet' ? 'Wallet Credit' : 'Instant UPI Reversal',
     cooler: updatedCooler,
@@ -1739,7 +1739,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
 
 app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
-  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^GOMEAT-/i, '').replace(/^TV-/i, '');
+  const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
   const coolers = db.get('coolers') || [];
   let cooler = coolers.find(c => 
@@ -1753,7 +1753,7 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
     if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
       cooler = db.insert('coolers', {
         id: normalizedBoxId,
-        qrCode: `GOMEAT-${normalizedBoxId}`,
+        qrCode: `BRISKETBOX-${normalizedBoxId}`,
         model: 'insulated bag Ultra-3L EPP',
         status: 'available',
         currentUserId: 'usr_customer',
@@ -1906,7 +1906,7 @@ app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
   
   const newCooler = {
     id,
-    qrCode: qrCode || `GOMEAT-${id}`,
+    qrCode: qrCode || `BRISKETBOX-${id}`,
     model: model || 'insulated bag 18L - Reusable EPP Cold-Gel Box',
     status: 'available',
     currentOrderId: null,
@@ -1968,7 +1968,7 @@ app.use((err, req, res, next) => {
   const statusCode = err.status || err.statusCode || 500;
   
   if (err.message && err.message.includes('CORS')) {
-    return res.status(403).json({ error: 'Access denied by GoMeat CORS policy' });
+    return res.status(403).json({ error: 'Access denied by BrisketBox CORS policy' });
   }
 
   console.error(`[API Error] ${req.method} ${req.url}:`, err.message || err);
@@ -1988,7 +1988,7 @@ if (!process.env.VERCEL && isDirectRun) {
   });
 
   app.listen(PORT, () => {
-    console.log(`[GoMeat API] Running on port ${PORT}`);
+    console.log(`[BrisketBox API] Running on port ${PORT}`);
   });
 }
 

@@ -152,7 +152,7 @@ async function run() {
     // 11. ADMIN DASHBOARD (Logged in as Rajeshwar Rao)
     // ==========================================
     console.log('Capturing 11_admin_dashboard_kpis.png...');
-    const adminToken = await getLoginToken('ops@gomeat.in', 'admin123');
+    const adminToken = await getLoginToken('ops@brisketbox.in', 'admin123');
     await page.evaluate((tok) => {
       localStorage.setItem('frost_token', tok);
     }, adminToken);

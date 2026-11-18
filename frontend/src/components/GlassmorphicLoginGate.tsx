@@ -20,14 +20,14 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
 }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [identifier, setIdentifier] = useState(roleHint === 'admin' ? 'ops@gomeat.in' : '');
+  const [identifier, setIdentifier] = useState(roleHint === 'admin' ? 'ops@brisketbox.in' : '');
   const [password, setPassword] = useState(roleHint === 'admin' ? 'admin123' : '');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   React.useEffect(() => {
     if (isOpen && roleHint === 'admin') {
-      setIdentifier('ops@gomeat.in');
+      setIdentifier('ops@brisketbox.in');
       setPassword('admin123');
       setMode('login');
     }
@@ -100,7 +100,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
       setIdentifier('pooja.sundaram@gmail.com');
       setPassword('customer123');
     } else {
-      setIdentifier('ops@gomeat.in');
+      setIdentifier('ops@brisketbox.in');
       setPassword('admin123');
     }
   };
@@ -233,10 +233,10 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
           {/* Brand Header */}
           <div className="text-center mt-2 mb-6">
             <div className="inline-flex items-center gap-2 mb-1">
-              <img src="/images/logo-dark.png" alt="GoMeat" className="h-7 w-auto object-contain drop-shadow-md" />
+              <img src="/images/logo-dark.png" alt="BrisketBox" className="h-7 w-auto object-contain drop-shadow-md" />
             </div>
             <p className="text-[11px] text-slate-300/90 font-medium">
-              Freshness we can trust • 0°C to 4°C Cold Chain
+              Freshness, sealed with flavour. • 0°C to 4°C Cold Chain
             </p>
           </div>
 

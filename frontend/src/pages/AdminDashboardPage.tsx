@@ -233,7 +233,7 @@ export const AdminDashboardPage: React.FC = () => {
       if (newStatus === 'refunded') {
         showNotification(
           refundPreference === 'wallet'
-            ? `Return #${returnId} approved! ₹250 credited directly to customer's GoMeat Wallet in 0 seconds.`
+            ? `Return #${returnId} approved! ₹250 credited directly to customer's BrisketBox Wallet in 0 seconds.`
             : `Return #${returnId} approved! ₹250 sent to customer bank via UPI.`
         );
       } else {
@@ -324,7 +324,7 @@ export const AdminDashboardPage: React.FC = () => {
         vacuumSealed: true
       });
       setShowAddProductModal(false);
-      showNotification(`Added "${newProduct.name}" to GoMeat catalog.`);
+      showNotification(`Added "${newProduct.name}" to BrisketBox catalog.`);
       setProducts(prev => [created, ...prev]);
     } catch (err: any) {
       alert(err.message || 'Failed to add cut');
@@ -390,7 +390,7 @@ export const AdminDashboardPage: React.FC = () => {
 
   // Delete Product
   const handleDeleteProduct = async (id: string, name: string) => {
-    if (!confirm(`Permanently remove "${name}" from GoMeat inventory?`)) return;
+    if (!confirm(`Permanently remove "${name}" from BrisketBox inventory?`)) return;
     try {
       await api.deleteProduct(id);
       showNotification(`Removed "${name}" from catalog.`);
@@ -411,7 +411,7 @@ export const AdminDashboardPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>GoMeat Tax Invoice & Cold-Chain Slip #${order.orderNumber || order.id}</title>
+        <title>BrisketBox Tax Invoice & Cold-Chain Slip #${order.orderNumber || order.id}</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #1e293b; max-width: 800px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
@@ -431,7 +431,7 @@ export const AdminDashboardPage: React.FC = () => {
       <body>
         <div class="header">
           <div>
-            <div class="brand">GoMeat™ Operations</div>
+            <div class="brand">BrisketBox™ Operations</div>
             <p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">Fresh Meat & Seafood Cold-Chain Fulfillment</p>
             <p style="margin: 2px 0 0; font-size: 11px; color: #94a3b8;">FSSAI Lic: 11224334000189 • GSTIN: 29AABCU9603R1ZM</p>
           </div>
@@ -525,7 +525,7 @@ export const AdminDashboardPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `GoMeat_Operations_Export_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `brisketbox_Operations_Export_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showNotification('Operations JSON report downloaded.');
@@ -1081,7 +1081,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 className="font-bold text-xs uppercase tracking-wider text-gray-500">
-              GoMeat Catalog Management ({products.length} Products)
+              BrisketBox Catalog Management ({products.length} Products)
             </h3>
             <button
               onClick={() => setShowAddProductModal(true)}
@@ -1460,7 +1460,7 @@ export const AdminDashboardPage: React.FC = () => {
 
           {coolerSubView === 'health' && (
             <CoolerHealthChecker 
-              initialQr={scannedCoolerId || 'GOMEAT-BOX-BLR-417'}
+              initialQr={scannedCoolerId || 'BRISKETBOX-BOX-BLR-417'}
               onOpenScanner={() => {
                 setScannedCoolerId(undefined);
                 setScannerOpen(true);
@@ -1638,7 +1638,7 @@ export const AdminDashboardPage: React.FC = () => {
                   Customer Cooler Return Requests & ₹250 Refund Approvals ({returns.length} Requests)
                 </span>
                 <span className="text-[11px] font-normal text-gray-500 block">
-                  Inspect returned ThermalVault™ boxes and approve instant refunds to GoMeat Wallet or UPI / Bank.
+                  Inspect returned ThermalVault™ boxes and approve instant refunds to BrisketBox Wallet or UPI / Bank.
                 </span>
               </div>
             </div>
@@ -1683,7 +1683,7 @@ export const AdminDashboardPage: React.FC = () => {
                             {isWallet ? (
                               <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] flex items-center gap-1 w-max">
                                 <Wallet className="w-3 h-3 text-emerald-600" />
-                                <span>GoMeat Wallet (Instant)</span>
+                                <span>BrisketBox Wallet (Instant)</span>
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300 font-bold text-[10px] flex items-center gap-1 w-max">
@@ -2491,7 +2491,7 @@ export const AdminDashboardPage: React.FC = () => {
 
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 text-gray-800 dark:text-gray-200 z-10 space-y-4 text-xs shadow-2xl">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-slate-800">
-              <h3 className="font-extrabold text-gray-950 dark:text-white text-sm">Add Fresh Cut to GoMeat Catalog</h3>
+              <h3 className="font-extrabold text-gray-950 dark:text-white text-sm">Add Fresh Cut to BrisketBox Catalog</h3>
               <button onClick={() => setShowAddProductModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>

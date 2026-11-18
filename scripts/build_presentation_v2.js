@@ -45,7 +45,7 @@ const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GoMeat - Full-Stack Production Engineering Presentation</title>
+  <title>BrisketBox - Full-Stack Production Engineering Presentation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -392,7 +392,7 @@ const htmlContent = `<!DOCTYPE html>
         Engineering Architecture Deck • Production-Grade MERN Platform
       </div>
       <h1 style="font-size: 64px; font-weight: 900; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px;">
-        <span style="color: #d11243;">GoMeat</span>: Temperature-Controlled Cold-Chain E-Commerce Engineering
+        <span style="color: #d11243;">BrisketBox</span>: Temperature-Controlled Cold-Chain E-Commerce Engineering
       </h1>
       <p style="font-size: 22px; color: #94a3b8; max-width: 850px; line-height: 1.5; margin-bottom: 40px;">
         A full-stack, enterprise-style food technology architecture engineered with cryptographic Razorpay transactions, server-authoritative state machines, and a zero-waste ₹250 reusable cold-box return loop.
@@ -465,7 +465,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 02 / 16</div>
     </div>
   </div>
@@ -475,7 +475,7 @@ POST /create-order HTTP/1.1
     <div class="slide-header">
       <div class="header-left">
         <div class="slide-tag">Engineering Solution</div>
-        <h2 class="slide-title">The GoMeat Solution: Closed-Loop Cold-Chain &amp; Zero-Trust MERN</h2>
+        <h2 class="slide-title">The BrisketBox Solution: Closed-Loop Cold-Chain &amp; Zero-Trust MERN</h2>
         <p class="slide-subtitle">A synchronized triad uniting thermal engineering, circular economics, and server-authoritative financial validation</p>
       </div>
       <div class="header-badge">Architecture Blueprint</div>
@@ -520,7 +520,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 03 / 16</div>
     </div>
   </div>
@@ -587,7 +587,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 04 / 16</div>
     </div>
   </div>
@@ -613,7 +613,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 05 / 16</div>
     </div>
   </div>
@@ -674,7 +674,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 06 / 16</div>
     </div>
   </div>
@@ -720,7 +720,7 @@ POST /create-order HTTP/1.1
         </p>
         <ul class="feature-list" style="font-size: 13px; margin-bottom: 14px;">
           <li><span class="check-icon">✓</span> <strong>Direct Server-to-Server Webhook:</strong> Razorpay dispatches <code style="color: #38bdf8;">payment.captured</code> directly to <code style="color: #38bdf8;">POST /api/payments/webhook</code>.</li>
-          <li><span class="check-icon">✓</span> <strong>Raw Body Preservation:</strong> Standard JSON parsers re-stringify JSON and change whitespace, invalidating cryptographic HMAC hashes. GoMeat retains raw bytes via Express middleware.</li>
+          <li><span class="check-icon">✓</span> <strong>Raw Body Preservation:</strong> Standard JSON parsers re-stringify JSON and change whitespace, invalidating cryptographic HMAC hashes. BrisketBox retains raw bytes via Express middleware.</li>
           <li><span class="check-icon">✓</span> <strong>Idempotent Event Handling:</strong> If the webhook delivers duplicate events for the same transaction, the backend checks <code style="color: #38bdf8;">order.paymentStatus === 'PAID'</code> and returns HTTP 200 without charging twice.</li>
         </ul>
         <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px; font-size: 12px; color: #34d399;">
@@ -730,7 +730,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 07 / 16</div>
     </div>
   </div>
@@ -756,7 +756,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 08 / 16</div>
     </div>
   </div>
@@ -782,7 +782,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 09 / 16</div>
     </div>
   </div>
@@ -807,7 +807,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/ (Homepage Hero &amp; Categories)</span>
           </div>
-          <img src="${ss01}" class="screenshot-img" alt="GoMeat Homepage">
+          <img src="${ss01}" class="screenshot-img" alt="BrisketBox Homepage">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Hero &amp; FreshSeal™ Strip:</strong> Instant city selector (Bengaluru, Mumbai, Delhi), 90-min express counter, and category filtering.
@@ -822,7 +822,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/ (Catalog Grid &amp; Budget Filter)</span>
           </div>
-          <img src="${ss02}" class="screenshot-img" alt="GoMeat Product Listing">
+          <img src="${ss02}" class="screenshot-img" alt="BrisketBox Product Listing">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Product Grid &amp; Customization:</strong> Displays gross/net weight tags, chilling guarantee (0°C–4°C), price sorting, and wishlist heart toggles.
@@ -831,7 +831,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 10 / 16</div>
     </div>
   </div>
@@ -856,7 +856,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/ (Checkout Address Modal)</span>
           </div>
-          <img src="${ss05}" class="screenshot-img" alt="GoMeat Checkout Address Form">
+          <img src="${ss05}" class="screenshot-img" alt="BrisketBox Checkout Address Form">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Address Hierarchy:</strong> Flat/Building, Street, City, State, Pincode, and Delivery instructions for contactless doorstep drop.
@@ -871,7 +871,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/ (Order Summary &amp; ₹250 Deposit)</span>
           </div>
-          <img src="${ss06}" class="screenshot-img" alt="GoMeat Order Summary Deposit">
+          <img src="${ss06}" class="screenshot-img" alt="BrisketBox Order Summary Deposit">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Deposit Transparency:</strong> Shows Subtotal, Delivery Fee, Discounts, and explicitly itemizes the 100% Refundable ₹250 Thermal Box deposit.
@@ -880,7 +880,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 11 / 16</div>
     </div>
   </div>
@@ -905,7 +905,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#tracking (Live Tracking &amp; Telemetry)</span>
           </div>
-          <img src="${ss07}" class="screenshot-img" alt="GoMeat Live Order Tracking">
+          <img src="${ss07}" class="screenshot-img" alt="BrisketBox Live Order Tracking">
         </div>
       </div>
 
@@ -930,7 +930,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 12 / 16</div>
     </div>
   </div>
@@ -955,7 +955,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#dashboard (Customer Dashboard &amp; Orders)</span>
           </div>
-          <img src="${ss08}" class="screenshot-img" alt="GoMeat Customer Dashboard">
+          <img src="${ss08}" class="screenshot-img" alt="BrisketBox Customer Dashboard">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Profile &amp; Orders Portal:</strong> Active and completed orders, live delivery tracking link, and saved delivery addresses.
@@ -970,7 +970,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#dashboard (Tax Invoices &amp; Reorder CTA)</span>
           </div>
-          <img src="${ss09}" class="screenshot-img" alt="GoMeat Order Invoices">
+          <img src="${ss09}" class="screenshot-img" alt="BrisketBox Order Invoices">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>FSSAI &amp; GST Invoicing:</strong> Automated client-side printable invoices (<code style="color: #38bdf8;">invoiceGenerator.ts</code>) complying with Indian food trade rules.
@@ -979,7 +979,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 13 / 16</div>
     </div>
   </div>
@@ -1004,7 +1004,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#coolers (Customer Cold-Box Returns Portal)</span>
           </div>
-          <img src="${ss10}" class="screenshot-img" alt="GoMeat Cold Box Returns">
+          <img src="${ss10}" class="screenshot-img" alt="BrisketBox Cold Box Returns">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Customer Returns UI:</strong> Real-time count of boxes held, UPI ID receiver field, and return request tracking.
@@ -1017,7 +1017,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 14 / 16</div>
     </div>
   </div>
@@ -1042,7 +1042,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#admin (Central Hub KPIs &amp; Revenue)</span>
           </div>
-          <img src="${ss11}" class="screenshot-img" alt="GoMeat Admin KPIs">
+          <img src="${ss11}" class="screenshot-img" alt="BrisketBox Admin KPIs">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Real-Time Depot KPIs:</strong> Gross Revenue, Total Orders, Active ThermalVaults In Transit, and Low-Stock Warnings.
@@ -1057,7 +1057,7 @@ POST /create-order HTTP/1.1
             <span class="frame-dot dot-g"></span>
             <span class="frame-url">http://localhost:5173/#admin (Orders Pipeline &amp; Status Selector)</span>
           </div>
-          <img src="${ss12}" class="screenshot-img" alt="GoMeat Admin Orders Pipeline">
+          <img src="${ss12}" class="screenshot-img" alt="BrisketBox Admin Orders Pipeline">
         </div>
         <div style="margin-top: 14px; font-size: 13px; color: #cbd5e1;">
           <strong>Pipeline Management:</strong> 7-stage status dropdown updater (<code style="color: #38bdf8;">CONFIRMED</code> to <code style="color: #10b981;">DELIVERED</code>) and cold-box asset assignment.
@@ -1066,7 +1066,7 @@ POST /create-order HTTP/1.1
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 15 / 16</div>
     </div>
   </div>
@@ -1135,10 +1135,10 @@ POST /create-order HTTP/1.1
         </p>
         <div class="code-box" style="font-size: 11px; margin-bottom: 14px;">
 <span class="code-cmt"># Production Health Check</span>
-curl -I https://gomeat-git-main-dhinesh-s-projects1.vercel.app/api/health
+curl -I https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/api/health
 HTTP/2 200 OK
 content-type: application/json; charset=utf-8
-{"status":"ok","name":"GoMeat API"}
+{"status":"ok","name":"BrisketBox API"}
         </div>
         <ul class="feature-list" style="font-size: 13px;">
           <li><span class="check-icon">→</span> <strong>Phase 2 Roadmap:</strong> Physical Bluetooth Low Energy (BLE) temperature logger beacon hardware sync.</li>
@@ -1149,7 +1149,7 @@ content-type: application/json; charset=utf-8
     </div>
 
     <div class="slide-footer">
-      <div class="footer-brand"><span class="brand-logo-text">GoMeat</span> Architectural Review</div>
+      <div class="footer-brand"><span class="brand-logo-text">BrisketBox</span> Architectural Review</div>
       <div>Slide 16 / 16 • Presentation Deck Complete</div>
     </div>
   </div>
@@ -1173,7 +1173,7 @@ async function generateArtifacts() {
   await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
   await page.goto('file:///' + htmlPath.replace(/\\\\/g, '/'), { waitUntil: 'networkidle0' });
 
-  const pdfPath = path.join(__dirname, 'GoMeat_Engineering_Presentation.pdf');
+  const pdfPath = path.join(__dirname, 'brisketbox_Engineering_Presentation.pdf');
   await page.pdf({
     path: pdfPath,
     width: '1920px',
@@ -1182,18 +1182,18 @@ async function generateArtifacts() {
     margin: { top: 0, right: 0, bottom: 0, left: 0 }
   });
 
-  console.log('GoMeat_Engineering_Presentation.pdf successfully generated at:', pdfPath);
+  console.log('brisketbox_Engineering_Presentation.pdf successfully generated at:', pdfPath);
   await browser.close();
 
   // Generate PPTX companion
-  console.log('Generating GoMeat_Engineering_Presentation.pptx companion...');
+  console.log('Generating brisketbox_Engineering_Presentation.pptx companion...');
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_16x9';
 
   const slidesData = [
-    { title: "GoMeat: Cold-Chain E-Commerce Engineering", sub: "Enterprise MERN Architecture with Razorpay & ThermalVault Closed-Loop" },
+    { title: "BrisketBox: Cold-Chain E-Commerce Engineering", sub: "Enterprise MERN Architecture with Razorpay & ThermalVault Closed-Loop" },
     { title: "Problem Statement & Market Friction", sub: "The Perishable Meat Dilemma: Temperature Abuse & Single-Use Plastic Waste" },
-    { title: "The GoMeat Engineering Solution", sub: "Closed-Loop Cold-Chain, Reusable Packaging & Server-Authoritative MERN" },
+    { title: "The BrisketBox Engineering Solution", sub: "Closed-Loop Cold-Chain, Reusable Packaging & Server-Authoritative MERN" },
     { title: "Technology Stack Justification", sub: "Why and How React, Node, Express, MongoDB Atlas, and Razorpay Were Selected" },
     { title: "System Architecture & Request Lifecycle", sub: "Full-Stack Component Decomposition, Protocol Boundaries & Mongoose Abstraction" },
     { title: "Security, Cryptography & Access Control", sub: "JWT Authentication, Bcrypt Password Salting & Role-Based Middleware" },
@@ -1214,7 +1214,7 @@ async function generateArtifacts() {
     slide.background = { color: '090D1A' };
     
     // Top banner tag
-    slide.addText(`GOMEAT PRODUCTION ARCHITECTURE • SLIDE ${idx + 1} OF 16`, {
+    slide.addText(`BRISKETBOX PRODUCTION ARCHITECTURE • SLIDE ${idx + 1} OF 16`, {
       x: 0.8, y: 0.5, w: 10, h: 0.3,
       fontSize: 10, color: 'FB7185', bold: true
     });
@@ -1238,21 +1238,21 @@ async function generateArtifacts() {
       line: { color: '1E293B', width: 1.5 }
     });
 
-    slide.addText(`Detailed Technical Diagram and Implementation Documentation available in GoMeat_Engineering_Presentation.pdf`, {
+    slide.addText(`Detailed Technical Diagram and Implementation Documentation available in brisketbox_Engineering_Presentation.pdf`, {
       x: 1.2, y: 3.5, w: 10.9, h: 1.5,
       fontSize: 14, color: 'CBD5E1', align: 'center'
     });
 
     // Footer
-    slide.addText(`GoMeat Engineering Platform • Vercel CI/CD • MongoDB Atlas`, {
+    slide.addText(`BrisketBox Engineering Platform • Vercel CI/CD • MongoDB Atlas`, {
       x: 0.8, y: 6.9, w: 10, h: 0.3,
       fontSize: 9, color: '64748B'
     });
   });
 
-  const pptxPath = path.join(__dirname, 'GoMeat_Engineering_Presentation.pptx');
+  const pptxPath = path.join(__dirname, 'brisketbox_Engineering_Presentation.pptx');
   await pptx.writeFile({ fileName: pptxPath });
-  console.log('GoMeat_Engineering_Presentation.pptx successfully generated at:', pptxPath);
+  console.log('brisketbox_Engineering_Presentation.pptx successfully generated at:', pptxPath);
 }
 
 generateArtifacts();

@@ -1,7 +1,7 @@
 {
-  "name": "gomeat-frontend",
+  "name": "brisketbox-frontend",
   "private": true,
-  "description": "GoMeat Web Client - Fresh Quality. Delivered with Care.",
+  "description": "BrisketBox Web Client - Freshness, Sealed with Flavour",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

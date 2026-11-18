@@ -6,10 +6,10 @@ import { connectMongoDB, getMongoStatus, User, Product, Order, Cooler, CoolerRet
 
 async function main() {
   console.log('========================================================');
-  console.log('GOMEAT - MONGODB CONNECTION & SCHEMAS TEST');
+  console.log('BRISKETBOX - MONGODB CONNECTION & SCHEMAS TEST');
   console.log('========================================================');
   
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/gomeat';
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/brisketbox';
   console.log(`Connecting to URI: ${uri}`);
   
   const connected = await connectMongoDB();

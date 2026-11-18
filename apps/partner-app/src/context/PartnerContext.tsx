@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { partnerApi } from '../services/api';
-import type { Product } from '@gomeat/shared';
+import type { Product } from '@brisketbox/shared';
 
 export interface InwardBatch {
   id: string;

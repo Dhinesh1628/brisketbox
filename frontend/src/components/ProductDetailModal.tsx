@@ -121,7 +121,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const [reviews, setReviews] = useState<ReviewItem[]>(() => {
     try {
-      const saved = localStorage.getItem(`gomeat_reviews_${product.id}`);
+      const saved = localStorage.getItem(`brisketbox_reviews_${product.id}`);
       return saved ? JSON.parse(saved) : defaultReviews;
     } catch {
       return defaultReviews;
@@ -161,7 +161,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     const updated = [newRev, ...reviews];
     setReviews(updated);
     try {
-      localStorage.setItem(`gomeat_reviews_${product.id}`, JSON.stringify(updated));
+      localStorage.setItem(`brisketbox_reviews_${product.id}`, JSON.stringify(updated));
     } catch (e) {}
 
     setReviewComment('');
@@ -175,7 +175,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('gomeat_wishlist');
+      const saved = localStorage.getItem('brisketbox_wishlist');
       if (saved && product) {
         const arr = JSON.parse(saved);
         setIsWishlisted(arr.includes(product.id));
@@ -185,7 +185,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const toggleWishlist = () => {
     try {
-      const saved = localStorage.getItem('gomeat_wishlist');
+      const saved = localStorage.getItem('brisketbox_wishlist');
       const arr: string[] = saved ? JSON.parse(saved) : [];
       let updated: string[];
       if (arr.includes(product.id)) {
@@ -195,7 +195,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         updated = [...arr, product.id];
         setIsWishlisted(true);
       }
-      localStorage.setItem('gomeat_wishlist', JSON.stringify(updated));
+      localStorage.setItem('brisketbox_wishlist', JSON.stringify(updated));
     } catch (e) {}
   };
 
@@ -474,7 +474,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
                 {showWeightExplanation && (
                   <p className="mt-2 text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed border-t border-amber-200 dark:border-amber-800/60 pt-2">
-                    In local markets, you pay for raw weight before cleaning. At GoMeat, we clean and trim off unwanted fat, skin, and waste before packing, so you only pay for meat you can actually cook and enjoy.
+                    In local markets, you pay for raw weight before cleaning. At BrisketBox, we clean and trim off unwanted fat, skin, and waste before packing, so you only pay for meat you can actually cook and enjoy.
                   </p>
                 )}
               </div>

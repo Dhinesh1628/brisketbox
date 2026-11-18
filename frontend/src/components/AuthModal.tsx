@@ -14,7 +14,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
   const [loginIdentifier, setLoginIdentifier] = useState(
-    defaultRoleHint === 'admin' ? 'ops@gomeat.in' : ''
+    defaultRoleHint === 'admin' ? 'ops@brisketbox.in' : ''
   );
   const [loginPassword, setLoginPassword] = useState('');
 
@@ -78,7 +78,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
           <div>
             <h2 className="text-base font-extrabold text-gray-950 dark:text-white">
-              {mode === 'login' ? 'Sign In to GoMeat' : 'Create an Account'}
+              {mode === 'login' ? 'Sign In to BrisketBox' : 'Create an Account'}
             </h2>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
               Enter your registered login details to proceed
@@ -162,7 +162,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
               </div>
               <div className="flex justify-between items-center py-0.5">
                 <span>Hub Admin (Rajeshwar):</span>
-                <span className="font-mono text-[#d11243] dark:text-rose-400 font-semibold">ops@gomeat.in / admin123</span>
+                <span className="font-mono text-[#d11243] dark:text-rose-400 font-semibold">ops@brisketbox.in / admin123</span>
               </div>
             </div>
 

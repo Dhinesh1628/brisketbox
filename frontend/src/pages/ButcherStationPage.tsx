@@ -38,7 +38,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
   // Auth Form State (when not authenticated as partner)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('partner@gomeat.in');
+  const [loginEmail, setLoginEmail] = useState('partner@brisketbox.in');
   const [loginPassword, setLoginPassword] = useState('partner123');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
@@ -277,7 +277,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-600 to-amber-700 flex items-center justify-center font-black text-white shadow-md">
                 <Scissors className="w-4 h-4" />
               </div>
-              <span className="font-black text-sm tracking-tight text-white">GoMeat Partner Station</span>
+              <span className="font-black text-sm tracking-tight text-white">BrisketBox Partner Station</span>
             </div>
             {onBackToStore && (
               <button
@@ -306,7 +306,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               <button
                 type="button"
                 onClick={() => {
-                  setLoginEmail('partner@gomeat.in');
+                  setLoginEmail('partner@brisketbox.in');
                   setLoginPassword('partner123');
                 }}
                 className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
@@ -378,7 +378,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="partner@gomeat.in or +91 98000 00000"
+                  placeholder="partner@brisketbox.in or +91 98000 00000"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -451,7 +451,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     required
                     value={regForm.email}
                     onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                    placeholder="shop@gomeat.in"
+                    placeholder="shop@brisketbox.in"
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
                   />
                 </div>
@@ -529,7 +529,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Store className="w-5 h-5 text-amber-400" />
-              <span className="font-black text-sm text-white">GoMeat Partner Station</span>
+              <span className="font-black text-sm text-white">BrisketBox Partner Station</span>
             </div>
             <button
               onClick={logout}
@@ -549,7 +549,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           <div className="space-y-1.5">
             <h2 className="text-lg font-black text-white">Shop Verification in Progress</h2>
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              Hello <strong className="text-white">{user.name}</strong>, your partner application for <strong className="text-amber-300">{user.shopName || 'your butcher station'}</strong> is being audited by GoMeat Central Operations.
+              Hello <strong className="text-white">{user.name}</strong>, your partner application for <strong className="text-amber-300">{user.shopName || 'your butcher station'}</strong> is being audited by BrisketBox Central Operations.
             </p>
           </div>
 

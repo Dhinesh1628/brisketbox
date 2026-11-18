@@ -1,6 +1,6 @@
-# GoMeat - Database Schema & Data Dictionary
+# BrisketBox - Database Schema & Data Dictionary
 
-**Official Project:** GoMeat  
+**Official Project:** BrisketBox  
 **Database Engines:** MongoDB Atlas (Mongoose ODM) & Persistent Document Store Fallback  
 **Standard Character Encoding:** UTF-8  
 **Last Updated:** November 9, 2026
@@ -106,7 +106,7 @@ Stores customer accounts, operations administrators, and delivery partner profil
 | `city` | String | Service city (e.g., `Bengaluru`, `Mumbai`) | Default `Bengaluru` |
 | `address` | String | Default delivery address | Optional |
 | `depositBalance` | Number | Total active ₹250 cooler deposits held | Default `0` |
-| `walletBalance` | Number | Store credit balance in GoMeat Wallet | Default `0` |
+| `walletBalance` | Number | Store credit balance in BrisketBox Wallet | Default `0` |
 | `walletTransactions` | Array | Log of debits, credits, and deposit refunds | Embedded documents |
 | `upiId` | String | Preferred UPI ID for instant deposit refunds | e.g. `customer@okhdfcbank` |
 | `createdAt` | Date | Account creation timestamp | ISO 8601 |
@@ -169,7 +169,7 @@ Fleet inventory tracking each reusable ThermalVault™ cold box throughout its m
 | Field | Type | Description | Values / States |
 |:---|:---|:---|:---|
 | `id` | String | Unique cold box asset code | `BOX-BLR-101` |
-| `qrCode` | String | Scannable physical barcode | `GOMEAT-BOX-101` |
+| `qrCode` | String | Scannable physical barcode | `brisketbox-BOX-101` |
 | `model` | String | Insulated container model | `ThermalVault 18L - Reusable EPP Cold-Gel Box` |
 | `status` | String | Fleet state | `available`, `assigned`, `with_customer`, `return_requested`, `sanitizing` |
 | `currentOrderId` | String | Linked active order ID | Nullable |

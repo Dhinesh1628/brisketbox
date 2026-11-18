@@ -19,7 +19,7 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) => {
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState('customer@gomeat.com');
+  const [identifier, setIdentifier] = useState('customer@brisketbox.com');
   const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +43,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) 
   };
 
   const setDemoUser = () => {
-    setIdentifier('customer@gomeat.com');
+    setIdentifier('customer@brisketbox.com');
     setPassword('password123');
   };
 
   const setDemoAdmin = () => {
-    setIdentifier('admin@gomeat.com');
+    setIdentifier('admin@brisketbox.com');
     setPassword('admin123');
   };
 
@@ -135,7 +135,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) 
           <View style={styles.securityNote}>
             <ShieldCheck size={14} color="#15803d" />
             <Text style={styles.securityText}>
-              256-bit Encrypted. Authentic GoMeat Cold-Chain Ecosystem.
+              256-bit Encrypted. Authentic BrisketBox Cold-Chain Ecosystem.
             </Text>
           </View>
         </View>

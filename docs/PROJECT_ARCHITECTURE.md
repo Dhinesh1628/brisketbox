@@ -1,6 +1,6 @@
-# GoMeat - Technical Architecture & System Design
+# BrisketBox - Technical Architecture & System Design
 
-**Official Project Name:** GoMeat  
+**Official Project Name:** BrisketBox  
 **Tagline:** Fresh Quality. Delivered with Care.  
 **Architecture Model:** Clean Full-Stack Monorepo (React 19 + Express 4 + MongoDB / In-Memory JSON Store)  
 **Last Updated:** November 9, 2026
@@ -9,7 +9,7 @@
 
 ## 1. High-Level Architectural Overview
 
-GoMeat is a direct-to-consumer (D2C) fresh meat, poultry, and coastal seafood platform with proprietary **Circular Reusable Cold-Box Logistics (ThermalVault™)** and **0°C–4°C Blast-Chilled Cold Chain Assurance**.
+BrisketBox is a direct-to-consumer (D2C) fresh meat, poultry, and coastal seafood platform with proprietary **Circular Reusable Cold-Box Logistics (ThermalVault™)** and **0°C–4°C Blast-Chilled Cold Chain Assurance**.
 
 ```mermaid
 flowchart TD
@@ -38,7 +38,7 @@ flowchart TD
 The codebase is organized into clean, self-contained packages:
 
 ```
-GoMeat/
+BrisketBox/
 ├── frontend/                     # React 19 Client SPA
 │   ├── public/                   # Static assets, favicon, product cuts
 │   ├── src/
@@ -105,7 +105,7 @@ GoMeat/
 ├── .gitignore                    # Professional monorepo ignore definitions
 ├── package.json                  # Root monorepo orchestration
 ├── README.md                     # Production repository README
-└── GoMeat.code-workspace         # VS Code multi-root workspace file
+└── BrisketBox.code-workspace         # VS Code multi-root workspace file
 ```
 
 ---
@@ -113,10 +113,10 @@ GoMeat/
 ## 3. Core Architectural Subsystems
 
 ### 3.1 Authentication & Security
-- **JWT Authentication:** Stateful user session tokens signed with `JWT_SECRET` (`gomeat-cuts-india-secret-2026`).
+- **JWT Authentication:** Stateful user session tokens signed with `JWT_SECRET` (`brisketbox-cuts-india-secret-2026`).
 - **Google OAuth 2.0:** Verified server-side via `google-auth-library` `OAuth2Client.verifyIdToken`.
 - **Role-Based Access Control (RBAC):** Middleware checks `customer` vs. `admin` roles on sensitive administrative routes.
-- **Backward Token Compatibility:** Dual-token lookup (`gomeat_token` with fallback to `frost_token`) ensures zero session invalidation during migration.
+- **Backward Token Compatibility:** Dual-token lookup (`brisketbox_token` with fallback to `frost_token`) ensures zero session invalidation during migration.
 
 ### 3.2 Dual-Layer Database Architecture
 - **Layer 1 (Production):** MongoDB Atlas via Mongoose ODM models with automatic schema casting and timestamps.
@@ -127,7 +127,7 @@ GoMeat/
 - **₹250 Refundable Deposit:** Tracked per cooler in custody (`BOX-BLR-XXX`).
 - **Dynamic Handover PIN:** Unique 4-digit code generated per order and customer (`getOrderDeliveryPin`) for rider identity verification.
 - **Live IoT Cold-Chain Monitoring:** Orders record live temperature (`0.8°C–2.3°C`) throughout 6 timeline stages.
-- **1-Click UPI & Wallet Refunds:** Once the box is inspected, ₹250 is instantly credited back to GoMeat Wallet or customer UPI.
+- **1-Click UPI & Wallet Refunds:** Once the box is inspected, ₹250 is instantly credited back to BrisketBox Wallet or customer UPI.
 
 ### 3.4 Conversational AI Commerce
 - **Meta WhatsApp Webhook:** Handles customer incoming messages via WhatsApp Cloud API.

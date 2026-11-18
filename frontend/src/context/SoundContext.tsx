@@ -13,7 +13,7 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('gomeat_sound_enabled');
+    const saved = localStorage.getItem('brisketbox_sound_enabled');
     // Default state: Sound ON
     return saved !== null ? saved === 'true' : true;
   });
@@ -22,7 +22,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioElemRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('gomeat_sound_enabled', String(isSoundEnabled));
+    localStorage.setItem('brisketbox_sound_enabled', String(isSoundEnabled));
   }, [isSoundEnabled]);
 
   // Preload ding.wav fallback

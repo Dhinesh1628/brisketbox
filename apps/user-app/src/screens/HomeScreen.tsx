@@ -15,7 +15,7 @@ import { api } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { ThermalBadge } from '../components/ThermalBadge';
 import { FloatingCartBar } from '../components/FloatingCartBar';
-import type { Product } from '@gomeat/shared';
+import type { Product } from '@brisketbox/shared';
 
 const CATEGORIES = ['All', 'Chicken', 'Mutton', 'Fish & Seafood', 'Cold Cuts', 'Eggs'];
 

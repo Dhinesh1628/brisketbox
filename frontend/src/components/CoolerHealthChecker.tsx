@@ -15,7 +15,7 @@ interface CoolerHealthCheckerProps {
 }
 
 export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
-  initialQr = 'GOMEAT-BOX-BLR-417',
+  initialQr = 'BRISKETBOX-BOX-BLR-417',
   onOpenScanner,
   className = ''
 }) => {
@@ -28,10 +28,10 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const sampleBoxes = [
-    { id: 'BOX-BLR-417', qr: 'GOMEAT-BOX-BLR-417', label: 'BOX-417 (Standard Delivery)', grade: 'A' },
-    { id: 'BOX-BLR-103', qr: 'GOMEAT-BOX-BLR-103', label: 'BOX-103 (⚠️ Breach Anomaly)', grade: 'D' },
-    { id: 'BOX-BLR-633', qr: 'GOMEAT-BOX-BLR-633', label: 'BOX-633 (Central Depot Stock)', grade: 'A' },
-    { id: 'BOX-BLR-182', qr: 'GOMEAT-BOX-BLR-182', label: 'BOX-182 (In-Transit EV)', grade: 'A' },
+    { id: 'BOX-BLR-417', qr: 'BRISKETBOX-BOX-BLR-417', label: 'BOX-417 (Standard Delivery)', grade: 'A' },
+    { id: 'BOX-BLR-103', qr: 'BRISKETBOX-BOX-BLR-103', label: 'BOX-103 (⚠️ Breach Anomaly)', grade: 'D' },
+    { id: 'BOX-BLR-633', qr: 'BRISKETBOX-BOX-BLR-633', label: 'BOX-633 (Central Depot Stock)', grade: 'A' },
+    { id: 'BOX-BLR-182', qr: 'BRISKETBOX-BOX-BLR-182', label: 'BOX-182 (In-Transit EV)', grade: 'A' },
     { id: 'BOX-BLR-983', qr: 'SAGAR-BOX-BLR-983', label: 'BOX-983 (Available Reserve)', grade: 'A' },
   ];
 
@@ -102,7 +102,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 flex items-center gap-1">
                 <Cpu className="w-3 h-3" />
-                Script #3 Engine • GoMeat Fleet Telemetry
+                Script #3 Engine • BrisketBox Fleet Telemetry
               </span>
               <span className="text-[10px] text-gray-400">FreshSeal 0°C-4°C SLA</span>
             </div>
@@ -177,7 +177,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
               type="text"
               value={searchQr}
               onChange={(e) => setSearchQr(e.target.value)}
-              placeholder="Enter QR Code or Box Tag (e.g. GOMEAT-BOX-BLR-417, BOX-BLR-103, 417)..."
+              placeholder="Enter QR Code or Box Tag (e.g. BRISKETBOX-BOX-BLR-417, BOX-BLR-103, 417)..."
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-mono font-medium text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
             />
           </div>

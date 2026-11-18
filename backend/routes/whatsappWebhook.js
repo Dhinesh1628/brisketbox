@@ -5,7 +5,7 @@ const router = express.Router();
 
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || '';
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'gomeat_whatsapp_verify_2026';
+const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'brisketbox_whatsapp_verify_2026';
 
 /**
  * 1. Meta WhatsApp Cloud API Webhook Verification (GET)
@@ -56,7 +56,7 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
         console.log(`[WhatsApp Inbound] From ${fromPhone}: "${messageText}"`);
 
-        // Process with GoMeat AI Chatbot Engine
+        // Process with BrisketBox AI Chatbot Engine
         const botResponse = await processCustomerMessage(messageText, fromPhone);
 
         // Send Reply Back to WhatsApp if Cloud API token is configured
@@ -79,7 +79,7 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
 /**
  * 3. Direct API Endpoint for Live Web Simulator & Chat Widget
- * Allows users, interns, and PM to chat with the GoMeat AI directly
+ * Allows users, interns, and PM to chat with the BrisketBox AI directly
  * in the interactive web WhatsApp widget!
  */
 router.post('/chatbot/chat', async (req, res) => {
