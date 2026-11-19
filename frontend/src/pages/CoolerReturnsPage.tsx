@@ -82,7 +82,7 @@ export const CoolerReturnsPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-            <span>Return Cold Boxes for ₹250 Refund</span>
+            <span>Return Cold Boxes for Reuse</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-[10px] font-bold">
               0°C–4°C IoT Monitored
             </span>
@@ -116,7 +116,7 @@ export const CoolerReturnsPage: React.FC = () => {
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xs">
           <span className="text-gray-500 dark:text-gray-400 block">Security Deposit in Custody</span>
           <div className="text-xl font-extrabold text-[#d11243] dark:text-rose-500 mt-1">₹{depositTotal}</div>
-          <span className="text-gray-400 dark:text-gray-500 text-[11px]">₹250 per box currently held</span>
+          <span className="text-gray-400 dark:text-gray-500 text-[11px]">Zero deposit plan active</span>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xs">
@@ -141,7 +141,7 @@ export const CoolerReturnsPage: React.FC = () => {
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
               Boxes in Your Custody ({coolers.length})
             </h3>
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">₹250 / box</span>
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Free packaging</span>
           </div>
 
           {loading ? (
@@ -216,7 +216,7 @@ export const CoolerReturnsPage: React.FC = () => {
                             onClick={() => setSelectedCooler(cooler)}
                             className="px-3.5 py-1.5 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-2xs transition"
                           >
-                            Request Return (₹250)
+                            Schedule Free Pickup
                           </button>
                         ) : (
                           <span className="text-amber-700 dark:text-amber-400 text-xs font-semibold">
@@ -274,7 +274,7 @@ export const CoolerReturnsPage: React.FC = () => {
                     <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center text-[11px]">
                       <span className="text-gray-500 dark:text-gray-400">Agent: {ret.courierAssigned || 'Local Hub Partner'}</span>
                       <span className={`font-bold ${isRefunded ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                        {isRefunded ? '+₹250 Credited to UPI' : '₹250 Pending Collection Scan'}
+                        {isRefunded ? 'Box Picked Up' : 'Pending Pickup'}
                       </span>
                     </div>
                   </div>
@@ -290,7 +290,7 @@ export const CoolerReturnsPage: React.FC = () => {
               <li>Take your meat cuts out and keep them in your fridge.</li>
               <li>Keep the ice packs inside the cold box.</li>
               <li>Hand the box back to the delivery partner on your next order, or request a pickup.</li>
-              <li>Get ₹250 back to your BrisketBox Wallet or bank account once it's checked!</li>
+              <li>Our courier collects empty boxes during your next delivery!</li>
             </ol>
           </div>
 
@@ -327,7 +327,7 @@ export const CoolerReturnsPage: React.FC = () => {
               {/* Refund Method Options */}
               <div className="space-y-2">
                 <label className="block text-gray-800 dark:text-gray-200 font-bold text-xs">
-                  How would you like to receive your ₹250 refund?
+                  Schedule box pickup time
                 </label>
                 <div className="grid grid-cols-1 gap-2">
                   {/* Option 1: BrisketBox In-App Wallet */}
@@ -393,7 +393,7 @@ export const CoolerReturnsPage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1">
-                        ₹250 sent to your Google Pay, PhonePe, Paytm, or Bank Account.
+                        Free courier collection at your doorstep.
                       </p>
                     </div>
                   </div>
@@ -403,7 +403,7 @@ export const CoolerReturnsPage: React.FC = () => {
                 {refundPreference === 'upi' && (
                   <div className="pt-1.5">
                     <label className="block text-gray-700 dark:text-gray-300 font-bold mb-1 text-[11px]">
-                      Enter UPI ID for ₹250 Bank Transfer *
+                      Registered Contact Number for Pickup *
                     </label>
                     <input
                       type="text"

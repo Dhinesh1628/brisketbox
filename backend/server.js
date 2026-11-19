@@ -460,8 +460,8 @@ app.post('/api/orders', authenticate, (req, res) => {
   }
 
   const discount = Math.min(parseInt(couponDiscount || 0, 10), subtotal);
-  const COOLER_DEPOSIT = 250;
-  const shippingFee = subtotal >= 799 ? 0 : 40;
+  const COOLER_DEPOSIT = 0;
+  const shippingFee = subtotal >= 499 ? 0 : 40;
   const total = Math.max(0, subtotal - discount + COOLER_DEPOSIT + shippingFee);
 
   let assignedCooler = db.get('coolers').find(c => c.status === 'available');

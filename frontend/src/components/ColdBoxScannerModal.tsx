@@ -62,7 +62,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
       subtitle: 'Doorstep pickup completed • 24h TAT',
       temp: '1.8°C',
       tempStatus: 'Normal (0°C to 4°C)',
-      statusBadge: 'Eligible for ₹250 Refund',
+      statusBadge: 'Box Verified for Reuse',
       badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
       description: 'Hermetic seals intact, blast-chilled temperature maintained within FSSC-22000 safe limits.'
     },
@@ -1005,12 +1005,12 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                         {processingRefund ? (
                           <>
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Processing ₹250 Refund...</span>
+                            <span>Verifying Box...</span>
                           </>
                         ) : (
                           <>
                             <Check className="w-4 h-4" />
-                            <span>Approve & Send ₹250 Refund</span>
+                            <span>Verify & Sanitize Box</span>
                           </>
                         )}
                       </button>

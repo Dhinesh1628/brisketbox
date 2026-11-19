@@ -812,15 +812,15 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
           <div className="border-b border-gray-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
               <h3 className="font-black text-sm text-gray-950 dark:text-white uppercase tracking-wider">
-                insulated packaging Cold Box & Deposit Status
+                Temperature Controlled Cold Box Status
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Every box carries a ₹250 refundable deposit. Unpack your meat and schedule a free doorstep pickup anytime.
+                Delivered in insulated cold boxes keeping cuts at 0°C to 4°C. Zero security deposit on packaging.
               </p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-gray-400 uppercase font-bold block">Protected Deposit</span>
-              <span className="text-base font-black text-emerald-700 dark:text-emerald-400">₹{totalHeldDeposit}</span>
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Packaging Plan</span>
+              <span className="text-base font-black text-emerald-700 dark:text-emerald-400">Free (₹0 Deposit)</span>
             </div>
           </div>
 
@@ -840,7 +840,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                       <p className="text-[11px] text-gray-500">{c.model}</p>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-extrabold text-[10px]">
-                      ₹250 Protected
+                      Zero Deposit
                     </span>
                   </div>
 
@@ -855,7 +855,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                     }}
                     className="w-full py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs transition"
                   >
-                    Request 1-Click Pickup (₹250 UPI Refund)
+                    Schedule Free Box Pickup
                   </button>
                 </div>
               ))}

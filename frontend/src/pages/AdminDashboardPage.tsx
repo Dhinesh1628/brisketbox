@@ -470,7 +470,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">ThermalVault™ Tag: ${order.coolerId}</div>
             <div style="font-size: 12px; color: #475569;">Assigned Partner: ${order.deliveryExecutive || 'Depot Dispatch Fleet'}</div>
             <div style="font-size: 12px; color: #16a34a; font-weight: bold;">Chamber Readout: 1.4°C (Bio-Safe 0-4°C)</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Deposit Held: ₹250 (Auto-refund on return)</div>
+            <div style="font-size: 11px; color: #16a34a; margin-top: 4px;">Packaging: Insulated Box (Free / ₹0 Deposit)</div>
           </div>
         </div>
 
@@ -500,9 +500,9 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         <div class="total-box">
-          <div>Subtotal: <strong>₹${order.subtotal || (order.total - 250)}</strong></div>
-          <div>ThermalVault™ Box Security Deposit (Refundable): <strong>₹250</strong></div>
-          <div>Delivery & Packaging: <strong>₹0 (Free)</strong></div>
+          <div>Subtotal: <strong>₹${order.subtotal || order.total}</strong></div>
+          <div>Packaging & Cold Box: <strong>₹0 (Free / Zero Deposit)</strong></div>
+          <div>Delivery Fee: <strong>${order.shippingFee === 0 ? '₹0 (Free)' : `₹${order.shippingFee || 0}`}</strong></div>
           <div class="grand">Grand Total: ₹${order.total}</div>
           <div style="font-size: 11px; color: #16a34a; margin-top: 4px;">Payment: ${order.paymentMethod || 'Razorpay Online'} • Verified (${order.paymentStatus || 'PAID'})</div>
         </div>
@@ -900,16 +900,16 @@ export const AdminDashboardPage: React.FC = () => {
 
             <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-extrabold text-xs text-gray-900 dark:text-white">Reusable Box Custody</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950 text-[#d11243] font-bold">
-                  ₹250 Security Held
+                <span className="font-extrabold text-xs text-gray-900 dark:text-white">Active Cold Deliveries</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 font-bold">
+                  Zero Deposit Plan
                 </span>
               </div>
-              <div className="text-3xl font-black text-[#d11243] font-mono">
+              <div className="text-3xl font-black text-gray-900 dark:text-white font-mono">
                 {coolers.filter(c => c.status === 'with_customer' || c.status === 'assigned' || c.status === 'in_transit').length || 18} Units
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Circulating with customers; eligible for 1-click Razorpay reversal on return.
+                Chilled insulated boxes in transit with active customer deliveries.
               </p>
             </div>
 
@@ -1333,10 +1333,10 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="p-4 bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
             <div>
               <h4 className="font-bold text-sky-950 dark:text-sky-200">
-                Razorpay Payment Transactions & ₹250 Cold-Box Deposit Ledger
+                Razorpay Online Payment & Billing Ledger
               </h4>
               <p className="text-[11px] text-sky-800 dark:text-sky-300 mt-0.5">
-                Every verified order holds a ₹250 refundable security deposit. 1-Click reversal directly refunds the customer UPI / source card.
+                All customer orders processed via Razorpay gateway and Cash on Delivery. Zero packaging deposit plan active.
               </p>
             </div>
             <button
@@ -1359,8 +1359,8 @@ export const AdminDashboardPage: React.FC = () => {
                     <th className="py-3 px-4">Payment Method</th>
                     <th className="py-3 px-4">Razorpay Payment ID</th>
                     <th className="py-3 px-4">Payment Status</th>
-                    <th className="py-3 px-4">Cold-Box Deposit (₹250)</th>
-                    <th className="py-3 px-4 text-right">Refund Action</th>
+                    <th className="py-3 px-4">Deposit Status</th>
+                    <th className="py-3 px-4 text-right">Receipt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-700 dark:text-gray-200">
@@ -1393,30 +1393,17 @@ export const AdminDashboardPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            refundStatus === 'REFUNDED'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : refundStatus === 'REQUESTED'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                              : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300'
-                          }`}>
-                            ₹{ord.coolerDeposit || 250} ({refundStatus})
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300">
+                            {ord.coolerDeposit ? `₹${ord.coolerDeposit}` : '₹0 (Waived)'}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          {refundStatus === 'REFUNDED' ? (
-                            <span className="text-emerald-700 dark:text-emerald-400 font-bold text-[11px] flex items-center justify-end gap-1">
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Refunded</span>
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleExecuteColdBoxRefund(ord.id)}
-                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs transition"
-                            >
-                              Refund ₹250
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handlePrintPackingSlip(ord)}
+                            className="px-2.5 py-1 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-bold text-[11px] cursor-pointer"
+                          >
+                            Slip
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1541,14 +1528,14 @@ export const AdminDashboardPage: React.FC = () => {
 
             <div className="p-3.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-2xs">
               <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Deposit Ledger</span>
-                <Wallet className="w-4 h-4 text-amber-600" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">Packaging Policy</span>
+                <Wallet className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="text-xl font-black text-gray-900 dark:text-white mt-1">
-                ₹{cm.depositLedger?.activeHeld ?? cm.depositLedger?.held ?? 750} Held
+              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                Zero Deposit
               </div>
               <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-0.5">
-                ₹{cm.depositLedger?.totalRefunded ?? 2250} refunded via UPI/Wallet
+                Free packaging on all customer orders
               </span>
             </div>
 
@@ -1752,7 +1739,7 @@ export const AdminDashboardPage: React.FC = () => {
                                   onClick={() => handleReturnStatusUpdate(ret.id, 'refunded', ret.refundPreference || 'wallet')}
                                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer shadow-xs transition"
                                 >
-                                  {isWallet ? 'Credit ₹250 Wallet' : 'Send ₹250 UPI'}
+                                  {isWallet ? 'Credit Wallet' : 'Approve Return'}
                                 </button>
                               )}
                             </div>
@@ -2249,15 +2236,15 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="p-3 bg-gray-50 dark:bg-slate-800/40 rounded-xl space-y-1.5 text-[11px]">
               <div className="flex justify-between text-gray-600 dark:text-gray-300">
                 <span>Items Subtotal:</span>
-                <span className="font-mono">₹{selectedOrder.subtotal || (selectedOrder.total - 250)}</span>
+                <span className="font-mono">₹{selectedOrder.subtotal || selectedOrder.total}</span>
               </div>
               <div className="flex justify-between text-gray-600 dark:text-gray-300">
-                <span>ThermalVault™ Refundable Deposit:</span>
-                <span className="font-mono font-bold text-[#d11243]">₹250</span>
+                <span>Packaging Deposit:</span>
+                <span className="font-mono text-emerald-600 font-bold">₹0 (Zero Deposit Plan)</span>
               </div>
               <div className="flex justify-between text-gray-600 dark:text-gray-300">
-                <span>Delivery & Insulated Packaging:</span>
-                <span className="font-mono text-emerald-600 font-bold">FREE</span>
+                <span>Delivery Fee:</span>
+                <span className="font-mono text-emerald-600 font-bold">{selectedOrder.shippingFee === 0 ? 'FREE' : `₹${selectedOrder.shippingFee || 0}`}</span>
               </div>
               <div className="pt-2 border-t border-gray-200 dark:border-slate-700 flex justify-between font-black text-sm text-gray-950 dark:text-white">
                 <span>Grand Total:</span>

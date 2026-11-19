@@ -275,7 +275,7 @@ const MainApp: React.FC = () => {
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center max-w-md mx-auto my-12 space-y-3">
               <h3 className="font-bold text-gray-900 text-sm">Please Sign In to View Your Cold Boxes</h3>
-              <p className="text-xs text-gray-500">Sign in with your registered account to manage box returns and track your ₹250 security deposit.</p>
+              <p className="text-xs text-gray-500">Sign in with your registered account to manage cold boxes and delivery tracking.</p>
               <button
                 onClick={() => handleOpenAuth('customer')}
                 className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
@@ -358,12 +358,12 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Reusable Box Initiative</h4>
+              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Freshness Guarantee</h4>
               <ul className="space-y-1.5 text-gray-600 dark:text-gray-400 text-[11px]">
-                <li>₹250 Refundable Security Deposit</li>
+                <li>Zero Security Deposit (Free Packaging)</li>
                 <li>EPP Insulated Box with Ice Gel Packs</li>
                 <li>Maintains 0°C - 4°C for up to 36 Hours</li>
-                <li>Instant UPI Reversal upon Doorstep Pickup</li>
+                <li>Express Delivery in ~90 Minutes</li>
               </ul>
             </div>
 
@@ -372,7 +372,7 @@ const MainApp: React.FC = () => {
               <ul className="space-y-1.5 text-[11px]">
                 <li>
                   <button onClick={() => handleOpenLegalModal('tos')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
-                    Terms of Service & Box Deposit Policy
+                    Terms of Service & Delivery Policy
                   </button>
                 </li>
                 <li>

@@ -118,10 +118,12 @@ export function generateAndPrintInvoice(order: Order) {
               <span>Subtotal:</span>
               <strong>₹${order.subtotal}</strong>
             </div>
+            ${order.coolerDeposit ? `
             <div style="display: flex; justify-content: space-between; color: #16a34a;">
-              <span>ThermalVault™ Box Deposit:</span>
-              <strong>+₹${order.coolerDeposit || 250} (Refundable)</strong>
+              <span>Packaging Deposit:</span>
+              <strong>+₹${order.coolerDeposit}</strong>
             </div>
+            ` : ''}
             ${order.discountAmount ? `
             <div style="display: flex; justify-content: space-between; color: #16a34a;">
               <span>Promo Discount (${order.couponCode || 'PROMO'}):</span>
@@ -143,10 +145,7 @@ export function generateAndPrintInvoice(order: Order) {
           </div>
         </div>
 
-        <div class="deposit-highlight">
-          <strong>♻️ ₹250 ThermalVault™ Deposit Refund Notice:</strong><br>
-          Your meat was delivered in an insulated ThermalVault cooler holding 0°C to 4°C. When empty, return it to the courier or schedule a 1-click doorstep pickup in your BrisketBox customer dashboard to receive an instant ₹250 UPI refund.
-        </div>
+
 
         <div class="footer">
           This is a computer-generated tax invoice and does not require physical signature. Generated via BrisketBox Cold-Chain Core Engine.

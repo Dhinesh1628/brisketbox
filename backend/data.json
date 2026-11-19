@@ -220,7 +220,7 @@
       "id": "usr_partner_1",
       "name": "Abdul Rahim (Master Butcher)",
       "email": "partner@brisketbox.in",
-      "password": "$2b$10$0pnfBNhJm7rDSSei5nHk3.fJRH5buRi3PYMGV5dZs40SHDFAhrrbq",
+      "password": "$2b$10$sk85ftnMqNIxPmACiMGM/enf2HetOpv2ihSXeyfBnFm87imauWjM.",
       "role": "partner",
       "approvalStatus": "approved",
       "phone": "+91 98860 33445",
@@ -244,7 +244,7 @@
       "id": "usr_partner_pending",
       "name": "Karthik Gowda (Owner)",
       "email": "karthik.poultry@gmail.com",
-      "password": "$2b$10$8Y1SoMUR2l.tGUyrwSOMHuSR5q9SIRjZz8VMDBXD21IijvqTnkcIm",
+      "password": "$2b$10$jn3WyDk9/uVdzLnDpHcYKOKmEEBfKTmk9GdgWNFUwFe63rPEWOB4e",
       "role": "partner",
       "approvalStatus": "pending_approval",
       "phone": "+91 97310 99887",
@@ -516,7 +516,7 @@
       "coolerCode": "GOMEAT-BOX-BLR-417",
       "model": "ThermalVault 18L - Reusable EPP Cold-Gel Box",
       "status": "with_customer",
-      "currentOrderId": "ORD-417-DELIVERED",
+      "currentOrderId": null,
       "currentUserId": "usr_customer",
       "currentUserName": "Pooja Sundaram",
       "cyclesUsed": 1,
@@ -572,8 +572,8 @@
       "qrCode": "GOMEAT-BOX-BLR-103",
       "coolerCode": "GOMEAT-BOX-BLR-103",
       "model": "ThermalVault Ultra-3L EPP",
-      "status": "damaged",
-      "currentOrderId": "ORD-103-BREACH",
+      "status": "with_customer",
+      "currentOrderId": "ORD-9281",
       "currentUserId": "usr_customer",
       "currentUserName": "Pooja Sundaram",
       "cyclesUsed": 8,
@@ -583,8 +583,7 @@
       "assignedHub": "Mahadevapura Dark Hub",
       "createdAt": "2026-11-10T08:37:35.823Z",
       "updatedAt": "2026-11-10T08:37:35.823Z",
-      "__v": 0,
-      "maintenanceReason": "Thermal gasket compromised • Sensor reached 5.8°C (>4.0°C safe limit)"
+      "__v": 0
     },
     {
       "_id": "6afdd563a12093e0ddeeb142",
@@ -2029,128 +2028,6 @@
       "temperatureLog": [],
       "updatedAt": "2026-11-18T22:52:09.322Z",
       "__v": 0
-    },
-    {
-      "id": "ORD-417-DELIVERED",
-      "orderNumber": "ORD-417-DELIVERED",
-      "userId": "usr_customer",
-      "customerName": "Pooja Sundaram",
-      "customerEmail": "pooja.sundaram@gmail.com",
-      "customerPhone": "+91 98765 43210",
-      "deliveryAddress": "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      "city": "Bengaluru",
-      "coolerId": "BOX-BLR-417",
-      "coolerModel": "Insulated Cold Bag",
-      "status": "Delivered",
-      "orderStatus": "DELIVERED",
-      "lifecycleStatus": "DELIVERED",
-      "items": [
-        {
-          "productId": "prod_1",
-          "name": "Seer Fish / Surmai (Large Steaks)",
-          "price": 799,
-          "quantity": 1,
-          "unit": "500g",
-          "netWeight": "450g",
-          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          "productId": "prod_3",
-          "name": "Tender Curry Cut Broiler Chicken (Skinless)",
-          "price": 249,
-          "quantity": 2,
-          "unit": "500g",
-          "netWeight": "900g",
-          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      "total": 1299,
-      "coolerDeposit": 250,
-      "createdAt": "2026-11-11T12:00:00.000Z",
-      "deliveredAt": "2026-11-11T14:30:00.000Z",
-      "tempLog": [
-        {
-          "time": "08:00 AM",
-          "temp": 0.8,
-          "event": "Sealed with chilled ice-gel packs at Mahadevapura Dark Hub"
-        },
-        {
-          "time": "08:30 AM",
-          "temp": 1.2,
-          "event": "Dispatched with EV Cold-Chain Courier"
-        },
-        {
-          "time": "09:15 AM",
-          "temp": 1.8,
-          "event": "Delivered at customer doorstep (Sub-4C guaranteed)"
-        }
-      ]
-    },
-    {
-      "id": "ORD-103-BREACH",
-      "orderNumber": "ORD-103-BREACH",
-      "userId": "usr_customer",
-      "customerName": "Pooja Sundaram",
-      "customerEmail": "pooja.sundaram@gmail.com",
-      "customerPhone": "+91 98765 43210",
-      "deliveryAddress": "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      "city": "Bengaluru",
-      "coolerId": "BOX-BLR-103",
-      "coolerModel": "insulated bag 24L - Dual Phase ColdGel Box",
-      "status": "Delivered",
-      "orderStatus": "DELIVERED",
-      "lifecycleStatus": "DELIVERED",
-      "items": [
-        {
-          "productId": "prod_2",
-          "name": "Young Goat / Mutton Biryani Cut (Tender)",
-          "price": 549,
-          "quantity": 2,
-          "unit": "500g",
-          "netWeight": "1000g",
-          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          "productId": "prod_4",
-          "name": "White Prawns / Jhinga (Cleaned & Deveined)",
-          "price": 499,
-          "quantity": 1,
-          "unit": "500g",
-          "netWeight": "450g",
-          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      "total": 1598,
-      "totalAmount": 1598,
-      "createdAt": "2026-11-08T09:00:00.000Z",
-      "deliveredAt": "2026-11-08T10:45:00.000Z",
-      "coolerReturned": false,
-      "deliveryExecutive": "Suresh Patil (EV Fleet #14, +91 97412 88301)",
-      "riderFullName": "Suresh Patil",
-      "riderId": "usr_rider_1",
-      "paymentMethod": "UPI (Google Pay)",
-      "tempLog": [
-        {
-          "time": "09:00",
-          "temp": 1.4,
-          "event": "Cuts packed with chilled gel bricks at Halal Cuts Station"
-        },
-        {
-          "time": "09:30",
-          "temp": 3.2,
-          "event": "Dispatched with EV Chilled Courier"
-        },
-        {
-          "time": "10:15",
-          "temp": 5.4,
-          "event": "ALERT: Sensor rose above 4C safe threshold"
-        },
-        {
-          "time": "10:45",
-          "temp": 5.8,
-          "event": "Delivered at doorstep - Gasket seal compromised (5.8C)"
-        }
-      ]
     }
   ],
   "coolerReturns": [

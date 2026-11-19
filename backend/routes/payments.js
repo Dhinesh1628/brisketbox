@@ -100,8 +100,8 @@ router.post('/create-order', async (req, res) => {
       });
     }
 
-    // 2. Compute Fees & Cold-Box Deposit
-    const COOLER_DEPOSIT = 250;
+    // 2. Compute Fees
+    const COOLER_DEPOSIT = 0;
     const discount = Math.min(parseInt(couponDiscount || 0, 10), subtotal);
     const shippingFee = subtotal >= 499 ? 0 : 40;
     const tip = Math.max(0, parseInt(req.body.tipAmount || 0, 10));
@@ -250,7 +250,6 @@ router.post('/create-order', async (req, res) => {
           notes: {
             orderNumber,
             customerEmail: user.email || addressDetails?.email || '',
-            coolerDeposit: '₹250 Refundable',
             walletDeduction: String(walletDeduction)
           }
         });

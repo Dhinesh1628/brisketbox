@@ -472,7 +472,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Delivered fresh in reusable cold boxes across {selectedCity}. Get ₹250 back when you return the box.
+                Delivered fresh in temperature-controlled packaging across {selectedCity}. Express 90-min delivery.
               </p>
             </div>
           </div>
@@ -482,7 +482,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             className="w-full md:w-auto px-3.5 py-2 rounded-xl bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold cursor-pointer shrink-0 transition shadow-xs flex items-center justify-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-            <span>Return Box for ₹250 Refund</span>
+            <span>Eco Box Packaging</span>
           </button>
         </div>
 
