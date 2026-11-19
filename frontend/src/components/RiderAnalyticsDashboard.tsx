@@ -51,7 +51,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 flex flex-col items-center justify-center space-y-3">
         <RefreshCw className="w-8 h-8 text-[#d11243] animate-spin" />
         <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
-          Running fleet diagnostic algorithms & compiling telemetry...
+          Loading fleet delivery logs and temperature records...
         </span>
       </div>
     );
@@ -76,14 +76,14 @@ export const RiderAnalyticsDashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-extrabold text-gray-950 dark:text-white">
-                  Fleet & Cold-Chain Diagnostics Suite
+                  Rider Delivery Fleet & Cold Box Reports
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                  Live Engine Active
+                  Fleet Logs Active
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Automated audit of 90-min delivery SLA, 0°C–4°C cold-box integrity, demand curves, and cash reconciliations.
+                90-minute delivery promise, 0°C to 4°C cold box temperatures, hub order demand, and cash in hand.
               </p>
             </div>
           </div>
@@ -217,7 +217,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
-          <span>1. Rider SLA & On-Time ({riderReport.riders?.length || 0})</span>
+          <span>1. Rider Delivery Times ({riderReport.riders?.length || 0})</span>
         </button>
 
         <button
@@ -229,7 +229,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           }`}
         >
           <Thermometer className="w-3.5 h-3.5" />
-          <span>2. Fault Diagnosis (Rider vs Cooler)</span>
+          <span>2. Cooler Box vs Rider Check</span>
           {diagnosis.suspectCoolersCount > 0 && (
             <span className="px-1.5 py-0.2 bg-amber-400 text-amber-950 font-black rounded-full text-[10px]">
               {diagnosis.suspectCoolersCount}
@@ -246,7 +246,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
-          <span>3. Demand & Fleet Sizing</span>
+          <span>3. Area Demand & Peak Hours</span>
         </button>
 
         <button
@@ -258,7 +258,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           }`}
         >
           <DollarSign className="w-3.5 h-3.5" />
-          <span>4. Cash on Delivery Audit</span>
+          <span>4. Cash on Delivery (COD)</span>
         </button>
 
         <button
@@ -270,7 +270,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           }`}
         >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>5. Rider ID Check (Verhoeff)</span>
+          <span>5. Rider ID & License Check</span>
         </button>
       </div>
 
@@ -373,17 +373,17 @@ export const RiderAnalyticsDashboard: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1.5">
                 <h4 className="font-black text-amber-950 dark:text-amber-300 text-sm">
-                  Automated Cold-Chain Root Cause Isolation
+                  Checking Cooler Box vs Rider Delivery Times
                 </h4>
                 <div className="space-y-1 text-amber-900 dark:text-amber-200/90 leading-relaxed">
                   <p>
-                    • <strong>Cooler Defect Isolation:</strong> If a cooler fails repeatedly across multiple different riders, the physical insulation is compromised.
+                    • <strong>Cooler Box Check:</strong> If a cooler warms up repeatedly across different riders, the box insulation needs repair.
                   </p>
                   <p>
-                    • <strong>Rider Delay Isolation:</strong> Evaluated with defective boxes removed. Riders who still breach the 0°C–4°C limit with healthy coolers are flagged for transit latency or excessive stops.
+                    • <strong>Rider Check:</strong> Checked using good coolers only. Riders whose deliveries warm up even with good coolers are flagged for slow delivery or stops on the road.
                   </p>
                   <p>
-                    • <strong>Trip Length Threshold:</strong> Trips over 45 minutes saw a <strong>{diagnosis.tripImpact?.longTripsBreachPct || 28.9}% breach rate</strong> vs only <strong>{diagnosis.tripImpact?.shortTripsBreachPct || 2.4}%</strong> for trips under 45 minutes.
+                    • <strong>Trip Duration:</strong> Deliveries taking longer than 45 minutes had a <strong>{diagnosis.tripImpact?.longTripsBreachPct || 28.9}% failure rate</strong>, compared to only <strong>{diagnosis.tripImpact?.shortTripsBreachPct || 2.4}%</strong> for quick deliveries under 45 minutes.
                   </p>
                 </div>
               </div>
@@ -620,10 +620,10 @@ export const RiderAnalyticsDashboard: React.FC = () => {
           <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
             <div>
               <h4 className="font-extrabold text-gray-950 dark:text-white text-xs">
-                Government Identity Compliance & Cryptographic Validation
+                Rider ID & Driving License Verification
               </h4>
               <p className="text-[11px] text-gray-500 mt-0.5">
-                Checks Verhoeff checksum (Aadhaar), PAN individual structure, and duplicate ID prevention across the fleet.
+                Checks 12-digit Aadhaar number format, PAN individual card details, and checks for reused IDs across riders.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">

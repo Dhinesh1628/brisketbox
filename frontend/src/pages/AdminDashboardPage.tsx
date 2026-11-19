@@ -787,8 +787,8 @@ export const AdminDashboardPage: React.FC = () => {
           }`}
         >
           <Activity className="w-3.5 h-3.5 text-[#d11243] group-hover:text-white" />
-          <span className="font-extrabold">Fleet Analytics</span>
-          <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[10px] font-black">5 Suites</span>
+          <span className="font-extrabold">Fleet Reports</span>
+          <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[10px] font-black">5 Reports</span>
         </button>
       </div>
 
