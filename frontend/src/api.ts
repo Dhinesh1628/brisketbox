@@ -810,5 +810,59 @@ export const api = {
       throw new Error(err.error || `Failed to apply '${action}' action to cooler ${id}`);
     }
     return res.json();
+  },
+
+  // ==========================================
+  // RIDER & COLD-CHAIN ANALYTICS SUITE (Ashik Analytics Engine)
+  // ==========================================
+  async getFleetAnalyticsOverview(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/overview?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch fleet analytics overview');
+    }
+    return res.json();
+  },
+
+  async getRiderReport(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/rider-report?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch rider report');
+    return res.json();
+  },
+
+  async getRiderOrCoolerDiagnosis(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/rider-or-cooler?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch root cause diagnosis');
+    return res.json();
+  },
+
+  async getDemandAnalytics(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/demand-check?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch demand analytics');
+    return res.json();
+  },
+
+  async getCashAudit(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/cash-check?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch cash audit');
+    return res.json();
+  },
+
+  async getRiderIdCheck(source: 'live' | 'benchmark' = 'live'): Promise<any> {
+    const res = await fetch(`${API_BASE}/analytics/rider-id-check?source=${source}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch rider ID validation check');
+    return res.json();
   }
 };

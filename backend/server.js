@@ -13,6 +13,7 @@ import { connectMongoDB, getMongoStatus } from './mongo.js';
 import { assignFleetRiderForOrder } from './dispatch.js';
 import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
+import analyticsRouter from './routes/analytics.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
 import { createBackup } from './scripts/backup.js';
 import {
@@ -139,6 +140,9 @@ app.use(express.json({
 
 // Razorpay Payments Router
 app.use('/api/payments', paymentsRouter);
+
+// Fleet & Cold-Chain Analytics Engine Router
+app.use('/api/analytics', analyticsRouter);
 
 // WhatsApp Cloud API Webhook & Master Butcher Concierge Router
 app.use('/api', whatsappWebhookRouter);

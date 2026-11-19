@@ -42,10 +42,11 @@ import { useAuth } from '../context/AuthContext';
 import { getOrderDeliveryPin } from '../utils/pinHelper';
 import { ColdBoxScannerModal } from '../components/ColdBoxScannerModal';
 import { CoolerHealthChecker } from '../components/CoolerHealthChecker';
+import { RiderAnalyticsDashboard } from '../components/RiderAnalyticsDashboard';
 
 export const AdminDashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'inventory' | 'payments' | 'coolers' | 'customers' | 'riders' | 'partners'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'inventory' | 'payments' | 'coolers' | 'customers' | 'riders' | 'partners' | 'analytics'>('overview');
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [coolers, setCoolers] = useState<Cooler[]>([]);
@@ -775,6 +776,19 @@ export const AdminDashboardPage: React.FC = () => {
               ? `${adminPartners.filter(p => p.approvalStatus === 'pending_approval').length} pending`
               : adminPartners.length}
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-1.5 ${
+            activeTab === 'analytics'
+              ? 'bg-[#d11243] text-white shadow-2xs'
+              : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5 text-[#d11243] group-hover:text-white" />
+          <span className="font-extrabold">Fleet Analytics</span>
+          <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[10px] font-black">5 Suites</span>
         </button>
       </div>
 
@@ -2115,6 +2129,13 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 10: RIDER & COLD-CHAIN FLEET ANALYTICS SUITE */}
+      {/* ======================================================== */}
+      {activeTab === 'analytics' && (
+        <RiderAnalyticsDashboard />
       )}
 
       {/* ======================================================== */}
