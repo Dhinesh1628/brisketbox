@@ -1,4 +1,26 @@
 import {
+  ORDER_LIFECYCLE,
+  isValidTransition,
+  canRoleExecuteTransition,
+  normalizeLifecycle
+} from './services/orderStateMachine.js';
+import {
+  validate,
+  loginSchema,
+  registerSchema,
+  profileUpdateSchema,
+  riderRegisterSchema,
+  partnerRegisterSchema,
+  orderCreateSchema,
+  riderLifecycleSchema,
+  partnerOrderStatusSchema,
+  coolerReturnRequestSchema,
+  coolerActionSchema,
+  coolerInspectionDecisionSchema,
+  contactMessageSchema,
+  partnerStockUpdateSchema
+} from './validators/schemas.js';
+import {
   validateProductionEnv,
   getJwtSecret,
   createToken,
@@ -197,7 +219,7 @@ app.use(express.json({
 app.use('/api/payments', paymentLimiter, paymentsRouter);
 
 // Fleet & Cold-Chain Analytics Engine Router
-app.use('/api/analytics', analyticsRouter);
+app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
 
 // WhatsApp Cloud API Webhook & Master Butcher Concierge Router
 app.use('/api', whatsappWebhookRouter);
@@ -412,7 +434,26 @@ app.post('/api/products', authenticate, requireAdmin, (req, res) => {
 });
 
 app.put('/api/products/:id', authenticate, requireAdmin, (req, res) => {
-  const updated = db.update('products', req.params.id, req.body);
+  const { name, category, price, mrp, unit, description, netWeight, grossWeight, pieces, serves, chillingMethod, origin, cutStyle, inStock, stock, image } = req.body;
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (category !== undefined) updates.category = category;
+  if (price !== undefined) updates.price = Number(price);
+  if (mrp !== undefined) updates.mrp = Number(mrp);
+  if (unit !== undefined) updates.unit = unit;
+  if (description !== undefined) updates.description = description;
+  if (netWeight !== undefined) updates.netWeight = netWeight;
+  if (grossWeight !== undefined) updates.grossWeight = grossWeight;
+  if (pieces !== undefined) updates.pieces = pieces;
+  if (serves !== undefined) updates.serves = serves;
+  if (chillingMethod !== undefined) updates.chillingMethod = chillingMethod;
+  if (origin !== undefined) updates.origin = origin;
+  if (cutStyle !== undefined) updates.cutStyle = cutStyle;
+  if (inStock !== undefined) updates.inStock = Boolean(inStock);
+  if (stock !== undefined) updates.stock = Number(stock);
+  if (image !== undefined) updates.image = image;
+
+  const updated = db.update('products', req.params.id, updates);
   if (!updated) {
     return res.status(404).json({ error: 'Product not found' });
   }
@@ -598,16 +639,29 @@ function sanitizeAssignedRider(order) {
 }
 
 app.get('/api/orders', authenticate, (req, res) => {
-  let orders = db.get('orders');
-  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'partner' || req.user.role === 'rider' || req.query.all === 'true';
-  if (!isFleetOrPartner) {
+  let orders = db.get('orders') || [];
+
+  if (req.user.role === 'admin') {
+    // Admin can view all orders
+  } else if (req.user.role === 'customer') {
     orders = orders.filter(o => o.userId === req.user.id);
+  } else if (req.user.role === 'rider') {
+    orders = orders.filter(o => o.riderId === req.user.id);
+  } else if (req.user.role === 'partner') {
+    orders = orders.filter(o => o.partnerId === req.user.shopId || o.partnerId === req.user.id);
+  } else {
+    orders = [];
   }
-  const enriched = orders.map(o => ({
-    ...o,
-    assignedRider: sanitizeAssignedRider(o)
-  }));
-  res.json(enriched);
+
+  // Never return deliveryPin on list endpoints or to unauthorized roles
+  const sanitized = orders.map(o => {
+    const { deliveryPin, ...safeOrder } = o;
+    return {
+      ...safeOrder,
+      assignedRider: sanitizeAssignedRider(o)
+    };
+  });
+  res.json(sanitized);
 });
 
 app.get('/api/orders/:id', authenticate, (req, res) => {
@@ -616,15 +670,25 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'rider' || req.user.role === 'partner' || req.query.all === 'true';
-  if (!isFleetOrPartner && order.userId !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
+  const isOwnerCustomer = req.user.role === 'customer' && order.userId === req.user.id;
+  const isAssignedRider = req.user.role === 'rider' && order.riderId === req.user.id;
+  const isAssignedPartner = req.user.role === 'partner' && (order.partnerId === req.user.shopId || order.partnerId === req.user.id);
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwnerCustomer && !isAssignedRider && !isAssignedPartner && !isAdmin) {
+    return res.status(403).json({ error: 'Access denied: You do not own or manage this order' });
   }
 
-  const cooler = db.findById('coolers', order.coolerId);
+  const cooler = order.coolerId ? db.findById('coolers', order.coolerId) : null;
+  const { deliveryPin, ...safeOrder } = order;
+
+  // deliveryPin is strictly confidential and returned only to the owning customer
+  if (isOwnerCustomer) {
+    safeOrder.deliveryPin = deliveryPin;
+  }
 
   res.json({
-    ...order,
+    ...safeOrder,
     coolerDetails: cooler,
     assignedRider: sanitizeAssignedRider(order)
   });
@@ -744,11 +808,37 @@ app.get('/api/rider/orders', authenticate, requireRole('rider'), requireApproved
   res.json(assigned);
 });
 
-app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, (req, res) => {
+app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, validate(riderLifecycleSchema), (req, res) => {
   const { lifecycleStatus, pin, coolerReturned, podImage, notes } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
+  }
+
+  // Ensure rider can only update their own assigned order
+  if (req.user.role !== 'admin' && order.riderId !== req.user.id) {
+    return res.status(403).json({ error: 'Access denied: You are not the assigned rider for this order' });
+  }
+
+  // State machine validation
+  const targetStatus = normalizeLifecycle(lifecycleStatus);
+  if (!isValidTransition(order.lifecycleStatus, targetStatus)) {
+    return res.status(400).json({
+      error: `Invalid lifecycle transition from '${order.lifecycleStatus || order.status}' to '${targetStatus}'.`
+    });
+  }
+
+  if (!canRoleExecuteTransition('rider', order.lifecycleStatus, targetStatus)) {
+    return res.status(403).json({
+      error: `Riders are not authorized to transition order to '${targetStatus}'.`
+    });
+  }
+
+  // PIN check when completing delivery
+  if (targetStatus === ORDER_LIFECYCLE.DELIVERED) {
+    if (!pin || String(pin).trim() !== String(order.deliveryPin).trim()) {
+      return res.status(400).json({ error: 'Invalid delivery verification PIN. Please request the 4-digit PIN from the customer.' });
+    }
   }
 
   if (order.riderId && order.riderId !== req.user.id && req.user.role !== 'admin') {
@@ -991,10 +1081,28 @@ app.get('/api/partner/orders', authenticate, requireRole('partner'), requireAppr
   res.json(partnerOrders);
 });
 
-app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, (req, res) => {
+app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, validate(partnerOrderStatusSchema), (req, res) => {
   const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId, itemPrepList, dressingLossLog } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  // Ensure partner can only update their shop's orders
+  if (req.user.role !== 'admin' && order.partnerId && order.partnerId !== req.user.shopId && order.partnerId !== req.user.id) {
+    return res.status(403).json({ error: 'Access denied: You are not the assigned partner shop for this order' });
+  }
+
+  const targetStatus = normalizeLifecycle(lifecycleStatus || status);
+  if (!isValidTransition(order.lifecycleStatus, targetStatus)) {
+    return res.status(400).json({
+      error: `Invalid lifecycle transition from '${order.lifecycleStatus || order.status}' to '${targetStatus}'.`
+    });
+  }
+
+  if (!canRoleExecuteTransition('partner', order.lifecycleStatus, targetStatus)) {
+    return res.status(403).json({
+      error: `Partner shops are not authorized to transition order to '${targetStatus}'.`
+    });
+  }
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1586,7 +1694,7 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
 // ==========================================
 
 // 1. Fleet-wide Cooler Health Overview
-app.get('/api/admin/coolers/health', (req, res) => {
+app.get('/api/admin/coolers/health', authenticate, requireAdmin, (req, res) => {
   try {
     const overview = generateFleetHealthOverview(db.data || {});
     res.json({
@@ -1607,27 +1715,11 @@ const handleCoolerHealthDiagnostic = (req, res) => {
     let cooler = findCooler(coolers, qrOrId);
 
     if (!cooler) {
-      // Auto-provision standard test box if it matches standard naming format
-      const normalizedBoxId = qrOrId.toUpperCase().replace(/^(BRISKETBOX-|SAGAR-|TV-)/i, '');
-      if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-        cooler = db.insert('coolers', {
-          id: normalizedBoxId,
-          qrCode: `BRISKETBOX-${normalizedBoxId}`,
-          model: 'insulated bag Ultra-3L EPP',
-          status: 'available',
-          cyclesUsed: 4,
-          lastSanitizedDate: new Date().toISOString().split('T')[0],
-          depositAmount: 250,
-          maxHoldingHours: 36,
-          assignedHub: 'Bengaluru Central Hub Depot'
-        });
-      } else {
-        return res.status(404).json({
-          found: false,
-          qr: qrOrId,
-          error: `No cooler found for QR code '${qrOrId}'. Please scan again.`
-        });
-      }
+      return res.status(404).json({
+        found: false,
+        qr: qrOrId,
+        error: `No cooler found for ID or QR code '${qrOrId}'.`
+      });
     }
 
     const tempCheck = getTemperatureCheck(cooler, db.data || {});
@@ -1648,11 +1740,11 @@ const handleCoolerHealthDiagnostic = (req, res) => {
   }
 };
 
-app.get('/api/admin/coolers/:qr/health', handleCoolerHealthDiagnostic);
-app.get('/api/coolers/:qr/health', handleCoolerHealthDiagnostic);
+app.get('/api/admin/coolers/:qr/health', authenticate, requireAdmin, handleCoolerHealthDiagnostic);
+app.get('/api/coolers/:qr/health', authenticate, requireAdmin, handleCoolerHealthDiagnostic);
 
 // 3. Cooler Maintenance / Operational Actions (Sanitize, Flag Breakdown, Decommission)
-app.post('/api/admin/coolers/:id/action', (req, res) => {
+app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(coolerActionSchema), (req, res) => {
   try {
     const coolerId = req.params.id;
     const { action, notes } = req.body;
@@ -1701,7 +1793,7 @@ app.post('/api/admin/coolers/:id/action', (req, res) => {
 // ==========================================
 // 4B. COLD BOX QR SCANNER, TELEMETRY & DIAGNOSTICS (Ashik Spec)
 // ==========================================
-app.get('/api/coolers/inspect/:coolerId', (req, res) => {
+app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   // Strip URL or common prefixes if scanned as a full URL
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
@@ -1715,26 +1807,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      const isBreach = normalizedBoxId.includes('103');
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: isBreach ? 'damaged' : (normalizedBoxId.includes('182') ? 'assigned' : 'with_customer'),
-        currentOrderId: isBreach ? 'ORD-103-BREACH' : 'ORD-9281',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        cyclesUsed: 8,
-        lastSanitizedDate: '2026-11-06',
-        depositAmount: 250,
-        maxHoldingHours: 36,
-        assignedHub: 'Mahadevapura Dark Hub'
-      });
-    } else {
-      return res.status(404).json({ error: `insulated bag Cold Box "${rawId}" not found in fleet directory.` });
-    }
+    return res.status(404).json({ error: `Cooler Box "${rawId}" not found in fleet directory.` });
   }
 
   // Find associated order
@@ -1830,7 +1903,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireAdmin, validate(coolerInspectionDecisionSchema), (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
@@ -1842,20 +1915,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: 'available',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        depositAmount: 250
-      });
-    } else {
-      return res.status(404).json({ error: 'Cooler box not found' });
-    }
+    return res.status(404).json({ error: 'Cooler box not found' });
   }
 
   const { refundPreference = 'wallet', upiId, inspectorNotes = 'QR Inward Inspection: EPP foam walls intact, gel bricks sanitized.' } = req.body;
@@ -1940,7 +2000,7 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmin, (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
@@ -1952,20 +2012,7 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: 'available',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        depositAmount: 250
-      });
-    } else {
-      return res.status(404).json({ error: 'Cooler box not found' });
-    }
+    return res.status(404).json({ error: 'Cooler box not found' });
   }
 
   const { reason = 'Temperature breach detected: Box cannot hold 0°C to 4°C' } = req.body;
