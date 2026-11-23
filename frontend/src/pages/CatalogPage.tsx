@@ -455,7 +455,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       />
 
       {/* Explore Categories Section */}
-      <div id="catalog-grid-top" ref={catalogGridRef} className="scroll-mt-24 space-y-4 sm:space-y-6">
+      <div id="catalog-grid-top" ref={catalogGridRef} className="scroll-mt-28 sm:scroll-mt-32 space-y-4 sm:space-y-6">
         <CategorySection
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
