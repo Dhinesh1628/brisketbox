@@ -31,17 +31,23 @@ interface CatalogPageProps {
   selectedCity: string;
   searchQuery: string;
   onSetSearchQuery?: (query: string) => void;
+  selectedCategory?: string;
+  onSelectCategory?: (category: string) => void;
 }
 
 export const CatalogPage: React.FC<CatalogPageProps> = ({ 
   onNavigateToReturns, 
   selectedCity,
   searchQuery,
-  onSetSearchQuery 
+  onSetSearchQuery,
+  selectedCategory: propCategory,
+  onSelectCategory: propOnSelectCategory
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [localCategory, setLocalCategory] = useState('All');
+  const selectedCategory = propCategory ?? localCategory;
+  const setSelectedCategory = propOnSelectCategory ?? setLocalCategory;
   const [inspectingProduct, setInspectingProduct] = useState<Product | null>(null);
   const [inspectingWeight, setInspectingWeight] = useState<string>('500g');
   const [selectedWeights, setSelectedWeights] = useState<Record<string, string>>({});
@@ -449,7 +455,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       />
 
       {/* Explore Categories Section */}
-      <div ref={catalogGridRef} className="scroll-mt-24 space-y-4 sm:space-y-6">
+      <div id="catalog-grid-top" ref={catalogGridRef} className="scroll-mt-24 space-y-4 sm:space-y-6">
         <CategorySection
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}

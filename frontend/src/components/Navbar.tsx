@@ -27,7 +27,9 @@ import {
   Bell,
   Settings,
   Utensils,
-  Bike
+  Bike,
+  LayoutGrid,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -46,7 +48,101 @@ interface NavbarProps {
   setSearchQuery: (query: string) => void;
   currentAddress?: DeliveryAddress;
   onOpenLocationModal?: () => void;
+  selectedCategory?: string;
+  onSelectCategory?: (category: string) => void;
 }
+
+export interface SubCategoryNav {
+  name: string;
+  searchTerm?: string;
+  categoryFilter?: string;
+}
+
+export interface CategoryNavGroup {
+  id: string;
+  name: string;
+  categoryValue: string;
+  image: string;
+  subCategories: SubCategoryNav[];
+}
+
+export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
+  {
+    id: 'chicken',
+    name: 'Chicken',
+    categoryValue: 'Fresh Chicken',
+    image: '/images/products/prod_6.jpg',
+    subCategories: [
+      { name: 'Curry Cuts', searchTerm: 'Curry Cut' },
+      { name: 'Boneless & Breast Fillets', searchTerm: 'Boneless' },
+      { name: 'Country Chicken (Nati Koli)', searchTerm: 'Country Chicken' },
+      { name: 'Biryani Cuts', searchTerm: 'Biryani' },
+      { name: 'Chicken Combos', searchTerm: 'Combo' }
+    ]
+  },
+  {
+    id: 'mutton',
+    name: 'Mutton',
+    categoryValue: 'Tender Mutton',
+    image: '/images/products/prod_4.jpg',
+    subCategories: [
+      { name: 'Biryani & Curry Cut', searchTerm: 'Biryani' },
+      { name: 'Rich Rogan Josh Cuts', searchTerm: 'Rogan Josh' },
+      { name: 'Tender Goat Ribs & Shoulder', searchTerm: 'Mutton' },
+      { name: 'Mutton Curry Cuts (Bone-in)', searchTerm: 'Curry Cut' },
+      { name: 'Special Feast Combos', searchTerm: 'Feast' }
+    ]
+  },
+  {
+    id: 'fish',
+    name: 'Fish & Seafood',
+    categoryValue: 'Fish & Seafood',
+    image: '/images/products/prod_1.jpg',
+    subCategories: [
+      { name: 'Surmai (Seer Fish) Steaks', searchTerm: 'Surmai' },
+      { name: 'White Pomfret (Whole Cleaned)', searchTerm: 'Pomfret' },
+      { name: 'Jumbo Sea Prawns (Deveined)', searchTerm: 'Prawns' },
+      { name: 'Center-Cut Round Steaks', searchTerm: 'Steaks' },
+      { name: 'Coastal Harbor Fresh Catch', categoryFilter: 'Fish & Seafood' }
+    ]
+  },
+  {
+    id: 'ready_to_cook',
+    name: 'Ready to Cook',
+    categoryValue: 'Ready to Cook',
+    image: '/images/products/prod_7.jpg',
+    subCategories: [
+      { name: 'Amritsari Crispy Fish Tikka', searchTerm: 'Tikka' },
+      { name: 'Marinated Skillet Roasts', searchTerm: 'Roast' },
+      { name: 'Herb Butter Sizzlers', searchTerm: 'Butter' },
+      { name: 'Quick 8-Min Pan Fries', searchTerm: 'Fry' }
+    ]
+  },
+  {
+    id: 'combos',
+    name: 'Combos & Feasts',
+    categoryValue: 'Combo Box',
+    image: '/images/products/prod_8.jpg',
+    subCategories: [
+      { name: 'Grand Coastal Seafood Feast', searchTerm: 'Feast' },
+      { name: 'Weekend Family Value Packs', searchTerm: 'Box' },
+      { name: 'Mutton + Chicken Combos', searchTerm: 'Combo' },
+      { name: 'Party Starter Platters', searchTerm: 'Feast' }
+    ]
+  },
+  {
+    id: 'specials',
+    name: 'BrisketBox Specials',
+    categoryValue: 'All',
+    image: '/images/hero_banner_meat.jpg',
+    subCategories: [
+      { name: '0°C to 4°C Fresh Certified', categoryFilter: 'All' },
+      { name: 'Daily Harbor Landings', categoryFilter: 'Fish & Seafood' },
+      { name: 'Antibiotic-Free Farm Cuts', categoryFilter: 'Fresh Chicken' },
+      { name: 'All Master Cuts', categoryFilter: 'All' }
+    ]
+  }
+];
 
 const TRENDING_SEARCH_CHIPS = [
   { label: 'Curry cut', term: 'Curry cut' },
@@ -66,7 +162,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   searchQuery,
   setSearchQuery,
   currentAddress,
-  onOpenLocationModal
+  onOpenLocationModal,
+  selectedCategory,
+  onSelectCategory
 }) => {
   const { user, logout } = useAuth();
   const { totalItems, subtotal, setIsCartOpen, items, addItem, updateQuantity, applyCoupon } = useCart();
@@ -124,6 +222,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => { isMounted = false; };
   }, []);
 
+  // Licious-Style Categories Mega-Flyout State
+  const [categoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
+  const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState(0);
+  const categoriesDropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectCategoryFromMenu = (catValue: string) => {
+    if (onSelectCategory) {
+      onSelectCategory(catValue);
+    }
+    setSearchQuery('');
+    setCurrentTab('catalog');
+    setCategoriesMenuOpen(false);
+    setTimeout(() => {
+      document.getElementById('catalog-grid-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const handleSelectSubCategory = (sub: SubCategoryNav, parentCatValue: string) => {
+    if (sub.categoryFilter && onSelectCategory) {
+      onSelectCategory(sub.categoryFilter);
+    } else if (onSelectCategory) {
+      onSelectCategory(parentCatValue);
+    }
+    if (sub.searchTerm) {
+      setSearchQuery(sub.searchTerm);
+    } else {
+      setSearchQuery('');
+    }
+    setCurrentTab('catalog');
+    setCategoriesMenuOpen(false);
+    setTimeout(() => {
+      document.getElementById('catalog-grid-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   // Close dropdown upon outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -134,6 +267,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         (!mobileSearchRef.current || !mobileSearchRef.current.contains(target))
       ) {
         setIsSearchFocused(false);
+      }
+      if (
+        categoriesDropdownRef.current &&
+        !categoriesDropdownRef.current.contains(target)
+      ) {
+        setCategoriesMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -610,6 +749,100 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Navigation & Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
+            {/* Licious-Style Categories Mega-Flyout Menu */}
+            <div ref={categoriesDropdownRef} className="relative hidden md:block">
+              <button
+                type="button"
+                onClick={() => setCategoriesMenuOpen(!categoriesMenuOpen)}
+                className={`h-9 sm:h-10 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                  categoriesMenuOpen
+                    ? 'bg-rose-50 dark:bg-rose-950/70 text-[#d11243] dark:text-rose-400 border-[#d11243]/50 shadow-xs'
+                    : 'text-gray-700 dark:text-gray-200 hover:text-[#d11243] dark:hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-2xs'
+                }`}
+                aria-expanded={categoriesMenuOpen}
+              >
+                <LayoutGrid className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#d11243]" />
+                <span>Categories</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${categoriesMenuOpen ? 'rotate-180 text-[#d11243]' : ''}`} />
+              </button>
+
+              {/* Flyout Mega Dropdown */}
+              {categoriesMenuOpen && (
+                <div className="absolute right-0 lg:left-0 top-full mt-2.5 w-[500px] max-w-[90vw] bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden flex animate-in fade-in slide-in-from-top-2 duration-150">
+                  {/* Top Pointer Arrow */}
+                  <div className="absolute -top-1.5 right-6 lg:left-8 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-gray-200 dark:border-slate-800 rotate-45 z-20 pointer-events-none" />
+
+                  {/* Left Column: Categories List with Circular Platters */}
+                  <div className="w-[210px] bg-gray-50/90 dark:bg-slate-950/80 border-r border-gray-150 dark:border-slate-800 py-2 shrink-0 max-h-[380px] overflow-y-auto">
+                    {CATEGORY_NAV_DATA.map((cat, idx) => {
+                      const isHovered = hoveredCategoryIndex === idx;
+                      return (
+                        <div
+                          key={cat.id}
+                          onMouseEnter={() => setHoveredCategoryIndex(idx)}
+                          onClick={() => handleSelectCategoryFromMenu(cat.categoryValue)}
+                          className={`px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition text-xs font-semibold ${
+                            isHovered
+                              ? 'bg-white dark:bg-slate-900 text-[#d11243] dark:text-rose-400 font-bold shadow-2xs border-l-3 border-[#d11243]'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-slate-900/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <img
+                              src={cat.image}
+                              alt={cat.name}
+                              className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-slate-700 shadow-2xs shrink-0"
+                            />
+                            <span className="truncate">{cat.name}</span>
+                          </div>
+                          <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isHovered ? 'text-[#d11243] translate-x-0.5' : 'text-gray-400 opacity-40'}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Column: Sub-categories / Cut Styles */}
+                  <div className="flex-1 p-4 bg-white dark:bg-slate-900 flex flex-col justify-between max-h-[380px] overflow-y-auto">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} Cuts
+                        </span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          0°C - 4°C Fresh
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.subCategories.map((sub) => (
+                          <button
+                            key={sub.name}
+                            type="button"
+                            onClick={() => handleSelectSubCategory(sub, CATEGORY_NAV_DATA[hoveredCategoryIndex].categoryValue)}
+                            className="w-full text-left py-2 px-2.5 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:text-[#d11243] dark:hover:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/40 transition flex items-center justify-between group cursor-pointer"
+                          >
+                            <span>{sub.name}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-[#d11243] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 dark:border-slate-800 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCategoryFromMenu(CATEGORY_NAV_DATA[hoveredCategoryIndex].categoryValue)}
+                        className="text-xs font-bold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>View all {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} cuts</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* BrisketBox Offers Button (Visible on extra-wide screens) */}
             <button
               onClick={handleOffersClick}

@@ -77,6 +77,7 @@ const MainApp: React.FC = () => {
 
   const [selectedCity, setSelectedCity] = useState(() => currentAddress?.city || 'Hyderabad');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const handleSelectAddress = (addr: DeliveryAddress) => {
     setCurrentAddress(addr);
@@ -212,6 +213,11 @@ const MainApp: React.FC = () => {
           setSearchQuery={setSearchQuery}
           currentAddress={currentAddress}
           onOpenLocationModal={handleOpenLocationModal}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(cat) => {
+            setSelectedCategory(cat);
+            handleTabChange('catalog');
+          }}
         />
       )}
 
@@ -226,6 +232,8 @@ const MainApp: React.FC = () => {
             selectedCity={selectedCity}
             searchQuery={searchQuery}
             onSetSearchQuery={setSearchQuery}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
           />
         )}
 
