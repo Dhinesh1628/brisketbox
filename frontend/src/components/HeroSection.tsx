@@ -340,7 +340,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Headline and Taxonomy */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                 <Compass className="w-3 h-3 text-[#d11243]" />
                 <span>{currentSlide.origin}</span>
@@ -348,17 +348,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <span className="text-white">{currentSlide.categoryName}</span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-snug">
                 {currentSlide.title}
               </h1>
 
-              <p className="text-xs sm:text-sm font-medium text-neutral-300">
+              <p className="text-xs sm:text-sm font-semibold text-rose-200/90 tracking-wide leading-relaxed">
                 {currentSlide.subtitle}
               </p>
             </div>
 
             {/* Editorial Description */}
-            <p className="text-xs sm:text-sm text-neutral-400 max-w-xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-300/80 max-w-xl leading-relaxed pt-1">
               {currentSlide.description}
             </p>
 

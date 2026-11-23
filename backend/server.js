@@ -48,6 +48,11 @@ import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
 import analyticsRouter from './routes/analytics.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
+import crypto from 'crypto';
+import { calculateOrderPricing } from './services/pricingService.js';
+import { recordCouponUsage } from './services/couponService.js';
+import { deductStock, releaseStock } from './services/stockService.js';
+import { debitWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
   findCooler,
@@ -472,76 +477,86 @@ app.delete('/api/products/:id', authenticate, requireAdmin, (req, res) => {
 // 3. ORDERS & CHECKOUT (₹ INR + ₹250 Deposit)
 // ==========================================
 
-app.post('/api/orders', authenticate, (req, res) => {
-  const { items, deliveryAddress, deliverySlot, deliveryNotes, paymentMethod, city, couponCode, couponDiscount } = req.body;
+app.post('/api/orders', authenticate, async (req, res) => {
+  const { items, deliveryAddress, deliverySlot, deliveryNotes, paymentMethod = 'cod', city, couponCode, useWallet, tipAmount } = req.body;
 
   if (!items || !items.length) {
     return res.status(400).json({ error: 'Please add at least one cut to your cold box' });
   }
 
-  let subtotal = 0;
-  const processedItems = [];
+  // Calculate pricing strictly on server
+  let pricing;
+  try {
+    pricing = calculateOrderPricing({
+      items,
+      couponCode,
+      user: req.user,
+      useWallet: Boolean(useWallet),
+      tipAmount
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
 
-  for (const item of items) {
-    const prod = db.findById('products', item.productId);
-    if (!prod) {
-      return res.status(400).json({ error: `Cut with ID ${item.productId} not found` });
-    }
-    if (prod.stock < item.quantity) {
-      return res.status(400).json({ error: `Insufficient stock for ${prod.name}` });
-    }
+  const {
+    subtotal,
+    discountAmount,
+    coolerDeposit,
+    shippingFee,
+    grossTotal,
+    walletDeduction,
+    netPayable,
+    processedItems
+  } = pricing;
 
-    db.update('products', prod.id, { stock: prod.stock - item.quantity });
-    const lineTotal = prod.price * item.quantity;
-    subtotal += lineTotal;
-    processedItems.push({
-      productId: prod.id,
-      name: prod.name,
-      price: prod.price,
-      quantity: item.quantity,
-      unit: prod.unit,
-      netWeight: prod.netWeight,
-      chillingMethod: prod.chillingMethod,
-      cutStyle: item.selectedCutStyle || prod.cutStyle,
-      image: prod.image
+  // Deduct stock atomically
+  try {
+    await deductStock(processedItems);
+  } catch (stockErr) {
+    return res.status(400).json({ error: stockErr.message });
+  }
+
+  // Cryptographically secure collision-safe IDs
+  const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const deliveryPin = crypto.randomInt(1000, 10000).toString();
+
+  // If wallet deduction used, execute atomic ledger debit
+  if (walletDeduction > 0) {
+    try {
+      await debitWallet({
+        userId: req.user.id,
+        amount: walletDeduction,
+        idempotencyKey: `wallet_order_${orderNumber}_debit`,
+        orderId: orderNumber,
+        title: `Payment for #${orderNumber}`,
+        description: `Store credit used for Order #${orderNumber}`
+      });
+    } catch (walletErr) {
+      await releaseStock(processedItems);
+      return res.status(400).json({ error: walletErr.message });
+    }
+  }
+
+  if (couponCode) {
+    recordCouponUsage(couponCode, req.user, orderNumber);
+  }
+
+  const availableCoolers = db.get('coolers') || [];
+  const assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
+  if (assignedCooler) {
+    db.update('coolers', assignedCooler.id, {
+      status: 'assigned',
+      currentOrderId: orderNumber,
+      currentUserId: req.user.id,
+      currentUserName: req.user.name
     });
   }
 
-  const discount = Math.min(parseInt(couponDiscount || 0, 10), subtotal);
-  const COOLER_DEPOSIT = 0;
-  const shippingFee = subtotal >= 499 ? 0 : 40;
-  const total = Math.max(0, subtotal - discount + COOLER_DEPOSIT + shippingFee);
-
-  let assignedCooler = db.get('coolers').find(c => c.status === 'available');
-  if (!assignedCooler) {
-    const newBoxNumber = Math.floor(100 + Math.random() * 900);
-    const newId = `BOX-BLR-${newBoxNumber}`;
-    assignedCooler = {
-      id: newId,
-      qrCode: `BRISKETBOX-${newId}`,
-      model: 'insulated bag 18L - Reusable EPP Cold-Gel Box',
-      status: 'assigned',
-      currentOrderId: null,
-      currentUserId: req.user.id,
-      currentUserName: req.user.name,
-      cyclesUsed: 1,
-      lastSanitizedDate: new Date().toISOString().split('T')[0],
-      depositAmount: COOLER_DEPOSIT,
-      maxHoldingHours: 36,
-      assignedHub: `${city || 'Bengaluru'} Regional Hub Depot`
-    };
-    db.insert('coolers', assignedCooler);
-  }
-
-  const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-  const deliveryPin = Math.floor(1000 + Math.random() * 9000).toString();
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  // Load-balance & round-robin assign an approved fleet rider from database
   const assignedRider = assignFleetRiderForOrder();
+  const initialTemp = 0.8;
 
-  const initialTemp = 0.6;
   const order = {
     id: orderNumber,
     orderNumber,
@@ -550,56 +565,51 @@ app.post('/api/orders', authenticate, (req, res) => {
     customerName: req.user.name,
     customerEmail: req.user.email,
     customerPhone: req.user.phone || '+91 98765 43210',
-    deliveryAddress: deliveryAddress || req.user.address,
+    deliveryAddress: deliveryAddress || req.user.address || 'Address provided at checkout',
     city: city || req.user.city || 'Bengaluru',
     items: processedItems,
     subtotal,
-    discountAmount: discount || 0,
+    discountAmount,
     couponCode: couponCode || null,
-    coolerDeposit: COOLER_DEPOSIT,
+    coolerDeposit,
     shippingFee,
-    total,
+    tipAmount: pricing.tipAmount,
+    walletDeduction,
+    total: netPayable,
+    totalAmount: netPayable,
     status: 'Preparing',
     orderStatus: 'CONFIRMED',
     lifecycleStatus: 'CONFIRMED',
     partnerId: 'shop_central_butcher',
     partnerName: 'Halal Cuts & Coastal Harbor Station #14',
+    paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + ${paymentMethod.toUpperCase()}` : paymentMethod,
+    paymentStatus: netPayable === 0 ? 'PAID' : 'PENDING',
+    coolerId: assignedCooler?.id || null,
+    coolerModel: assignedCooler?.model || null,
+    coldBoxRefundStatus: 'NOT_REQUESTED',
+    liveTemp: initialTemp,
     riderId: assignedRider.riderId,
-    riderName: assignedRider.riderName,
     riderFullName: assignedRider.riderFullName,
+    riderName: assignedRider.riderName,
     riderPhone: assignedRider.riderPhone,
     riderVehicle: assignedRider.riderVehicle,
-    coolerId: assignedCooler.id,
-    coolerModel: assignedCooler.model,
-    liveTemp: initialTemp,
     deliveryExecutive: assignedRider.deliveryExecutive,
     lifecycleTimestamps: {
       confirmedAt: now.toISOString(),
       assignedAt: now.toISOString()
     },
     tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Cuts queued at Butcher Station. Assigned to Fleet Partner ${assignedRider.riderFullName}.` }
+      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Queued for custom butcher prep. Assigned to Fleet Rider ${assignedRider.riderFullName}.` }
     ],
     deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
-    trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
-    paymentMethod: paymentMethod || 'UPI (Google Pay / PhonePe)',
+    trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+    pinAttempts: 0,
+    pinLockedUntil: null,
     createdAt: new Date().toISOString(),
     deliveryNotes: deliveryNotes || ''
   };
 
   db.insert('orders', order);
-
-  db.update('coolers', assignedCooler.id, {
-    status: 'assigned',
-    currentOrderId: orderNumber,
-    currentUserId: req.user.id,
-    currentUserName: req.user.name
-  });
-
-  db.update('users', req.user.id, {
-    depositBalance: (req.user.depositBalance || 0) + COOLER_DEPOSIT
-  });
-
   res.status(201).json(order);
 });
 
@@ -646,9 +656,9 @@ app.get('/api/orders', authenticate, (req, res) => {
   } else if (req.user.role === 'customer') {
     orders = orders.filter(o => o.userId === req.user.id);
   } else if (req.user.role === 'rider') {
-    orders = orders.filter(o => o.riderId === req.user.id);
+    orders = orders.filter(o => o.riderId === req.user.id && o.orderStatus !== 'PENDING_PAYMENT');
   } else if (req.user.role === 'partner') {
-    orders = orders.filter(o => o.partnerId === req.user.shopId || o.partnerId === req.user.id);
+    orders = orders.filter(o => (o.partnerId === req.user.shopId || o.partnerId === req.user.id) && o.orderStatus !== 'PENDING_PAYMENT');
   } else {
     orders = [];
   }
@@ -1221,10 +1231,7 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
   res.json(updatedOrder);
 });
 
-// Security PIN Verification Tracker (3-attempt lockout & fraud protection)
-const pinAttemptTracker = new Map();
-
-// Swiggy-Grade Handover PIN Verification & Cooler Refund Endpoint
+// Database-Persistent Handover PIN Verification (Persistent Attempt Limits & Fraud Lockout)
 const handleOrderHandover = (req, res) => {
   const { pin, deliveryPin, coolerReturned, podImage, notes, cashCollected, cashAmount } = req.body;
   const order = db.findById('orders', req.params.id);
@@ -1235,13 +1242,12 @@ const handleOrderHandover = (req, res) => {
   const enteredPin = String(pin || deliveryPin || '').trim();
   const validPin = String(order.deliveryPin || '').trim();
   const nowTime = Date.now();
-  const attemptRecord = pinAttemptTracker.get(order.id) || { count: 0, lockedUntil: 0 };
 
-  // Check if order is under PIN lockout
-  if (attemptRecord.lockedUntil > nowTime) {
-    const remainingSec = Math.ceil((attemptRecord.lockedUntil - nowTime) / 1000);
+  // Check persistent DB lockout
+  if (order.pinLockedUntil && new Date(order.pinLockedUntil).getTime() > nowTime) {
+    const remainingSec = Math.ceil((new Date(order.pinLockedUntil).getTime() - nowTime) / 1000);
     return res.status(429).json({
-      error: `Handover locked due to 3 failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+      error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
       locked: true,
       remainingSec
     });
@@ -1249,25 +1255,34 @@ const handleOrderHandover = (req, res) => {
 
   // If a PIN is configured, verify it
   if (validPin && enteredPin !== validPin) {
-    attemptRecord.count += 1;
-    if (attemptRecord.count >= 3) {
-      attemptRecord.lockedUntil = nowTime + 300000; // 5 minute security lockout
-      pinAttemptTracker.set(order.id, attemptRecord);
+    const currentAttempts = (order.pinAttempts || 0) + 1;
+    const isLocked = currentAttempts >= 3;
+    const lockedUntil = isLocked ? new Date(nowTime + 300000).toISOString() : null;
+
+    db.update('orders', order.id, {
+      pinAttempts: currentAttempts,
+      pinLockedUntil: lockedUntil
+    });
+
+    if (isLocked) {
       return res.status(429).json({
         error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
         locked: true,
         remainingSec: 300
       });
     }
-    pinAttemptTracker.set(order.id, attemptRecord);
+
     return res.status(400).json({
-      error: `Invalid 4-digit PIN. ${3 - attemptRecord.count} attempt(s) remaining before security lockout.`,
-      remainingAttempts: 3 - attemptRecord.count
+      error: `Invalid 4-digit PIN. ${3 - currentAttempts} attempt(s) remaining before security lockout.`,
+      remainingAttempts: 3 - currentAttempts
     });
   }
 
-  // PIN verified successfully: reset security tracker
-  pinAttemptTracker.delete(order.id);
+  // PIN verified successfully: reset security tracker in database
+  db.update('orders', order.id, {
+    pinAttempts: 0,
+    pinLockedUntil: null
+  });
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1467,12 +1482,9 @@ app.post('/api/orders/:id/cancel', authenticate, (req, res) => {
     });
   }
 
-  // Restore inventory
-  for (const item of order.items) {
-    const prod = db.findById('products', item.productId);
-    if (prod) {
-      db.update('products', prod.id, { stock: prod.stock + item.quantity });
-    }
+  // Restore inventory atomically
+  if (Array.isArray(order.items)) {
+    await releaseStock(order.items);
   }
 
   // Release cooler
