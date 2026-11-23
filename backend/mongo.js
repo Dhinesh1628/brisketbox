@@ -5,12 +5,16 @@ import { Product } from './models/Product.js';
 import { Order } from './models/Order.js';
 import { Cooler } from './models/Cooler.js';
 import { CoolerReturn } from './models/CoolerReturn.js';
+import { WalletLedger } from './models/WalletLedger.js';
+import { CouponUsage } from './models/CouponUsage.js';
+import { PaymentEvent } from './models/PaymentEvent.js';
+import { Contact } from './models/Contact.js';
 
-// Resolve MongoDB SRV records reliably across all Windows/ISP networks
+// Resolve MongoDB SRV records reliably across all networks
 try {
   dns.setServers(['8.8.8.8', '1.1.1.1']);
 } catch (e) {
-  // Ignore if custom DNS cannot be set
+  // Ignore if custom DNS cannot be configured
 }
 
 // Global Mongoose connection cache for serverless (Vercel) connection reuse
@@ -19,7 +23,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-export async function connectMongoDB() {
+export async function connectMongoDB(maxRetries = (process.env.NODE_ENV === 'test' ? 1 : 3)) {
   const isProd = process.env.NODE_ENV === 'production';
   const uri = process.env.MONGODB_URI || (isProd ? '' : 'mongodb://127.0.0.1:27017/brisketbox');
 
@@ -27,38 +31,45 @@ export async function connectMongoDB() {
     throw new Error('[FATAL] MONGODB_URI is strictly required in production environment.');
   }
 
-  // If already connected, return cached connection immediately
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  if (!cached.promise) {
-    mongoose.set('strictQuery', false);
-    const opts = {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      maxPoolSize: 10,
-      bufferCommands: false
-    };
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    attempt++;
+    if (!cached.promise) {
+      mongoose.set('strictQuery', false);
+      const opts = {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+        maxPoolSize: 10,
+        bufferCommands: false
+      };
 
-    cached.promise = mongoose.connect(uri, opts).then((m) => {
-      console.log(`[MongoDB] Connected successfully to: ${m.connection.host}/${m.connection.name}`);
-      return m;
-    });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-    return cached.conn;
-  } catch (err) {
-    cached.promise = null;
-    if (isProd) {
-      // In production, startup must fail immediately if MongoDB cannot connect
-      throw new Error(`[FATAL] Failed to connect to MongoDB in production: ${err.message}`);
+      cached.promise = mongoose.connect(uri, opts).then((m) => {
+        console.log(`[MongoDB] Connected successfully to: ${m.connection.host}/${m.connection.name}`);
+        return m;
+      });
     }
-    console.warn(`[MongoDB] Connection notice (${err.message}). Running with local persistent document store in non-production.`);
-    return null;
+
+    try {
+      cached.conn = await cached.promise;
+      return cached.conn;
+    } catch (err) {
+      cached.promise = null;
+      console.warn(`[MongoDB] Connection attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      if (attempt >= maxRetries) {
+        if (isProd) {
+          throw new Error(`[FATAL] Failed to connect to MongoDB in production after ${maxRetries} attempts: ${err.message}`);
+        }
+        return null;
+      }
+      await new Promise(res => setTimeout(res, 500 * attempt));
+    }
   }
+
+  return null;
 }
 
 export function isMongoConnected() {
@@ -74,7 +85,7 @@ export function getMongoStatus() {
     isConnected: stateIndex === 1,
     host: mongoose.connection?.host || null,
     dbName: mongoose.connection?.name || null,
-    collections: ['users', 'products', 'orders', 'coolers', 'coolerreturns']
+    collections: ['users', 'products', 'orders', 'coolers', 'coolerreturns', 'walletledgers', 'couponusages', 'paymentevents', 'contacts']
   };
 }
 
@@ -83,5 +94,9 @@ export {
   Product,
   Order,
   Cooler,
-  CoolerReturn
+  CoolerReturn,
+  WalletLedger,
+  CouponUsage,
+  PaymentEvent,
+  Contact
 };

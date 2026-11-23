@@ -778,15 +778,18 @@ class Database {
   async syncWithMongo() {
     if (mongoose.connection.readyState !== 1) return;
     try {
-      const prodCount = await Product.countDocuments();
-      if (prodCount === 0) {
-        console.log('[MongoDB] Collections empty, auto-seeding BrisketBox catalog into MongoDB...');
-        await User.insertMany(INITIAL_DATA.users);
-        await Product.insertMany(INITIAL_DATA.products);
-        await Cooler.insertMany(INITIAL_DATA.coolers);
-        await Order.insertMany(INITIAL_DATA.orders);
-        await CoolerReturn.insertMany(INITIAL_DATA.coolerReturns);
-        console.log('[MongoDB] Auto-seeding into MongoDB complete.');
+      // Auto-seeding is strictly prohibited in production; only seed in dev if explicitly enabled
+      if (!isProd && isDemoSeedEnabled) {
+        const prodCount = await Product.countDocuments();
+        if (prodCount === 0) {
+          console.log('[MongoDB] Development mode: Seeding initial catalog into MongoDB...');
+          await User.insertMany(INITIAL_DATA.users);
+          await Product.insertMany(INITIAL_DATA.products);
+          await Cooler.insertMany(INITIAL_DATA.coolers);
+          await Order.insertMany(INITIAL_DATA.orders);
+          await CoolerReturn.insertMany(INITIAL_DATA.coolerReturns);
+          console.log('[MongoDB] Seeding into MongoDB complete.');
+        }
       }
 
       // Sync from MongoDB collections
@@ -800,14 +803,16 @@ class Database {
 
       if (users.length) {
         this.data.users = users;
-        // Ensure default riders and partners exist in cache and MongoDB
-        const defaultRidersAndPartners = INITIAL_DATA.users.filter(u => u.role === 'rider' || u.role === 'partner');
-        for (const r of defaultRidersAndPartners) {
-          if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
-            this.data.users.push({ ...r });
-            try {
-              await User.create(r);
-            } catch {}
+        // In dev, ensure default riders and partners exist
+        if (!isProd && isDemoSeedEnabled) {
+          const defaultRidersAndPartners = INITIAL_DATA.users.filter(u => u.role === 'rider' || u.role === 'partner');
+          for (const r of defaultRidersAndPartners) {
+            if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
+              this.data.users.push({ ...r });
+              try {
+                await User.create(r);
+              } catch {}
+            }
           }
         }
       }
@@ -823,8 +828,8 @@ class Database {
   }
 
   save() {
-    if (isProd || !DATA_FILE) {
-      return; // Never write JSON documents in production
+    if (isProd || !DATA_FILE || process.env.NODE_ENV === 'test') {
+      return; // Never write JSON documents in production or test runs
     }
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');

@@ -22,9 +22,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const { user } = useAuth();
   const { playPopSound } = useSound();
   
-  if (!product) return null;
 
-  const weightOptions = getProductWeightOptions(product);
+  const weightOptions = product ? getProductWeightOptions(product) : [];
   const [selectedWeight, setSelectedWeight] = useState<string>(
     initialWeight || weightOptions[0]?.weight || '500g'
   );
@@ -67,7 +66,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   ];
 
   const [selectedStyle, setSelectedStyle] = useState<string>(
-    product.cutStyle || cutOptions[0].id
+    product?.cutStyle || cutOptions[0].id
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
@@ -121,6 +120,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const [reviews, setReviews] = useState<ReviewItem[]>(() => {
     try {
+      if (!product) return defaultReviews;
       const saved = localStorage.getItem(`brisketbox_reviews_${product.id}`);
       return saved ? JSON.parse(saved) : defaultReviews;
     } catch {
@@ -144,7 +144,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reviewComment.trim()) return;
+    if (!product || !reviewComment.trim()) return;
 
     setIsSubmittingReview(true);
     const newRev: ReviewItem = {
@@ -184,6 +184,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   }, [product]);
 
   const toggleWishlist = () => {
+    if (!product) return;
     try {
       const saved = localStorage.getItem('brisketbox_wishlist');
       const arr: string[] = saved ? JSON.parse(saved) : [];
@@ -198,6 +199,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       localStorage.setItem('brisketbox_wishlist', JSON.stringify(updated));
     } catch (e) {}
   };
+
+  if (!product) return null;
 
   const existingItem = items.find(i => i.product.id === product.id);
   const discountPct = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;

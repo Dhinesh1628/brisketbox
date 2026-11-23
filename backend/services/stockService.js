@@ -5,7 +5,7 @@ import { db } from '../db.js';
 let stockOperationMutex = Promise.resolve();
 
 /**
- * Sequential mutex lock to prevent concurrent stock race conditions in local memory.
+ * Sequential mutex lock to prevent concurrent stock race conditions in local memory fallback.
  */
 function withStockLock(callback) {
   const nextLock = stockOperationMutex.then(async () => {
@@ -25,59 +25,54 @@ function withStockLock(callback) {
  * and no inventory is deducted.
  *
  * In production with MongoDB connected, executes atomic conditional updates ($inc with $gte).
- * In fallback mode, executes mutex-locked lowdb updates.
+ * Never executes $set from local memory after an atomic $inc.
  *
  * @param {Array<{ productId: string, quantity: number }>} items
+ * @param {{ session?: mongoose.ClientSession }} [options]
  * @returns {Promise<{ success: boolean, deductedItems: Array }>}
  */
-export async function deductStock(items) {
+export async function deductStock(items, options = {}) {
   return withStockLock(async () => {
     if (!Array.isArray(items) || items.length === 0) return { success: true, deductedItems: [] };
 
     const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+    const session = options.session || null;
 
     if (isMongo) {
       const deducted = [];
       try {
         for (const item of items) {
           const qty = Number(item.quantity) || 1;
-          const updated = await Product.findOneAndUpdate(
+          const query = Product.findOneAndUpdate(
             { id: item.productId, stock: { $gte: qty } },
             { $inc: { stock: -qty } },
-            { new: true }
+            { new: true, session }
           );
+          const updated = await query;
 
           if (!updated) {
-            const current = await Product.findOne({ id: item.productId });
+            const current = await Product.findOne({ id: item.productId }).session(session);
             throw new Error(`Insufficient stock for "${current?.name || item.productId}". Only ${current?.stock || 0} remaining (requested ${qty}).`);
           }
 
           deducted.push({ productId: item.productId, quantity: qty });
-
-          // Keep lowdb in sync
-          const localProd = db.findById('products', item.productId);
-          if (localProd) {
-            db.update('products', localProd.id, { stock: updated.stock });
-          }
         }
         return { success: true, deductedItems: deducted };
       } catch (err) {
-        // Rollback any items deducted in this partial batch
-        for (const rolled of deducted) {
-          await Product.findOneAndUpdate(
-            { id: rolled.productId },
-            { $inc: { stock: rolled.quantity } }
-          );
-          const localProd = db.findById('products', rolled.productId);
-          if (localProd) {
-            db.update('products', localProd.id, { stock: (localProd.stock || 0) + rolled.quantity });
+        // Rollback any items deducted in this partial batch if not using an aborted session
+        if (!session) {
+          for (const rolled of deducted) {
+            await Product.findOneAndUpdate(
+              { id: rolled.productId },
+              { $inc: { stock: rolled.quantity } }
+            );
           }
         }
         throw err;
       }
     }
 
-    // LowDB fallback
+    // LowDB fallback (only active when MongoDB is not connected)
     for (const item of items) {
       const prod = db.findById('products', item.productId);
       if (!prod) {
@@ -105,26 +100,30 @@ export async function deductStock(items) {
  * Used when an online payment fails, expires, or an order is cancelled.
  *
  * @param {Array<{ productId: string, quantity: number }>} items
+ * @param {{ session?: mongoose.ClientSession }} [options]
  * @returns {Promise<{ success: boolean }>}
  */
-export async function releaseStock(items) {
+export async function releaseStock(items, options = {}) {
   return withStockLock(async () => {
     if (!Array.isArray(items) || items.length === 0) return { success: true };
 
     const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+    const session = options.session || null;
 
     for (const item of items) {
       const qty = Number(item.quantity) || 1;
       if (isMongo) {
         await Product.findOneAndUpdate(
           { id: item.productId },
-          { $inc: { stock: qty } }
+          { $inc: { stock: qty } },
+          { session }
         );
-      }
-      const prod = db.findById('products', item.productId);
-      if (prod) {
-        const restoredStock = (prod.stock || 0) + qty;
-        db.update('products', prod.id, { stock: restoredStock });
+      } else {
+        const prod = db.findById('products', item.productId);
+        if (prod) {
+          const restoredStock = (prod.stock || 0) + qty;
+          db.update('products', prod.id, { stock: restoredStock });
+        }
       }
     }
 

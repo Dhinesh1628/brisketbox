@@ -94,7 +94,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
 
       {/* Licious-Style Circular Platter Grid / Horizontal Scroll */}
       <div className="bg-white dark:bg-slate-900/90 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-start justify-between gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-start justify-between gap-4 sm:gap-6 overflow-x-auto pt-4 pb-2 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.value;
 
@@ -106,10 +106,10 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                 className="flex flex-col items-center flex-1 min-w-[85px] sm:min-w-[100px] cursor-pointer group text-center select-none transition-transform focus:outline-none"
               >
                 {/* Circular Platter Plate Container */}
-                <div className="relative pt-3.5 pb-0.5">
-                  {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without ripping into circular border */}
+                <div className="relative pt-3 pb-0.5">
+                  {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without clipping or ripping */}
                   {cat.badge && (
-                    <span className={`absolute -top-1 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
                       {cat.badge}
                     </span>
                   )}

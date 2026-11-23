@@ -36,6 +36,8 @@ const userSchema = new mongoose.Schema({
   walletBalance: { type: Number, default: 0, min: 0 },
   walletTransactions: [walletTransactionSchema],
   depositBalance: { type: Number, default: 0 },
+  activeCoolersCount: { type: Number, default: 0 },
+  cashInHand: { type: Number, default: 0 },
   upiId: { type: String, default: '' },
   googleId: { type: String, sparse: true, index: true },
   avatar: { type: String, default: '' },

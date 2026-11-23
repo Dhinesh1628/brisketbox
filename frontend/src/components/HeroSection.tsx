@@ -315,8 +315,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         {/* Subtle Slate Background Texture */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:20px_20px] opacity-30 pointer-events-none" />
 
-        {/* Main Content Stage Grid */}
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 items-center gap-6 p-5 sm:p-7 lg:p-9 min-h-[380px] sm:min-h-[400px]">
+        {/* Main Content Stage Grid with Generous Gutter Clearance for Carousel Controls */}
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 items-center gap-6 px-10 sm:px-14 lg:px-16 py-6 sm:py-8 lg:py-9 min-h-[380px] sm:min-h-[400px]">
           
           {/* Left Column: Freshness Telemetry, Headline & Action */}
           <div className="md:col-span-7 space-y-4">
@@ -498,12 +498,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Carousel Arrow Controls */}
+        {/* Carousel Arrow Controls - Positioned in the clean gutter without overlapping copy or platter */}
         <button
           type="button"
           onClick={handlePrev}
           aria-label="Previous culinary cut"
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-md"
+          className="absolute left-2 sm:left-3.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
           <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
@@ -512,7 +512,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           type="button"
           onClick={handleNext}
           aria-label="Next culinary cut"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-md"
+          className="absolute right-2 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
           <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>

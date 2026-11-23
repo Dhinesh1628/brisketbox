@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { User } from '../models/User.js';
+import { WalletLedger } from '../models/WalletLedger.js';
 import { db } from '../db.js';
 import crypto from 'crypto';
 
@@ -19,8 +20,18 @@ function withWalletLock(callback) {
 
 /**
  * Debits store credit from a user's wallet with an idempotency key.
- * Backed by an immutable ledger to prevent double spending.
- * In MongoDB production, uses atomic $inc with condition { walletBalance: { $gte: numAmount } }.
+ * Backed by an immutable MongoDB ledger with unique index on idempotencyKey.
+ * In MongoDB, uses atomic $inc with condition { walletBalance: { $gte: numAmount } }.
+ * Never executes $set of walletBalance from memory.
+ *
+ * @param {Object} params
+ * @param {string} params.userId
+ * @param {number} params.amount
+ * @param {string} params.idempotencyKey
+ * @param {string} [params.orderId]
+ * @param {string} [params.title]
+ * @param {string} [params.description]
+ * @param {{ session?: mongoose.ClientSession }} [options]
  */
 export async function debitWallet({
   userId,
@@ -29,7 +40,7 @@ export async function debitWallet({
   orderId = null,
   title = 'Order Payment',
   description = 'Store credit used for order'
-}) {
+}, options = {}) {
   return withWalletLock(async () => {
     const numAmount = Math.round(Number(amount));
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -40,23 +51,23 @@ export async function debitWallet({
       throw new Error('An idempotencyKey is required for wallet transactions');
     }
 
-    const ledger = db.get('walletLedger') || [];
-    const existingTx = ledger.find(tx => tx.idempotencyKey === idempotencyKey);
-    if (existingTx) {
-      const user = db.findById('users', userId);
-      return {
-        success: true,
-        transaction: existingTx,
-        newBalance: user ? user.walletBalance : existingTx.balanceAfter,
-        isIdempotentReplay: true
-      };
-    }
-
     const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+    const session = options.session || null;
 
     if (isMongo) {
+      const existingLedger = await WalletLedger.findOne({ idempotencyKey }).session(session);
+      if (existingLedger) {
+        const u = await User.findOne({ id: userId }).session(session);
+        return {
+          success: true,
+          transaction: existingLedger.toObject ? existingLedger.toObject() : existingLedger,
+          newBalance: u ? u.walletBalance : existingLedger.balanceAfter,
+          isIdempotentReplay: true
+        };
+      }
+
       const txId = `tx_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-      const userBefore = await User.findOne({ id: userId });
+      const userBefore = await User.findOne({ id: userId }).session(session);
       if (!userBefore) {
         throw new Error(`User "${userId}" not found for wallet debit`);
       }
@@ -84,26 +95,31 @@ export async function debitWallet({
           $inc: { walletBalance: -numAmount },
           $push: { walletTransactions: transaction }
         },
-        { new: true }
+        { new: true, session }
       );
 
       if (!updatedUser) {
         throw new Error(`Insufficient wallet balance during concurrent transaction.`);
       }
 
-      const localUser = db.findById('users', userId);
-      if (localUser) {
-        db.update('users', localUser.id, {
-          walletBalance: updatedUser.walletBalance,
-          walletTransactions: [transaction, ...(localUser.walletTransactions || [])]
-        });
-      }
-      db.insert('walletLedger', transaction);
+      await WalletLedger.create([transaction], { session });
 
       return { success: true, transaction, newBalance: updatedUser.walletBalance };
     }
 
-    // LowDB fallback
+    // LowDB fallback (only active when MongoDB is not connected)
+    const ledger = db.get('walletLedger') || [];
+    const existingTx = ledger.find(tx => tx.idempotencyKey === idempotencyKey);
+    if (existingTx) {
+      const user = db.findById('users', userId);
+      return {
+        success: true,
+        transaction: existingTx,
+        newBalance: user ? user.walletBalance : existingTx.balanceAfter,
+        isIdempotentReplay: true
+      };
+    }
+
     const user = db.findById('users', userId);
     if (!user) {
       throw new Error(`User "${userId}" not found for wallet debit`);
@@ -144,7 +160,18 @@ export async function debitWallet({
 
 /**
  * Credits store credit to a user's wallet with an idempotency key.
- * Backed by an immutable ledger to prevent duplicate rewards or refunds.
+ * Backed by an immutable MongoDB ledger with unique index on idempotencyKey.
+ * In MongoDB, uses atomic $inc.
+ * Never executes $set of walletBalance from memory.
+ *
+ * @param {Object} params
+ * @param {string} params.userId
+ * @param {number} params.amount
+ * @param {string} params.idempotencyKey
+ * @param {string} [params.orderId]
+ * @param {string} [params.title]
+ * @param {string} [params.description]
+ * @param {{ session?: mongoose.ClientSession }} [options]
  */
 export async function creditWallet({
   userId,
@@ -153,7 +180,7 @@ export async function creditWallet({
   orderId = null,
   title = 'Wallet Credit',
   description = 'Store credit credited to wallet'
-}) {
+}, options = {}) {
   return withWalletLock(async () => {
     const numAmount = Math.round(Number(amount));
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -164,23 +191,23 @@ export async function creditWallet({
       throw new Error('An idempotencyKey is required for wallet transactions');
     }
 
-    const ledger = db.get('walletLedger') || [];
-    const existingTx = ledger.find(tx => tx.idempotencyKey === idempotencyKey);
-    if (existingTx) {
-      const user = db.findById('users', userId);
-      return {
-        success: true,
-        transaction: existingTx,
-        newBalance: user ? user.walletBalance : existingTx.balanceAfter,
-        isIdempotentReplay: true
-      };
-    }
-
     const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+    const session = options.session || null;
 
     if (isMongo) {
+      const existingLedger = await WalletLedger.findOne({ idempotencyKey }).session(session);
+      if (existingLedger) {
+        const u = await User.findOne({ id: userId }).session(session);
+        return {
+          success: true,
+          transaction: existingLedger.toObject ? existingLedger.toObject() : existingLedger,
+          newBalance: u ? u.walletBalance : existingLedger.balanceAfter,
+          isIdempotentReplay: true
+        };
+      }
+
       const txId = `tx_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-      const userBefore = await User.findOne({ id: userId });
+      const userBefore = await User.findOne({ id: userId }).session(session);
       if (!userBefore) {
         throw new Error(`User "${userId}" not found for wallet credit`);
       }
@@ -205,22 +232,27 @@ export async function creditWallet({
           $inc: { walletBalance: numAmount },
           $push: { walletTransactions: transaction }
         },
-        { new: true }
+        { new: true, session }
       );
 
-      const localUser = db.findById('users', userId);
-      if (localUser) {
-        db.update('users', localUser.id, {
-          walletBalance: updatedUser.walletBalance,
-          walletTransactions: [transaction, ...(localUser.walletTransactions || [])]
-        });
-      }
-      db.insert('walletLedger', transaction);
+      await WalletLedger.create([transaction], { session });
 
       return { success: true, transaction, newBalance: updatedUser.walletBalance };
     }
 
-    // LowDB fallback
+    // LowDB fallback (only active when MongoDB is not connected)
+    const ledger = db.get('walletLedger') || [];
+    const existingTx = ledger.find(tx => tx.idempotencyKey === idempotencyKey);
+    if (existingTx) {
+      const user = db.findById('users', userId);
+      return {
+        success: true,
+        transaction: existingTx,
+        newBalance: user ? user.walletBalance : existingTx.balanceAfter,
+        isIdempotentReplay: true
+      };
+    }
+
     const user = db.findById('users', userId);
     if (!user) {
       throw new Error(`User "${userId}" not found for wallet credit`);

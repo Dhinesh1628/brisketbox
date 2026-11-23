@@ -4,6 +4,7 @@ import {
   canRoleExecuteTransition,
   normalizeLifecycle
 } from './services/orderStateMachine.js';
+import { cancelOrder } from './services/orderService.js';
 import {
   validate,
   loginSchema,
@@ -141,16 +142,20 @@ const generalLimiter = rateLimit({
 });
 app.use('/api/', generalLimiter);
 
-// Database Availability Gate: Return 503 if MongoDB is disconnected in production
-app.use('/api', (req, res, next) => {
+// Connect per request with retry logic in production & 503 availability gate
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health' || req.path === '/api/health') {
+    return next();
+  }
   if (process.env.NODE_ENV === 'production') {
-    if (req.path === '/health' || req.path === '/api/health') {
-      return next();
-    }
     if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        error: 'Service Unavailable: Database connection is offline. Please try again shortly.'
-      });
+      try {
+        await connectMongoDB(3);
+      } catch (err) {
+        return res.status(503).json({
+          error: 'Service Unavailable: Database connection is offline. Please try again shortly.'
+        });
+      }
     }
   }
   next();
@@ -295,63 +300,72 @@ app.post('/api/auth/google', authLimiter, async (req, res, next) => {
 });
 
 app.post('/api/auth/register', authLimiter, (req, res) => {
-  const { name, email, password, phone, address, city, upiId } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email, and password are required' });
+  try {
+    const { name, email, password, phone, address, city, upiId } = req.body || {};
+    if (!name || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid name, email, and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const newUser = {
+      id: `usr_${uuidv4().slice(0, 8)}`,
+      name: String(name).trim(),
+      email: cleanEmail,
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'customer',
+      phone: typeof phone === 'string' ? phone : '+91 98765 00000',
+      city: typeof city === 'string' ? city : 'Bengaluru',
+      address: typeof address === 'string' ? address : '1st Cross, Indiranagar, Bengaluru, Karnataka 560038',
+      depositBalance: 0,
+      upiId: typeof upiId === 'string' ? upiId : '',
+      createdAt: new Date().toISOString()
+    };
+
+    db.insert('users', newUser);
+    const token = createToken(newUser);
+    const { password: _, ...userWithoutPw } = newUser;
+    res.status(201).json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const newUser = {
-    id: `usr_${uuidv4().slice(0, 8)}`,
-    name,
-    email: email.toLowerCase(),
-    password: bcrypt.hashSync(password, 10),
-    role: 'customer',
-    phone: phone || '+91 98765 00000',
-    city: city || 'Bengaluru',
-    address: address || '1st Cross, Indiranagar, Bengaluru, Karnataka 560038',
-    depositBalance: 0,
-    upiId: upiId || '',
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newUser);
-  const token = createToken(newUser);
-  const { password: _, ...userWithoutPw } = newUser;
-  res.status(201).json({ user: userWithoutPw, token });
 });
 
 // Standard Login supporting Email or Mobile number
 app.post('/api/auth/login', authLimiter, (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
-  }
-
-  const cleanPhone = input.replace(/[^0-9]/g, '');
-  const user = db.get('users').find(u => {
-    if (u.email && u.email.toLowerCase() === input) return true;
-    if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
-      const uPhoneClean = u.phone.replace(/[^0-9]/g, '');
-      return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
     }
-    return false;
-  });
 
-  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+    const cleanPhone = input.replace(/[^0-9]/g, '');
+    const user = db.get('users').find(u => {
+      if (u.email && u.email.toLowerCase() === input) return true;
+      if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
+        const uPhoneClean = String(u.phone).replace(/[^0-9]/g, '');
+        return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
+      }
+      return false;
+    });
+
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+    }
+
+    const token = createToken(user);
+    setAuthCookie(res, token);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Login failed' });
   }
-
-  const token = createToken(user);
-  setAuthCookie(res, token);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -725,91 +739,101 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 // ==========================================
 
 app.post('/api/rider/register', authLimiter, (req, res) => {
-  const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body;
-  if (!name || !email || !password || !phone) {
-    return res.status(400).json({ error: 'Name, email, phone, and password are required for rider onboarding' });
+  try {
+    const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body || {};
+    if (!name || !email || !password || !phone || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid name, email, phone, and password strings are required for rider onboarding' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    const newRider = {
+      id: `usr_rider_${uuidv4().slice(0, 6)}`,
+      name: String(name).trim(),
+      email: cleanEmail,
+      phone: String(phone),
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'rider',
+      approvalStatus: 'pending_approval',
+      address: typeof address === 'string' ? address : 'Bengaluru',
+      vehicleType: typeof vehicleType === 'string' ? vehicleType : 'Electric 2-Wheeler (EV)',
+      vehicleNumber: typeof vehicleNumber === 'string' ? vehicleNumber : 'KA-04-EV-TEMP',
+      licenseNumber: typeof licenseNumber === 'string' ? licenseNumber : 'DL-TEMP-PENDING',
+      upiId: typeof upiId === 'string' ? upiId : `${cleanPhone.slice(-10)}@okaxis`,
+      online: false,
+      earningsToday: 0,
+      deliveriesToday: 0,
+      rating: 4.9,
+      createdAt: new Date().toISOString()
+    };
+
+    db.insert('users', newRider);
+    const { password: _, ...safeRider } = newRider;
+    res.status(201).json({
+      message: 'Rider registration submitted. Your application is under review by Operations.',
+      rider: safeRider
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Rider registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const newRider = {
-    id: `usr_rider_${uuidv4().slice(0, 6)}`,
-    name,
-    email: email.toLowerCase(),
-    phone,
-    password: bcrypt.hashSync(password, 10),
-    role: 'rider',
-    approvalStatus: 'pending_approval',
-    address: address || 'Bengaluru',
-    vehicleType: vehicleType || 'Electric 2-Wheeler (EV)',
-    vehicleNumber: vehicleNumber || 'KA-04-EV-TEMP',
-    licenseNumber: licenseNumber || 'DL-TEMP-PENDING',
-    upiId: upiId || `${phone.replace(/\D/g, '').slice(-10)}@okaxis`,
-    online: false,
-    earningsToday: 0,
-    deliveriesToday: 0,
-    rating: 4.9,
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newRider);
-  const { password: _, ...safeRider } = newRider;
-  res.status(201).json({
-    message: 'Rider registration submitted. Your application is under review by Operations.',
-    rider: safeRider
-  });
 });
 
 app.post('/api/rider/login', authLimiter, (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Rider email/phone and password required' });
-  }
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Rider email/phone and password required' });
+    }
 
-  const user = db.get('users').find(u => {
-    if (u.email && u.email.toLowerCase() === input) return true;
-    const cleanDigits = input.replace(/[^0-9]/g, '');
-    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-    return false;
-  });
-
-  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your rider credentials.' });
-  }
-
-  if (user.role !== 'rider' && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied: This login is exclusively for BrisketBox Delivery Riders.' });
-  }
-
-  if (user.approvalStatus === 'pending_approval') {
-    return res.status(403).json({
-      error: 'Your rider application is currently Pending Approval from the Operations Admin.',
-      approvalStatus: 'pending_approval'
+    const user = db.get('users').find(u => {
+      if (u.email && u.email.toLowerCase() === input) return true;
+      const cleanDigits = input.replace(/[^0-9]/g, '');
+      if (cleanDigits.length >= 10 && u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
+      return false;
     });
-  }
 
-  if (user.approvalStatus === 'rejected') {
-    return res.status(403).json({
-      error: 'Your rider application was not approved by Operations.',
-      approvalStatus: 'rejected'
-    });
-  }
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your rider credentials.' });
+    }
 
-  if (user.approvalStatus === 'suspended') {
-    return res.status(403).json({
-      error: 'Your rider partner account is currently suspended.',
-      approvalStatus: 'suspended'
-    });
-  }
+    if (user.role !== 'rider' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: This login is exclusively for BrisketBox Delivery Riders.' });
+    }
 
-  const token = createToken(user);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
+    if (user.approvalStatus === 'pending_approval') {
+      return res.status(403).json({
+        error: 'Your rider application is currently Pending Approval from the Operations Admin.',
+        approvalStatus: 'pending_approval'
+      });
+    }
+
+    if (user.approvalStatus === 'rejected') {
+      return res.status(403).json({
+        error: 'Your rider application was not approved by Operations.',
+        approvalStatus: 'rejected'
+      });
+    }
+
+    if (user.approvalStatus === 'suspended') {
+      return res.status(403).json({
+        error: 'Your rider partner account is currently suspended.',
+        approvalStatus: 'suspended'
+      });
+    }
+
+    const token = createToken(user);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Rider login failed' });
+  }
 });
 
 app.get('/api/rider/me', authenticate, requireRole('rider'), (req, res) => {
@@ -962,84 +986,93 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
 // ==========================================
 
 app.post('/api/partner/register', authLimiter, (req, res) => {
-  const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body;
-  if (!shopName || !ownerName || !email || !password) {
-    return res.status(400).json({ error: 'Shop name, owner name, email, and password are required' });
+  try {
+    const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body || {};
+    if (!shopName || !ownerName || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid shop name, owner name, email, and password strings are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const shopId = `shop_${uuidv4().slice(0, 8)}`;
+    const newPartner = {
+      id: `usr_partner_${uuidv4().slice(0, 6)}`,
+      name: String(ownerName).trim(),
+      shopName: String(shopName).trim(),
+      shopId,
+      email: cleanEmail,
+      phone: typeof phone === 'string' ? phone : '+91 98000 00000',
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'partner',
+      approvalStatus: 'pending_approval',
+      address: typeof address === 'string' ? address : 'Bengaluru Coastal Harbor Depot',
+      fssaiNumber: typeof fssaiNumber === 'string' ? fssaiNumber : 'FSSAI-REG-PENDING',
+      categories: Array.isArray(categories) ? categories : ['Fresh Chicken', 'Tender Mutton', 'Fish & Seafood'],
+      operatingHours: typeof operatingHours === 'string' ? operatingHours : '05:30 AM - 09:30 PM',
+      description: typeof description === 'string' ? description : 'Daily artisanal meat butchering station & seafood lot',
+      createdAt: new Date().toISOString()
+    };
+
+    db.insert('users', newPartner);
+    const { password: _, ...safePartner } = newPartner;
+    res.status(201).json({
+      message: 'Partner shop application submitted successfully. Pending Admin verification.',
+      partner: safePartner
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Partner registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const shopId = `shop_${uuidv4().slice(0, 8)}`;
-  const newPartner = {
-    id: `usr_partner_${uuidv4().slice(0, 6)}`,
-    name: ownerName,
-    shopName,
-    shopId,
-    email: email.toLowerCase(),
-    phone: phone || '+91 98000 00000',
-    password: bcrypt.hashSync(password, 10),
-    role: 'partner',
-    approvalStatus: 'pending_approval',
-    address: address || 'Bengaluru Coastal Harbor Depot',
-    fssaiNumber: fssaiNumber || 'FSSAI-REG-PENDING',
-    categories: categories || ['Fresh Chicken', 'Tender Mutton', 'Fish & Seafood'],
-    operatingHours: operatingHours || '05:30 AM - 09:30 PM',
-    description: description || 'Daily artisanal meat butchering station & seafood lot',
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newPartner);
-  const { password: _, ...safePartner } = newPartner;
-  res.status(201).json({
-    message: 'Partner shop application submitted successfully. Pending Admin verification.',
-    partner: safePartner
-  });
 });
 
 app.post('/api/partner/login', authLimiter, (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Partner business email and password required' });
-  }
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Partner business email and password required' });
+    }
 
-  const user = db.get('users').find(u => {
-    if (u.email && u.email.toLowerCase() === input) return true;
-    const cleanDigits = input.replace(/[^0-9]/g, '');
-    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-    return false;
-  });
-
-  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your shop partner login.' });
-  }
-
-  if (user.role !== 'partner' && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied: This login is exclusively for Butcher / Partner Shops.' });
-  }
-
-  if (user.approvalStatus === 'pending_approval') {
-    return res.status(403).json({
-      error: 'Your partner shop application is currently Pending Approval from BrisketBox Operations Admin.',
-      approvalStatus: 'pending_approval'
+    const user = db.get('users').find(u => {
+      if (u.email && u.email.toLowerCase() === input) return true;
+      const cleanDigits = input.replace(/[^0-9]/g, '');
+      if (cleanDigits.length >= 10 && u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
+      return false;
     });
-  }
 
-  if (user.approvalStatus === 'suspended') {
-    return res.status(403).json({
-      error: 'Your shop partner account is currently suspended.',
-      approvalStatus: 'suspended'
-    });
-  }
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your shop partner login.' });
+    }
 
-  const token = createToken(user);
-  setAuthCookie(res, token);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
+    if (user.role !== 'partner' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: This login is exclusively for Butcher / Partner Shops.' });
+    }
+
+    if (user.approvalStatus === 'pending_approval') {
+      return res.status(403).json({
+        error: 'Your partner shop application is currently Pending Approval from BrisketBox Operations Admin.',
+        approvalStatus: 'pending_approval'
+      });
+    }
+
+    if (user.approvalStatus === 'suspended') {
+      return res.status(403).json({
+        error: 'Your shop partner account is currently suspended.',
+        approvalStatus: 'suspended'
+      });
+    }
+
+    const token = createToken(user);
+    setAuthCookie(res, token);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Partner login failed' });
+  }
 });
 
 app.get('/api/partner/me', authenticate, requireRole('partner'), (req, res) => {
@@ -1256,13 +1289,23 @@ const handleOrderHandover = async (req, res) => {
   }
 
   const isAdmin = req.user && req.user.role === 'admin';
-  const isAssignedRider = req.user && (req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId));
+  const isApprovedRider = req.user && req.user.role === 'rider' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = isApprovedRider && Boolean(order.riderId && order.riderId === req.user.id);
   if (!isAdmin && !isAssignedRider) {
-    return res.status(403).json({ error: 'Access denied: Only the assigned delivery rider or operations admin can complete order handover.' });
+    return res.status(403).json({ error: 'Access denied: Only the assigned and approved delivery rider or operations admin can complete order handover.' });
   }
 
-  if (order.orderStatus === 'DELIVERED') {
-    return res.status(400).json({ error: 'Order has already been delivered and verified.' });
+  // Handover is allowed ONLY from OUT_FOR_DELIVERY or ARRIVED
+  const currentLifecycle = normalizeLifecycle(order.lifecycleStatus || order.orderStatus || order.status);
+  if (!['OUT_FOR_DELIVERY', 'ARRIVED'].includes(currentLifecycle)) {
+    if (['DELIVERED', 'COOLER_RETURNED', 'COMPLETED'].includes(currentLifecycle)) {
+      return res.status(400).json({ 
+        error: `Order has already been delivered and completed. Current status is '${currentLifecycle}'.` 
+      });
+    }
+    return res.status(400).json({ 
+      error: `Order handover is only permitted from 'OUT_FOR_DELIVERY' or 'ARRIVED' status. Current status is '${currentLifecycle}'.` 
+    });
   }
 
   const enteredPin = String(pin || deliveryPin || '').trim();
@@ -1413,7 +1456,7 @@ app.post('/api/orders/:id/handover', authenticate, handleOrderHandover);
 app.put('/api/orders/:id/handover', authenticate, handleOrderHandover);
 
 // Update prep / delivery status
-const handleUpdateStatus = (req, res) => {
+const handleUpdateStatus = async (req, res) => {
   const { 
     status, 
     orderStatus, 
@@ -1434,32 +1477,51 @@ const handleUpdateStatus = (req, res) => {
   }
 
   const isAdmin = req.user && req.user.role === 'admin';
-  const isAssignedRider = req.user && req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId);
-  const isAssignedPartner = req.user && req.user.role === 'partner' && (order.partnerId === req.user.id || !order.partnerId);
+  const isApprovedRider = req.user && req.user.role === 'rider' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = isApprovedRider && Boolean(order.riderId && order.riderId === req.user.id);
+  const isApprovedPartner = req.user && req.user.role === 'partner' && req.user.approvalStatus === 'approved';
+  const isAssignedPartner = isApprovedPartner && Boolean(order.partnerId && (order.partnerId === req.user.id || (req.user.shopId && order.partnerId === req.user.shopId)));
 
   if (!isAdmin && !isAssignedRider && !isAssignedPartner) {
-    return res.status(403).json({ error: 'Access denied: Only authorized station partners, assigned riders, or operations admins can update order status.' });
+    return res.status(403).json({ error: 'Access denied: Only authorized, approved station partners, assigned riders, or operations admins can update order status.' });
   }
 
+  // Normalize target status before checks. No status spelling may bypass PIN delivery.
+  const targetStatus = normalizeLifecycle(status || orderStatus || '');
+
   // Delivery CANNOT be marked via status update; it MUST go through PIN verification
-  if (status === 'delivered' || status === 'Delivered' || orderStatus === 'DELIVERED') {
+  if (targetStatus === 'DELIVERED') {
     return res.status(400).json({ error: 'Orders can only be marked DELIVERED via the /api/orders/:id/handover route with customer delivery PIN verification.' });
   }
 
-  const resolvedOrderStatus = orderStatus || (
-    status === 'Out for Delivery' || status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' :
-    status === 'Packed' || status === 'Cold Box Packed' || status === 'ready_for_dispatch' ? 'PACKED' :
-    status === 'Quality Check' || status === 'vacuum_packed' ? 'QUALITY_CHECK' :
-    status === 'Preparing' || status === 'butchering' ? 'PREPARING' :
-    status === 'Cancelled' ? 'CANCELLED' :
-    status === 'Confirmed' ? 'CONFIRMED' : order.orderStatus
-  );
+  // Cancellation MUST go through unified cancelOrder
+  if (targetStatus === 'CANCELLED') {
+    try {
+      const cancelled = await cancelOrder({ orderId: order.id, user: req.user, reason: notes || note || 'Cancelled via status update' });
+      const sanitized = { ...cancelled };
+      if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+        delete sanitized.deliveryPin;
+      }
+      return res.json(sanitized);
+    } catch (err) {
+      return res.status(err.statusCode || 400).json({ error: err.message });
+    }
+  }
 
-  // Validate state machine transition
-  if (resolvedOrderStatus && resolvedOrderStatus !== order.orderStatus) {
-    if (!isValidTransition(order.orderStatus, resolvedOrderStatus)) {
+  const resolvedOrderStatus = targetStatus || order.orderStatus;
+  const currentStatus = normalizeLifecycle(order.lifecycleStatus || order.orderStatus || order.status);
+
+  // Validate state machine transition & role permissions
+  if (resolvedOrderStatus && resolvedOrderStatus !== currentStatus) {
+    if (!isValidTransition(currentStatus, resolvedOrderStatus)) {
       return res.status(400).json({
-        error: `Invalid order state transition from '${order.orderStatus}' to '${resolvedOrderStatus}'.`
+        error: `Invalid order state transition from '${currentStatus}' to '${resolvedOrderStatus}'.`
+      });
+    }
+
+    if (!canRoleExecuteTransition(req.user.role, currentStatus, resolvedOrderStatus)) {
+      return res.status(403).json({
+        error: `Role '${req.user.role}' is not authorized to execute order transition from '${currentStatus}' to '${resolvedOrderStatus}'.`
       });
     }
   }
@@ -1509,67 +1571,24 @@ const handleUpdateStatus = (req, res) => {
 app.patch('/api/orders/:id/status', authenticate, handleUpdateStatus);
 app.put('/api/orders/:id/status', authenticate, handleUpdateStatus);
 
-// Customer Order Cancellation (Only allowed before order is PACKED)
+// Customer Order Cancellation (Unified Cancellation Service)
 app.post('/api/orders/:id/cancel', authenticate, async (req, res) => {
-  const order = db.findById('orders', req.params.id);
-  if (!order) {
-    return res.status(404).json({ error: 'Order not found' });
-  }
-
-  if (req.user.role !== 'admin' && order.userId !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  const nonCancellable = ['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
-  if (nonCancellable.includes(order.orderStatus)) {
-    return res.status(400).json({ 
-      error: `Order cannot be cancelled in '${order.orderStatus}' stage. Please contact concierge support.` 
+  try {
+    const cancelled = await cancelOrder({ 
+      orderId: req.params.id, 
+      user: req.user, 
+      reason: req.body?.reason || 'Customer requested cancellation' 
     });
-  }
 
-  // Restore inventory atomically ONLY if stock was previously deducted
-  if (order.stockDeducted && Array.isArray(order.items)) {
-    await releaseStock(order.items);
-  }
-
-  // Refund wallet credit if wallet was used
-  if (order.walletDeduction > 0 && order.userId) {
-    try {
-      await creditWallet({
-        userId: order.userId,
-        amount: order.walletDeduction,
-        idempotencyKey: `wallet_refund_cancel_${order.id}`,
-        orderId: order.orderNumber || order.id,
-        title: `Refund for Order #${order.orderNumber || order.id}`,
-        description: 'Store credit refunded due to order cancellation.'
-      });
-    } catch (walletErr) {
-      console.warn('[Cancel] Wallet refund error:', walletErr.message);
+    const sanitized = { ...cancelled };
+    if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+      delete sanitized.deliveryPin;
     }
+
+    res.json({ success: true, message: 'Order cancelled successfully', order: sanitized });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
   }
-
-  // Release cooler
-  if (order.coolerId) {
-    db.update('coolers', order.coolerId, {
-      status: 'available',
-      currentOrderId: null,
-      currentUserId: null
-    });
-  }
-
-  const updated = db.update('orders', order.id, {
-    orderStatus: 'CANCELLED',
-    status: 'Cancelled',
-    stockDeducted: false,
-    paymentStatus: order.paymentStatus === 'PAID' ? 'REFUND_PENDING' : order.paymentStatus
-  });
-
-  const sanitized = { ...updated };
-  if (req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
-    delete sanitized.deliveryPin;
-  }
-
-  res.json({ success: true, message: 'Order cancelled successfully', order: sanitized });
 });
 
 // Customer Concierge Support & Contact Form Submission (Anti-Spam Rate Limited)

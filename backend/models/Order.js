@@ -22,6 +22,7 @@ const orderSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   orderNumber: { type: String, required: true, unique: true, index: true },
   userId: { type: String, required: true, index: true },
+  guestToken: { type: String, default: null, index: true },
   customerName: { type: String, required: true },
   customerEmail: { type: String, required: true },
   customerPhone: { type: String, required: true },
@@ -38,6 +39,14 @@ const orderSchema = new mongoose.Schema({
   total: { type: Number, required: true, min: 0 },
   totalAmount: { type: Number, required: true, min: 0 },
   amountInPaise: { type: Number, default: 0 },
+
+  // Execution & stock state flags
+  stockDeducted: { type: Boolean, default: false },
+  walletDebited: { type: Boolean, default: false },
+  walletRefunded: { type: Boolean, default: false },
+  coolerReleased: { type: Boolean, default: false },
+  coolerReturned: { type: Boolean, default: false },
+  coolerDepositRefunded: { type: Boolean, default: false },
 
   // Delivery & Location details
   deliveryAddress: { type: String, required: true },
@@ -64,10 +73,16 @@ const orderSchema = new mongoose.Schema({
       'PENDING_PAYMENT',
       'CONFIRMED',
       'PREPARING',
+      'QUALITY_CHECK',
+      'PACKED',
       'READY_FOR_PICKUP',
       'OUT_FOR_DELIVERY',
       'ARRIVED',
       'DELIVERED',
+      'COOLER_RETURNED',
+      'REFUND_PENDING',
+      'REFUND_REQUIRED',
+      'REFUNDED',
       'CANCELLED'
     ],
     default: 'PENDING_PAYMENT',
@@ -79,22 +94,36 @@ const orderSchema = new mongoose.Schema({
       'PENDING_PAYMENT',
       'CONFIRMED',
       'PREPARING',
+      'QUALITY_CHECK',
+      'PACKED',
       'READY_FOR_PICKUP',
       'OUT_FOR_DELIVERY',
       'ARRIVED',
       'DELIVERED',
+      'COOLER_RETURNED',
+      'REFUND_PENDING',
+      'REFUND_REQUIRED',
+      'REFUNDED',
       'CANCELLED'
     ],
     default: 'PENDING_PAYMENT',
     index: true
   },
   status: { type: String, default: 'Pending Payment' },
+  prepStage: { type: String, default: '' },
 
   // Payment Tracking
   paymentMethod: { type: String, default: 'razorpay' },
   paymentStatus: {
     type: String,
-    enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    enum: [
+      'PENDING',
+      'PAID',
+      'FAILED',
+      'REFUND_PENDING',
+      'REFUND_REQUIRED',
+      'REFUNDED'
+    ],
     default: 'PENDING',
     index: true
   },
@@ -106,6 +135,10 @@ const orderSchema = new mongoose.Schema({
   deliveryPin: { type: String, default: '' },
   pinAttempts: { type: Number, default: 0 },
   pinLockedUntil: { type: Date, default: null },
+  podImage: { type: String, default: null },
+  handoverNotes: { type: String, default: '' },
+  deliveredAt: { type: String, default: null },
+  cashCollected: { type: Number, default: 0 },
 
   // Cold Box & Reusable Logistics
   coolerId: { type: String, default: null, index: true },
@@ -126,9 +159,14 @@ const orderSchema = new mongoose.Schema({
   riderName: { type: String, default: null },
   riderPhone: { type: String, default: null },
   riderVehicle: { type: String, default: null },
+  riderLocation: { type: mongoose.Schema.Types.Mixed, default: null },
   deliveryExecutive: { type: String, default: null },
   partnerId: { type: String, default: null, index: true },
   partnerName: { type: String, default: null },
+  weighedWeight: { type: Number, default: null },
+  batchLotId: { type: String, default: null },
+  sealTag: { type: String, default: null },
+  butcherName: { type: String, default: null },
 
   // Cold Chain Telemetry
   liveTemp: { type: Number, default: 0.8 },
@@ -138,6 +176,7 @@ const orderSchema = new mongoose.Schema({
     confirmedAt: { type: String, default: null },
     assignedAt: { type: String, default: null },
     preparingAt: { type: String, default: null },
+    packedAt: { type: String, default: null },
     outForDeliveryAt: { type: String, default: null },
     arrivedAt: { type: String, default: null },
     deliveredAt: { type: String, default: null },

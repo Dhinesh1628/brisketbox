@@ -963,10 +963,10 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <div 
               onClick={() => setIsCashDepositModalOpen(true)}
               title="Click to view Cash in Hand & Deposit at Hub"
-              className="p-2 rounded-xl bg-amber-50/70 border border-amber-200 hover:border-amber-300 hover:bg-amber-100/60 transition cursor-pointer shadow-xs"
+              className="p-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 hover:border-amber-400 hover:bg-amber-100/80 transition cursor-pointer shadow-xs"
             >
-              <span className="text-[10px] text-amber-800 block uppercase font-bold">Cash in Hand</span>
-              <span className="text-base font-black text-amber-800 font-mono">₹{cashInHand}</span>
+              <span className="text-[10px] text-amber-900 dark:text-amber-300 block uppercase font-bold">Cash in Hand</span>
+              <span className="text-base font-black text-amber-900 dark:text-amber-300 font-mono">₹{cashInHand}</span>
             </div>
           </div>
         </div>

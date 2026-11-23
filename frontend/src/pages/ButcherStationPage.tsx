@@ -1182,8 +1182,8 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             {/* Header Greeting Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h1 className="text-xl font-bold text-[#0f172a] flex items-center gap-2">
-                  <span>Good morning, {user.name ? user.name.split(' ')[0] : 'Master Butcher'}!</span>
+                <h1 className="text-xl font-bold text-[#0f172a] flex items-center gap-2 pl-0.5">
+                  <span className="truncate">Good morning, {user.name ? user.name.split(' ')[0] : 'Master Butcher'}!</span>
                 </h1>
                 <p className="text-xs text-gray-500">
                   {user.address || 'Road No. 36, Jubilee Hills, Hyderabad'}

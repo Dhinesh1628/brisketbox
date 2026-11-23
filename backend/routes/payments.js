@@ -3,11 +3,12 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { db } from '../db.js';
 import { assignFleetRiderForOrder } from '../dispatch.js';
-import { getAuthTokenFromReq, verifyToken, authenticate, requireAdmin } from '../services/auth.js';
+import { getAuthTokenFromReq, verifyToken, authenticate, requireAdmin, authenticateOptional } from '../services/auth.js';
 import { calculateOrderPricing } from '../services/pricingService.js';
 import { recordCouponUsage } from '../services/couponService.js';
 import { deductStock, releaseStock } from '../services/stockService.js';
 import { debitWallet, creditWallet } from '../services/walletService.js';
+import { finalizePayment, releasePaymentReservations } from '../services/paymentFinalizer.js';
 
 const router = express.Router();
 
@@ -335,6 +336,8 @@ router.post('/create-order', async (req, res) => {
       razorpayOrderId = `order_test_${crypto.randomBytes(8).toString('hex')}`;
     }
 
+    const guestToken = crypto.randomBytes(24).toString('hex');
+
     const order = createOrderRecord({
       orderNumber,
       user,
@@ -360,13 +363,15 @@ router.post('/create-order', async (req, res) => {
       walletDebited: walletDeduction > 0,
       razorpayOrderId,
       amountInPaise,
-      assignedRider: null
+      assignedRider: null,
+      guestToken
     });
 
     res.status(200).json({
       success: true,
       orderId: order.id,
       orderNumber: order.orderNumber,
+      guestToken,
       razorpayOrderId,
       amount: amountInPaise,
       currency: 'INR',
@@ -484,45 +489,29 @@ router.post('/verify', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid payment signature. Verification failed.' });
     }
 
-    // Deduct stock atomically now that payment is confirmed
-    if (!order.stockDeducted && Array.isArray(order.items)) {
-      try {
-        await deductStock(order.items);
-      } catch (stockErr) {
-        console.error('[Payments] Stock deduction error post-payment:', stockErr);
-        return res.status(409).json({ error: `Item out of stock during payment: ${stockErr.message}. Refund will be issued.` });
-      }
-    }
-
-    // Record coupon usage
-    if (order.couponCode) {
-      recordCouponUsage(order.couponCode, { id: order.userId }, order.id);
-    }
-
-    const assignedRider = assignFleetRiderForOrder();
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    const updatedOrder = db.update('orders', order.id, {
-      paymentStatus: 'PAID',
-      orderStatus: 'CONFIRMED',
-      status: 'Order Confirmed',
-      lifecycleStatus: 'CONFIRMED',
-      stockDeducted: true,
+    // Centralized, idempotent payment finalizer
+    const finalResult = await finalizePayment({
+      orderId: order.id,
       razorpayPaymentId: razorpay_payment_id,
+      razorpayOrderId: razorpay_order_id,
       razorpaySignature: razorpay_signature || 'SERVER_VERIFIED',
-      riderId: assignedRider.riderId,
-      riderFullName: assignedRider.riderFullName,
-      riderName: assignedRider.riderName,
-      riderPhone: assignedRider.riderPhone,
-      riderVehicle: assignedRider.riderVehicle,
-      deliveryExecutive: assignedRider.deliveryExecutive,
-      tempLog: [
-        { time: timeStr, temp: 0.8, event: `Payment of ₹${order.totalAmount} received via Razorpay (${razorpay_payment_id}). Order confirmed & assigned to fleet.` }
-      ]
+      amountInPaise: order.amountInPaise || Math.round(order.totalAmount * 100),
+      currency: 'INR',
+      source: 'verify'
     });
 
-    const sanitized = { ...updatedOrder };
+    if (finalResult.refundRequired) {
+      return res.status(409).json({
+        error: 'Item out of stock during payment. Order moved to refund-required state.',
+        order: finalResult.order
+      });
+    }
+
+    if (!finalResult.success) {
+      return res.status(400).json({ error: finalResult.error || 'Payment finalization failed' });
+    }
+
+    const sanitized = { ...finalResult.order };
     if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
       delete sanitized.deliveryPin;
     }
@@ -597,38 +586,24 @@ router.post('/webhook', async (req, res) => {
         return res.status(400).json({ error: `Payment amount mismatch: Expected ${expectedPaise} paise, got ${payment.amount} paise` });
       }
 
-      if (order.paymentStatus !== 'PAID') {
-        if (!order.stockDeducted && Array.isArray(order.items)) {
-          try {
-            await deductStock(order.items);
-          } catch (stockErr) {
-            console.error('[Webhook] Stock deduction error:', stockErr);
-          }
-        }
+      const finalResult = await finalizePayment({
+        orderId: order.id,
+        razorpayPaymentId: payment.id,
+        razorpayOrderId: payment.order_id,
+        amountInPaise: payment.amount,
+        currency: payment.currency,
+        source: 'webhook'
+      });
 
-        const assignedRider = assignFleetRiderForOrder();
-        db.update('orders', order.id, {
-          paymentStatus: 'PAID',
-          orderStatus: 'CONFIRMED',
-          status: 'Order Confirmed',
-          lifecycleStatus: 'CONFIRMED',
-          stockDeducted: true,
-          razorpayPaymentId: payment.id,
-          assignedRider
-        });
-      }
-      return res.status(200).json({ status: 'ok', received: true });
-    } else if (event === 'payment.failed') {
-      const payment = payload.payment.entity;
-      const orderId = payment.order_id;
-      const order = db.get('orders').find(o => o.razorpayOrderId === orderId);
+      return res.status(200).json({ status: 'ok', received: true, success: finalResult.success });
+    } else if (event === 'payment.failed' || event === 'order.expired') {
+      const payment = payload?.payment?.entity;
+      const orderId = payment?.order_id || payload?.order?.entity?.id;
+      const order = db.get('orders').find(o => o.razorpayOrderId === orderId || o.id === orderId);
 
-      if (order && order.paymentStatus === 'PENDING') {
-        db.update('orders', order.id, {
-          paymentStatus: 'FAILED',
-          orderStatus: 'PENDING_PAYMENT'
-        });
-        console.log(`[Webhook] Order ${order.id} payment marked FAILED via webhook`);
+      if (order) {
+        await releasePaymentReservations(order.id);
+        console.log(`[Webhook] Order ${order.id} payment failed/expired. Released reservations.`);
       }
     } else if (event === 'refund.processed') {
       const refund = payload.refund.entity;
@@ -656,12 +631,21 @@ router.post('/webhook', async (req, res) => {
 // ==========================================
 // 4. GET /api/payments/status/:orderId
 // ==========================================
-router.get('/status/:orderId', (req, res) => {
+router.get('/status/:orderId', authenticateOptional, (req, res) => {
   const { orderId } = req.params;
   const order = db.get('orders').find(o => o.id === orderId || o.orderNumber === orderId || o.razorpayOrderId === orderId);
 
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
+  }
+
+  // Authorization: Must be order owner, admin, or provide valid guestToken
+  const isOwner = req.user && (req.user.role === 'admin' || order.userId === req.user.id);
+  const guestTokenHeader = req.headers['x-guest-token'] || req.query.guestToken;
+  const isValidGuest = Boolean(order.guestToken && guestTokenHeader && order.guestToken === guestTokenHeader);
+
+  if (!isOwner && !isValidGuest) {
+    return res.status(403).json({ error: 'Access denied: Authentication or valid guest token required to inspect payment status' });
   }
 
   res.status(200).json({
@@ -792,20 +776,24 @@ function createOrderRecord(params) {
     amountInPaise = 0,
     assignedRider = null,
     stockDeducted = false,
-    walletDebited = false
+    walletDebited = false,
+    guestToken = null
   } = params;
 
-  // Assign existing available cooler box, or null (do not auto-create fake coolers)
-  const availableCoolers = db.get('coolers') || [];
-  const assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
+  // Do NOT reserve coolers before payment is confirmed (unless COD or 100% Wallet Paid)
+  let assignedCooler = null;
+  if (orderStatus === 'CONFIRMED' || paymentMethod === 'cod') {
+    const availableCoolers = db.get('coolers') || [];
+    assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
 
-  if (assignedCooler) {
-    db.update('coolers', assignedCooler.id, {
-      status: 'assigned',
-      currentOrderId: orderNumber,
-      currentUserId: user.id,
-      currentUserName: user.name
-    });
+    if (assignedCooler) {
+      db.update('coolers', assignedCooler.id, {
+        status: 'assigned',
+        currentOrderId: orderNumber,
+        currentUserId: user.id,
+        currentUserName: user.name
+      });
+    }
   }
 
   const now = new Date();
@@ -815,6 +803,7 @@ function createOrderRecord(params) {
   const order = {
     id: orderNumber,
     orderNumber,
+    guestToken,
     userId: user.id,
     customerName: user.name,
     customerEmail: user.email,

@@ -120,6 +120,23 @@ export const authenticate = (req, res, next) => {
   }
 };
 
+export const authenticateOptional = (req, res, next) => {
+  const token = getAuthTokenFromReq(req);
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = verifyToken(token);
+    const user = db.findById('users', decoded.id);
+    req.user = user || null;
+  } catch (err) {
+    req.user = null;
+  }
+  next();
+};
+
 export const requireAdmin = (req, res, next) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ error: 'Operations admin permissions required' });
