@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2, Info, ChevronDown, ChevronUp, Truck, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 interface CartDrawerProps {
@@ -129,7 +129,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-gray-800 dark:text-gray-200 font-bold flex items-center gap-1.5">
-                    <span>🚚</span>
+                    <Truck className="w-3.5 h-3.5 text-[#d11243] shrink-0" />
                     <span>Add items worth <strong className="text-[#d11243] dark:text-rose-400 font-black">₹{diffToFree}</strong> more to get <strong>FREE Delivery!</strong></span>
                   </span>
                   <span className="text-[10px] font-black text-gray-500 dark:text-gray-400">
@@ -147,7 +147,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
               <div className="flex items-center justify-between">
                 <p className="text-emerald-800 dark:text-emerald-300 font-black flex items-center gap-1.5 text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>🎉 You unlocked FREE Delivery! (Saved ₹40)</span>
+                  <span>You unlocked FREE Delivery! (Saved ₹40)</span>
                 </p>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-300 dark:border-emerald-700">
                   FREE

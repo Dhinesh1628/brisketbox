@@ -55,7 +55,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         grossWeight: '30 Eggs',
         pieces: '30 Farm Fresh Eggs (Crate)',
         serves: 'Family Monthly Value',
-        badge: 'Best Value 🔥'
+        badge: 'Best Value'
       }
     ];
   }
@@ -116,7 +116,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
       grossWeight: '1000g (1kg)',
       pieces: '8-12 cuts',
       serves: 'Serves 4-6',
-      badge: 'Best Value 🔥'
+      badge: 'Best Value'
     }
   ];
 }

@@ -16,7 +16,9 @@ import {
   Truck,
   Box,
   CreditCard,
-  FileText
+  FileText,
+  Lock,
+  Bike
 } from 'lucide-react';
 import type { Order } from '../types';
 import { api } from '../api';
@@ -112,7 +114,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       { time: '07:45 AM', temp: 1.8, event: 'Assigned to Fleet Partner Suresh Patil (Ather 450X)' },
       { time: '08:05 AM', temp: 2.3, event: 'Suresh Patil is in transit on Outer Ring Road (1.8 km away)' }
     ],
-    deliverySlot: '⚡ Express Delivery in 90 Mins (Live EV Courier)',
+    deliverySlot: 'Express Delivery in 90 Mins (Live EV Courier)',
     trackingCode: 'BRISKETBOX-TRK-84920',
     deliveryPin: '4291',
     createdAt: new Date().toISOString(),
@@ -592,8 +594,8 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
           {/* Swiggy Style 4-Digit Handover PIN Card */}
           <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/70 dark:from-slate-850 dark:to-slate-800 border-2 border-amber-300 dark:border-amber-700/80 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500 dark:bg-amber-600 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
-                🔒
+              <div className="w-12 h-12 rounded-2xl bg-amber-500 dark:bg-amber-600 text-white flex items-center justify-center shadow-md shrink-0">
+                <Lock className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -629,8 +631,8 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                     className="w-12 h-12 rounded-2xl object-cover border border-gray-200 dark:border-slate-700 shadow-2xs shrink-0"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950 text-[#d11243] border border-rose-200 dark:border-rose-900 flex items-center justify-center text-xl shrink-0">
-                    🛵
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950 text-[#d11243] border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0">
+                    <Bike className="w-5 h-5 text-[#d11243]" />
                   </div>
                 )}
                 <div>
@@ -648,7 +650,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
                     <span>Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || currentOrder.assignedRider?.vehicle || 'EV 2-Wheeler'}</strong></span>
                     <span>•</span>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">⚡ Express 90-Min Dispatch</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">Express 90-Min Dispatch</span>
                   </div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -680,8 +682,8 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
           ) : (
             <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0">
-                  🛵
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                  <Bike className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">

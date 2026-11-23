@@ -28,6 +28,7 @@ import {
   Eye,
   Check,
   ChevronRight,
+  Zap,
   Box,
   Wallet,
   QrCode,
@@ -461,8 +462,8 @@ export const AdminDashboardPage: React.FC = () => {
           <div>
             <strong style="font-size: 12px; text-transform: uppercase; color: #64748b;">Customer Delivery Details:</strong>
             <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">${order.customerName}</div>
-            <div style="font-size: 12px; color: #475569;">📞 ${order.customerPhone}</div>
-            <div style="font-size: 12px; color: #475569; margin-top: 4px;">📍 ${formatAddress(order.deliveryAddress)}</div>
+            <div style="font-size: 12px; color: #475569;">Phone: ${order.customerPhone}</div>
+            <div style="font-size: 12px; color: #475569; margin-top: 4px;">Address: ${formatAddress(order.deliveryAddress)}</div>
             ${order.deliveryNotes ? `<div style="font-size: 11px; color: #b45309; margin-top: 4px;">Note: "${order.deliveryNotes}"</div>` : ''}
           </div>
           <div>
@@ -508,7 +509,7 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         <div class="cert">
-          <strong>✓ 0°C - 4°C FreshSeal™ Cold Chain Verified:</strong>
+          <strong>0°C - 4°C FreshSeal™ Cold Chain Verified:</strong>
           This order was vacuum-sealed and packed inside an insulated EPP box with certified non-toxic food-grade gel bricks. Meat temperature guaranteed under 4°C throughout delivery SLA.
         </div>
 
@@ -1210,9 +1211,10 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
                 <button
                   onClick={handleBulkRestockLow}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
-                  ⚡ Restock All Low SKUs to 30 Units
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Restock All Low SKUs to 30 Units</span>
                 </button>
               </div>
               <p className="text-[11px] text-amber-800 dark:text-amber-300">
@@ -1627,7 +1629,7 @@ export const AdminDashboardPage: React.FC = () => {
                           </button>
                           {c.status === 'available' ? (
                             <span className="text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
-                              ✓ Ready
+                              Ready
                             </span>
                           ) : (
                             <button
@@ -1702,7 +1704,7 @@ export const AdminDashboardPage: React.FC = () => {
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300 font-bold text-[10px] flex items-center gap-1 w-max">
-                                <span>📱 UPI: {ret.upiId || 'Direct Bank'}</span>
+                                <span>UPI: {ret.upiId || 'Direct Bank'}</span>
                               </span>
                             )}
                           </td>
@@ -2159,7 +2161,7 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-100 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Customer Information</span>
                 <div className="font-bold text-gray-950 dark:text-white">{selectedOrder.customerName}</div>
-                <div className="text-gray-600 dark:text-gray-300">📞 {selectedOrder.customerPhone}</div>
+                <div className="text-gray-600 dark:text-gray-300">Phone: {selectedOrder.customerPhone}</div>
                 <div className="text-gray-500 dark:text-gray-400">{selectedOrder.customerEmail}</div>
               </div>
 
@@ -2327,7 +2329,7 @@ export const AdminDashboardPage: React.FC = () => {
                   <option value="">-- Choose Approved Delivery Rider --</option>
                   {adminRiders.filter(r => r.approvalStatus === 'approved').map(r => (
                     <option key={r.id} value={r.id}>
-                      {r.name} • {r.vehicleType || 'EV Scooter'} ({r.phone || 'Verified'}) {r.online ? '🟢 Online' : '⚪ Offline'}
+                      {r.name} • {r.vehicleType || 'EV Scooter'} ({r.phone || 'Verified'}) {r.online ? '[Online]' : '[Offline]'}
                     </option>
                   ))}
                   {adminRiders.filter(r => r.approvalStatus === 'approved').length === 0 && (

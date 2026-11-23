@@ -97,17 +97,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
 
           <button
             onClick={resetAndClose}
-            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold text-sm hover:bg-gray-200 cursor-pointer"
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 cursor-pointer"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {ticketNumber ? (
           /* Success Screen */
           <div className="py-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center text-3xl mx-auto shadow-lg animate-bounce">
-              ✓
+            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg">
+              <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
             </div>
             
             <div className="space-y-1">

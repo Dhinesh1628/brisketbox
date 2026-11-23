@@ -325,7 +325,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
         onSelectAddress(newAddr);
         onCityChange(cityDetected);
-        setGpsNotice(`✓ Detected Locality: ${cleanFormatted}`);
+        setGpsNotice(`Detected Locality: ${cleanFormatted}`);
         setIsDetectingGps(false);
         setTimeout(() => {
           onClose();
@@ -353,7 +353,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
     };
     onSelectAddress(fallbackAddr);
     onCityChange(fallbackCity);
-    setGpsNotice(`✓ Set Location: ${fallbackArea}, ${fallbackCity}`);
+    setGpsNotice(`Set Location: ${fallbackArea}, ${fallbackCity}`);
     setTimeout(() => {
       onClose();
     }, 900);
@@ -374,7 +374,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
       try {
         const perm = await (navigator.permissions as any).query({ name: 'geolocation' });
         if (perm.state === 'denied') {
-          setGpsNotice('⚠️ Location permission is blocked in browser. Using network locality...');
+          setGpsNotice('Location permission is blocked in browser. Using network locality...');
           fallbackIpLocation();
           return;
         }
@@ -386,7 +386,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const accuracy = Math.round(pos.coords.accuracy || 15);
-        setGpsNotice(`✓ GPS Acquired (±${accuracy}m accuracy). Resolving doorstep street & colony...`);
+        setGpsNotice(`GPS Acquired (±${accuracy}m accuracy). Resolving doorstep street & colony...`);
 
         try {
           // Reverse-geocode coordinates using OpenStreetMap Nominatim for exact street, colony & pincode
@@ -398,7 +398,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
             onSelectAddress(newAddr);
             onCityChange(detectedCity);
-            setGpsNotice(`✓ Doorstep Location: ${cleanFormatted}`);
+            setGpsNotice(`Doorstep Location: ${cleanFormatted}`);
             setIsDetectingGps(false);
             setTimeout(() => {
               onClose();
@@ -451,7 +451,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
             onSelectAddress(newAddr);
             onCityChange(detectedCity);
-            setGpsNotice(`✓ Detected: ${cleanFormatted}`);
+            setGpsNotice(`Detected: ${cleanFormatted}`);
             setIsDetectingGps(false);
             setTimeout(() => {
               onClose();
@@ -465,13 +465,13 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
       (err) => {
         setIsDetectingGps(false);
         if (err.code === 1) {
-          setGpsNotice('⚠️ Location access was denied. Auto-detected approximate area via network.');
+          setGpsNotice('Location access was denied. Auto-detected approximate area via network.');
           fallbackIpLocation();
         } else if (err.code === 2) {
-          setGpsNotice('⚠️ Device GPS signal unavailable. Auto-detected approximate area via network.');
+          setGpsNotice('Device GPS signal unavailable. Auto-detected approximate area via network.');
           fallbackIpLocation();
         } else if (err.code === 3) {
-          setGpsNotice('⚠️ GPS timed out. Auto-detected approximate area via network.');
+          setGpsNotice('GPS timed out. Auto-detected approximate area via network.');
           fallbackIpLocation();
         } else {
           fallbackIpLocation();

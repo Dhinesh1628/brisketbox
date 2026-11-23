@@ -32,7 +32,8 @@ import {
   Wifi,
   WifiOff,
   Check,
-  CreditCard
+  CreditCard,
+  X
 } from 'lucide-react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -491,7 +492,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         setCashInHand(prev => prev + collectedAmt);
       }
       playOrderChime();
-      showNotification('⚡ Queued in Offline Storage! Will auto-sync when network returns.');
+      showNotification('Queued in Offline Storage! Will auto-sync when network returns.');
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'Delivered', lifecycleStatus: 'DELIVERED' } : o));
       setTimeout(() => {
         setSelectedOrder(null);
@@ -1017,7 +1018,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             </div>
             <span className="px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 text-[10px] font-bold border border-slate-700 flex items-center gap-1">
               <Award className="w-3 h-3 text-amber-400" />
-              <span>4.9 ★ Rating</span>
+              <span>4.9 Rating</span>
             </span>
           </div>
 
@@ -1168,7 +1169,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                           onClick={() => handleAdvanceLifecycle(ord, 'RIDER_ACCEPTED')}
                           className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-md"
                         >
-                          ✓ Accept Delivery Run
+                          Accept Delivery Run
                         </button>
                       )}
 
@@ -1206,7 +1207,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                             onClick={() => handleAdvanceLifecycle(ord, 'PICKED_UP')}
                             className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-md"
                           >
-                            ✓ Confirm Cold Box Pick Up
+                            Confirm Cold Box Pick Up
                           </button>
                         </div>
                       )}
@@ -1301,8 +1302,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   Verify Handover • #{selectedOrder.orderNumber || selectedOrder.id}
                 </h3>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-white">
-                ✕
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1495,7 +1496,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 <Camera className="w-4 h-4 text-sky-400" />
                 <h3 className="font-black text-white text-sm">Scan Cold Box Barcode</h3>
               </div>
-              <button onClick={stopCameraScanner} className="text-gray-400 hover:text-white">✕</button>
+              <button onClick={stopCameraScanner} className="text-gray-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
 
             {/* Video Viewfinder with animated laser scanline */}
@@ -1569,7 +1570,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 <Banknote className="w-4 h-4 text-amber-400" />
                 <h3 className="font-black text-white text-sm">Hub Cash Reconciliation</h3>
               </div>
-              <button onClick={() => setIsCashDepositModalOpen(false)} className="text-gray-400 hover:text-white">✕</button>
+              <button onClick={() => setIsCashDepositModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-1">

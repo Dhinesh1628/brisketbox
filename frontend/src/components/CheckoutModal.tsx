@@ -18,7 +18,11 @@ import {
   RefreshCw,
   Info,
   Banknote,
-  Wallet
+  Wallet,
+  BellOff,
+  PhoneOff,
+  Shield,
+  Bike
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -91,13 +95,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   // Swiggy 1-Tap Delivery Notes State
   const deliveryPills = [
-    { id: 'nobell', icon: '🔕', label: "Don't ring the bell" },
-    { id: 'door', icon: '🚪', label: 'Leave at door' },
-    { id: 'nocall', icon: '📞', label: 'Avoid calling' },
-    { id: 'guard', icon: '🛡️', label: 'Leave with security guard' }
+    { id: 'nobell', icon: BellOff, label: "Don't ring the bell" },
+    { id: 'door', icon: Home, label: 'Leave at door' },
+    { id: 'nocall', icon: PhoneOff, label: 'Avoid calling' },
+    { id: 'guard', icon: Shield, label: 'Leave with security guard' }
   ];
   const [selectedInstructionPills, setSelectedInstructionPills] = useState<string[]>([
-    "🔕 Don't ring the bell"
+    "Don't ring the bell"
   ]);
   const [customNotes, setCustomNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
@@ -200,7 +204,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     const fullAddress = `${flatNo}, ${building}, ${street}, ${city}, ${state} - ${pincode} (${addressType.toUpperCase()})`;
     const computedSlot = slotMode === 'express'
-      ? '⚡ Express Delivery in 90 Mins (Live EV Chilled Courier)'
+      ? 'Express Delivery in 90 Mins (Live EV Chilled Courier)'
       : `${scheduledDay}, ${selectedSlotTime}`;
 
     const instructionsSummary = selectedInstructionPills.join(' • ');
@@ -533,7 +537,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-black text-xs text-gray-950 dark:text-white">
                     <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    <span>⚡ Express (90 Mins)</span>
+                    <span>Express (90 Mins)</span>
                   </div>
                   <span className="text-[10px] font-extrabold bg-[#d11243] text-white px-1.5 py-0.5 rounded">
                     Recommended
@@ -556,7 +560,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-xs text-gray-950 dark:text-white">
                     <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                    <span>📅 Schedule for Later</span>
+                    <span>Schedule for Later</span>
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Flexible</span>
                 </div>
@@ -746,6 +750,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="grid grid-cols-2 gap-1.5">
                 {deliveryPills.map(opt => {
                   const isSelected = selectedInstructionPills.includes(opt.label);
+                  const Icon = opt.icon;
                   return (
                     <button
                       key={opt.id}
@@ -763,7 +768,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-700'
                       }`}
                     >
-                      <span className="text-sm shrink-0">{opt.icon}</span>
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{opt.label}</span>
                     </button>
                   );
@@ -827,7 +832,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {isFullyWalletPaid && (
               <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-emerald-300/60">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>🎉 Full amount covered by your wallet! You pay ₹0.</span>
+                <span>Full amount covered by your wallet! You pay ₹0.</span>
               </div>
             )}
           </div>
@@ -908,7 +913,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="p-3.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 space-y-2 shadow-2xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🛵</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Bike className="w-4 h-4" />
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-xs text-gray-900 dark:text-white">
@@ -1016,8 +1023,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             {tipAmount > 0 && (
               <div className="flex justify-between text-gray-700 dark:text-gray-200 font-bold">
-                <span className="flex items-center gap-1">
-                  <span>🛵 Delivery Partner Tip:</span>
+                <span className="flex items-center gap-1.5">
+                  <Bike className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Delivery Partner Tip:</span>
                 </span>
                 <span>+₹{tipAmount}</span>
               </div>

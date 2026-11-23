@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BrisketBox — Official LinkedIn Profile & Brand Strategy Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    @page {
+      size: A4;
+      margin: 14mm 14mm 14mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 11pt;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header styling */
+    .header-bar {
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .brand-title {
+      font-size: 22pt;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #d11243;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title span.tag {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 3px 8px;
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+
+    .doc-subtitle {
+      font-size: 10.5pt;
+      color: #64748b;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    .header-meta {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .header-meta strong {
+      color: #0f172a;
+    }
+
+    /* Section layout */
+    .section {
+      margin-bottom: 22px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 12.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-left: 4px solid #d11243;
+      padding-left: 10px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .lead-text {
+      font-size: 9.5pt;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+
+    /* Callout Card */
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+    }
+
+    .card.primary {
+      background: #fff5f5;
+      border-color: #fecdd3;
+    }
+
+    .card-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      color: #0f172a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card.primary .card-title {
+      color: #9f1239;
+    }
+
+    .tag-badge {
+      font-size: 7.5pt;
+      background: #e2e8f0;
+      color: #334155;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .quote-box {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+
+    /* Preformatted About block */
+    .about-block {
+      background: #0f172a;
+      color: #f1f5f9;
+      border-radius: 8px;
+      padding: 16px 18px;
+      font-size: 9.5pt;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-family: inherit;
+    }
+
+    .about-block strong {
+      color: #fca5a5;
+    }
+
+    /* Table */
+    table.spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      margin-top: 6px;
+    }
+
+    table.spec-table th,
+    table.spec-table td {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    table.spec-table th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      width: 32%;
+    }
+
+    table.spec-table td {
+      color: #0f172a;
+      font-weight: 500;
+    }
+
+    /* Posts grid */
+    .post-box {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-left: 3px solid #0284c7;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      font-size: 9pt;
+      line-height: 1.5;
+    }
+
+    .post-box.green {
+      border-left-color: #059669;
+    }
+
+    .post-box.rose {
+      border-left-color: #d11243;
+    }
+
+    .post-header {
+      font-weight: 700;
+      font-size: 9pt;
+      color: #0f172a;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .post-content {
+      color: #334155;
+      white-space: pre-wrap;
+    }
+
+    /* Footer */
+    .doc-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      margin-top: 25px;
+      font-size: 8pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <div class="header-bar">
+    <div>
+      <div class="brand-title">
+        BRISKETBOX <span class="tag">Brand Kit</span>
+      </div>
+      <div class="doc-subtitle">Official LinkedIn Profile & Launch Strategy Specification</div>
+    </div>
+    <div class="header-meta">
+      <div><strong>Confidential Internal Doc</strong></div>
+      <div>Rollout Scope: <strong>Bengaluru (HQ) &rarr; Hyd, Chennai</strong></div>
+      <div>Date: <strong>November 2026</strong> • Version 1.0</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: TAGLINE -->
+  <div class="section">
+    <div class="section-title">1. Official LinkedIn Taglines (Under 120 Characters)</div>
+    <div class="lead-text">Choose one of the following verified options based on your public announcement stage:</div>
+
+    <div class="card primary">
+      <div class="card-title">
+        <span>Option A: Primary Launch Tagline (Recommended)</span>
+        <span class="tag-badge">Most Balanced</span>
+      </div>
+      <div class="quote-box">
+        &ldquo;Building India's freshest cold-chain meat platform. Launching in Bengaluru, expanding to Hyderabad & Chennai.&rdquo;
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Option B: Product & Quality Focus</span>
+        <span class="tag-badge">Customer Facing</span>
+      </div>
+      <div class="quote-box">
+        &ldquo;Daily harbor catch and pasture-raised meats, delivered fresh at 0&deg;C to 4&deg;C right to your doorstep in 90 mins.&rdquo;
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Option C: Short &amp; Direct</span>
+        <span class="tag-badge">Mobile Compact</span>
+      </div>
+      <div class="quote-box">
+        &ldquo;Fresh coastal seafood &amp; farm cuts. Cut daily, packed cold, delivered across India.&rdquo;
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: ABOUT SECTION -->
+  <div class="section" style="page-break-before: auto;">
+    <div class="section-title">2. Complete "About" Section (Ready to Copy-Paste)</div>
+    <div class="lead-text">Copy and paste this exact text into the LinkedIn Company Description field. Written in clean, authentic human language with zero buzzwords:</div>
+
+    <div class="about-block">At BrisketBox, we believe fresh meat should never be frozen, chemically preserved, or sitting on supermarket shelves for days.
+
+We are building a modern cold-chain delivery platform connecting coastal harbor docks and regional farms directly to home kitchens. Launching our first operations in Bengaluru, with expansion planned for Hyderabad, Chennai, and key metropolitan hubs.
+
+Our core standards:
+
+• Sourced Daily: Coastal seafood sourced fresh from daily boat landings; poultry and tender mutton from vetted regional partner farms.
+• Clean, Custom Cuts: Hand-trimmed center-cut steaks, tender curry cuts, and deveined seafood prepared to order by skilled butchers right before dispatch.
+• Cold-Chain Maintained: Every delivery is packed in insulated cold boxes with chilled gel packs, ensuring meat stays strictly between 0°C and 4°C from our cutting board to your doorstep in ~90 minutes.
+• Free Packaging: Zero container deposits, zero hidden charges—just honest, restaurant-grade fresh cuts.
+
+Follow our journey as we roll out our local cold hubs across South India.</div>
+  </div>
+
+  <!-- SECTION 3: COMPANY DETAILS -->
+  <div class="section">
+    <div class="section-title">3. Official Company Details & Form Fields</div>
+    <table class="spec-table">
+      <tr>
+        <th>Company Name</th>
+        <td><strong>BrisketBox</strong> (BrisketBox Technologies)</td>
+      </tr>
+      <tr>
+        <th>LinkedIn Public URL</th>
+        <td><code>https://www.linkedin.com/company/brisketbox/</code></td>
+      </tr>
+      <tr>
+        <th>Website URL</th>
+        <td><code>https://brisketbox.vercel.app</code></td>
+      </tr>
+      <tr>
+        <th>Industry</th>
+        <td>Food &amp; Beverage Retail <em>(or E-Commerce / Quick Commerce)</em></td>
+      </tr>
+      <tr>
+        <th>Company Size</th>
+        <td>2–10 employees <em>(Early-stage venture)</em></td>
+      </tr>
+      <tr>
+        <th>Company Type</th>
+        <td>Privately Held</td>
+      </tr>
+      <tr>
+        <th>Headquarters</th>
+        <td>Bengaluru, Karnataka, India</td>
+      </tr>
+      <tr>
+        <th>Operating &amp; Expansion Hubs</th>
+        <td>Bengaluru <em>(Launch Hub)</em> &bull; Hyderabad &bull; Chennai</td>
+      </tr>
+      <tr>
+        <th>Specialties</th>
+        <td>Fresh Seafood Delivery, Artisanal Butchery, Farm-Fresh Poultry &amp; Mutton, 0&deg;C&ndash;4&deg;C Cold-Chain Logistics, Direct-to-Consumer Quick Commerce</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SECTION 4: BANNER & VISUAL IDENTITY -->
+  <div class="section">
+    <div class="section-title">4. Banner &amp; Visual Identity Specifications</div>
+    <div class="card">
+      <div class="card-title">Banner Cover Specs (1128 &times; 191 Pixels)</div>
+      <div style="font-size: 9pt; color: #475569; line-height: 1.6;">
+        <div>&bull; <strong>Background:</strong> Dark slate charcoal (<code>#0f172a</code>) with subtle warm lighting on the right edge.</div>
+        <div>&bull; <strong>Left / Center:</strong> Clean BrisketBox logo + Headline in white font: <em>&ldquo;Daily Harbor Catch &amp; Farm Cuts. Delivered Cold in 90 Mins.&rdquo;</em></div>
+        <div>&bull; <strong>Sub-strip:</strong> <em>&ldquo;Bengaluru (Launch) &bull; Hyderabad &bull; Chennai&rdquo;</em> in subtle slate text (<code>#94a3b8</code>).</div>
+        <div>&bull; <strong>Rule:</strong> Keep text strictly inside the central 70% width so mobile screens do not crop the copy.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: LAUNCH POSTS ROADMAP -->
+  <div class="section">
+    <div class="section-title">5. First 3 Launch Posts for the Page</div>
+    <div class="lead-text">Publish these 3 posts over the first 10 days to establish credibility and engagement:</div>
+
+    <div class="post-box rose">
+      <div class="post-header">
+        <span>Post 1: The Launch Announcement (Vision &amp; Honesty)</span>
+        <span class="tag-badge">Day 1</span>
+      </div>
+      <div class="post-content">Most meat delivery either relies on distant central warehouses with long transit times, or sells cuts that have been thawed and refrozen multiple times.
+
+We are building BrisketBox to fix that.
+
+By setting up local cold-chain hubs that keep fresh cuts strictly between 0°C and 4°C from dock to doorstep, our goal is to deliver genuine same-day freshness in under 90 minutes.
+
+We’re kicking off our rollout in Bengaluru, with Hyderabad and Chennai next on our roadmap.
+
+Follow our page to stay updated on our launch journey!</div>
+    </div>
+
+    <div class="post-box green">
+      <div class="post-header">
+        <span>Post 2: Behind the Cold-Chain (Quality &amp; Standards)</span>
+        <span class="tag-badge">Day 4</span>
+      </div>
+      <div class="post-content">Why temperature matters more than delivery speed:
+
+When raw seafood or mutton warms up even slightly during delivery, texture, moisture, and freshness drop rapidly. 
+
+That's why every BrisketBox delivery uses insulated cold boxes with chilled food-grade gel bricks—keeping your Surmai steaks and tender mutton cuts at pure refrigerator temperature (0°C to 4°C) until you open them at home.
+
+Zero shortcuts on freshness.</div>
+    </div>
+
+    <div class="post-box">
+      <div class="post-header">
+        <span>Post 3: The Sourcing &amp; Butchery Craft</span>
+        <span class="tag-badge">Day 8</span>
+      </div>
+      <div class="post-content">Daily harbor landings and farm-direct sourcing.
+
+Every morning, our catch is selected directly from regional boat landings, hand-trimmed into custom center-cut steaks and curry cuts by skilled butchers, and vacuum-sealed for delivery.
+
+Fresh cuts, zero preservatives, and free packaging.
+
+Explore our menu live at https://brisketbox.vercel.app</div>
+    </div>
+  </div>
+
+  <!-- Document Footer -->
+  <div class="doc-footer">
+    <div>BrisketBox Technologies &bull; Internal Documentation</div>
+    <div>Confidential &bull; Prepared for Team &amp; Founders</div>
+  </div>
+
+</body>
+</html>

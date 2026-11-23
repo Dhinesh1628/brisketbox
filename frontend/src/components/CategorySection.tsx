@@ -128,7 +128,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.value)}
-              className={`rounded-2xl p-4 text-left transition-all duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden group card-light-hover ${
+              className={`rounded-2xl p-4 text-left transition-all duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden group card-smooth ${
                 isSelected
                   ? 'bg-[#d11243] text-white shadow-md shadow-rose-900/30 ring-2 ring-[#d11243] ring-offset-2 dark:ring-offset-slate-900'
                   : 'bg-white dark:bg-slate-900 hover:bg-gray-50/80 dark:hover:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs hover:border-gray-300 dark:hover:border-slate-700'

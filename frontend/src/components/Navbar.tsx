@@ -24,7 +24,10 @@ import {
   TrendingUp,
   HelpCircle,
   VolumeX,
-  Bell
+  Bell,
+  Settings,
+  Utensils,
+  Bike
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -216,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleOffersClick = () => {
     applyCoupon('FRESH20');
-    setOffersToast('🎉 BrisketBox Exclusive Deal Applied: 20% OFF coupon (FRESH20) added to your cart!');
+    setOffersToast('BrisketBox Exclusive Deal Applied: 20% OFF coupon (FRESH20) added to your cart!');
     setTimeout(() => setOffersToast(null), 4000);
   };
 
@@ -781,7 +784,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           className="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold flex items-center justify-between cursor-pointer"
                         >
                           <span className="flex items-center gap-1.5">
-                            <span>⚙️</span>
+                            <Settings className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                             <span>Admin portal</span>
                           </span>
                           <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-black">
@@ -801,7 +804,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           className="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold flex items-center justify-between cursor-pointer"
                         >
                           <span className="flex items-center gap-1.5">
-                            <span>🥩</span>
+                            <Utensils className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                             <span>Butcher Station KDS</span>
                           </span>
                           <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-black">
@@ -821,7 +824,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           className="w-full text-left px-3 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-semibold flex items-center justify-between cursor-pointer"
                         >
                           <span className="flex items-center gap-1.5">
-                            <span>🛵</span>
+                            <Bike className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Rider Deliveries</span>
                           </span>
                           <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[9px] font-black">

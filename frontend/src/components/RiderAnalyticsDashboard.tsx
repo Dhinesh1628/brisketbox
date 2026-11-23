@@ -660,7 +660,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
                   </div>
                   {rider.reasons?.length > 0 && (
                     <div className="text-rose-600 dark:text-rose-400 text-[11px] font-medium">
-                      ⚠️ {rider.reasons.join(' ')}
+                      {rider.reasons.join(' ')}
                     </div>
                   )}
                 </div>
@@ -670,7 +670,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                       : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'
                   }`}>
-                    {rider.governmentVerified ? '✓ DigiLocker Verified' : 'Manual Upload'}
+                    {rider.governmentVerified ? 'DigiLocker Verified' : 'Manual Upload'}
                   </span>
                 </div>
               </div>

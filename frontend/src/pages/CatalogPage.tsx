@@ -16,14 +16,14 @@ import { getProductWeightOptions } from '../utils/weightUtils';
 import { getProductVisual } from '../data/productVisuals';
 
 const POPULAR_SEARCH_CHIPS = [
-  { label: '🍗 Curry Cut', term: 'Curry Cut' },
-  { label: '🥩 Biryani Cut', term: 'Biryani' },
-  { label: '🐟 Surmai Fish', term: 'Surmai' },
-  { label: '🍗 Boneless Fillets', term: 'Boneless' },
-  { label: '🦐 Jumbo Prawns', term: 'Prawns' },
-  { label: '🐟 Pomfret', term: 'Pomfret' },
-  { label: '🍢 Fish Tikka', term: 'Tikka' },
-  { label: '🎁 Feast Combo', term: 'Feast' },
+  { label: 'Curry Cut', term: 'Curry Cut' },
+  { label: 'Biryani Cut', term: 'Biryani' },
+  { label: 'Surmai Steaks', term: 'Surmai' },
+  { label: 'Boneless Fillets', term: 'Boneless' },
+  { label: 'Jumbo Prawns', term: 'Prawns' },
+  { label: 'White Pomfret', term: 'Pomfret' },
+  { label: 'Fish Tikka', term: 'Tikka' },
+  { label: 'Feast Combo', term: 'Feast' },
 ];
 
 interface CatalogPageProps {
@@ -80,7 +80,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       showToast(`Removed "${productName}" from saved items`);
     } else {
       updated = [...wishlist, productId];
-      showToast(`Saved "${productName}" for later ❤️`);
+      showToast(`Saved "${productName}" to saved cuts`);
     }
     setWishlist(updated);
     try {
@@ -200,7 +200,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       <div
         key={`${sectionBadge || 'prod'}-${product.id}`}
         onClick={() => handleOpenProductDetail(product, currentOption.weight)}
-        className="group bg-white dark:bg-slate-900/90 rounded-2xl border border-gray-200 dark:border-slate-800/80 hover:border-[#d11243]/50 dark:hover:border-rose-500/50 shadow-xs hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgba(225,29,67,0.15)] transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+        className="group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-800/80 hover:border-[#d11243]/50 dark:hover:border-rose-500/50 shadow-2xs card-smooth flex flex-col justify-between overflow-hidden cursor-pointer"
       >
         {/* Image & Badges: Dual-Layer Raw-to-Cooked Cross-Fade */}
         <div className="relative h-52 bg-slate-950 overflow-hidden select-none">
@@ -208,7 +208,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           <img
             src={visual.cookedImage}
             alt={`${visual.cookedDishName} cooked`}
-            className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-700 ease-out"
+            className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-500 ease-out"
             loading="lazy"
           />
 
@@ -219,7 +219,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           <img
             src={product.image || visual.rawImage}
             alt={product.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-in-out ${
               isCookedActive 
                 ? 'opacity-0 scale-105 pointer-events-none' 
                 : 'opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-105'
@@ -231,7 +231,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           />
 
           {/* Raw Cold Vapor Vignette */}
-          <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent pointer-events-none transition-opacity duration-700 ${
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent pointer-events-none transition-opacity duration-500 ${
             isCookedActive ? 'opacity-0' : 'group-hover:opacity-0'
           }`} />
 
@@ -241,16 +241,16 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               type="button"
               onClick={(e) => toggleMobileCooked(product.id, e)}
               title="Tap to toggle Raw vs Cooked view"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold backdrop-blur-md shadow-md transition-all duration-300 border border-white/20 active:scale-95 cursor-pointer bg-black/65 hover:bg-black/85 text-white"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm transition-all duration-200 border border-white/20 active:scale-95 cursor-pointer bg-black/65 hover:bg-black/85 text-white"
             >
-              <span className={`inline-block w-2 h-2 rounded-full transition-colors duration-300 ${
-                isCookedActive ? 'bg-amber-400 animate-pulse' : 'bg-cyan-400 group-hover:bg-amber-400'
+              <span className={`inline-block w-2 h-2 rounded-full transition-colors duration-200 ${
+                isCookedActive ? 'bg-amber-400' : 'bg-cyan-400 group-hover:bg-amber-400'
               }`} />
-              <span className="hidden group-hover:inline text-amber-300 font-black">
-                🔥 {visual.cookedDishName}
+              <span className="hidden group-hover:inline text-amber-300 font-semibold">
+                {visual.cookedDishName}
               </span>
-              <span className={`group-hover:hidden ${isCookedActive ? 'text-amber-300 font-black' : 'text-cyan-200'}`}>
-                {isCookedActive ? `🔥 ${visual.cookedDishName}` : '❄️ 0°C Raw Cut'}
+              <span className={`group-hover:hidden ${isCookedActive ? 'text-amber-300 font-semibold' : 'text-cyan-200'}`}>
+                {isCookedActive ? visual.cookedDishName : '0°C Raw Cut'}
               </span>
             </button>
           </div>
@@ -277,14 +277,14 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <span className="text-gray-300">• Gross {currentOption.grossWeight}</span>
           </div>
 
-          {/* Sizzle Prompt Pill */}
+          {/* Dish View Prompt Pill */}
           <div className="absolute bottom-2.5 right-2.5 z-20 pointer-events-none">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-md transition-all duration-300 border ${
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-md transition-all duration-200 border ${
               isCookedActive 
-                ? 'bg-amber-500/95 text-white border-amber-300/60 shadow-amber-500/40 shadow-xs' 
+                ? 'bg-amber-500/95 text-white border-amber-300/60 shadow-xs' 
                 : 'bg-black/65 text-amber-200 border-white/15 group-hover:bg-amber-500/95 group-hover:text-white group-hover:border-amber-300/60'
             }`}>
-              {isCookedActive ? '🔥 Sizzling Ready' : 'Tap / Hover to Cook 🔥'}
+              {isCookedActive ? 'Cooked Dish' : 'Hover to View Dish'}
             </span>
           </div>
         </div>
@@ -344,7 +344,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                       <div className="truncate">{opt.weight}</div>
                       {opt.badge && (
                         <div className="text-[8px] font-black uppercase text-amber-600 dark:text-amber-400 truncate mt-0.5">
-                          {opt.badge.replace('🔥', '')}
+                          {opt.badge}
                         </div>
                       )}
                     </button>
@@ -731,7 +731,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               <button
                 onClick={() => {
                   navigator.clipboard?.writeText('BRISKET20');
-                  showToast('Coupon code "BRISKET20" copied to clipboard! 🎟️');
+                  showToast('Coupon code "BRISKET20" copied to clipboard!');
                 }}
                 className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
               >

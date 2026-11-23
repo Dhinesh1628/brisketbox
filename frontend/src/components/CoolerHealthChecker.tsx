@@ -29,7 +29,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
 
   const sampleBoxes = [
     { id: 'BOX-BLR-417', qr: 'BRISKETBOX-BOX-BLR-417', label: 'BOX-417 (Standard Delivery)', grade: 'A' },
-    { id: 'BOX-BLR-103', qr: 'BRISKETBOX-BOX-BLR-103', label: 'BOX-103 (⚠️ Breach Anomaly)', grade: 'D' },
+    { id: 'BOX-BLR-103', qr: 'BRISKETBOX-BOX-BLR-103', label: 'BOX-103 (Breach Anomaly)', grade: 'D' },
     { id: 'BOX-BLR-633', qr: 'BRISKETBOX-BOX-BLR-633', label: 'BOX-633 (Central Depot Stock)', grade: 'A' },
     { id: 'BOX-BLR-182', qr: 'BRISKETBOX-BOX-BLR-182', label: 'BOX-182 (In-Transit EV)', grade: 'A' },
     { id: 'BOX-BLR-983', qr: 'SAGAR-BOX-BLR-983', label: 'BOX-983 (Available Reserve)', grade: 'A' },

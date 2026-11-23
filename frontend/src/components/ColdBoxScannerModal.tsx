@@ -626,7 +626,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
 
                       {detectedCode && (
                         <div className="absolute bottom-3 inset-x-4 py-2 px-3 bg-emerald-500 text-black font-extrabold text-xs rounded-xl text-center shadow-lg animate-in fade-in">
-                          ✓ QR Scanned: {detectedCode}
+                          QR Scanned: {detectedCode}
                         </div>
                       )}
                     </>
@@ -787,7 +787,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                             ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                         }`}>
-                          {inspectionData.telemetry?.isCompliant ? '✓ 0°C to 4°C Maintained' : '⚠️ Temperature Breach Alert'}
+                          {inspectionData.telemetry?.isCompliant ? '0°C to 4°C Maintained' : 'Temperature Breach Alert'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

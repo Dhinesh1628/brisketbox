@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Zap, ShieldCheck, Star, Award, CheckCircle2, ChevronRight, HelpCircle, Heart, MessageSquare, ThumbsUp, Send, Flame } from 'lucide-react';
+import { X, Plus, Minus, Zap, ShieldCheck, Star, Award, CheckCircle2, ChevronRight, HelpCircle, Heart, MessageSquare, ThumbsUp, Send, Flame, ThermometerSnowflake, Package, ArrowRight } from 'lucide-react';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -242,7 +242,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <span className="text-gray-300 dark:text-gray-600">•</span>
             <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
               <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
-              <span>{product.eta || '⚡ 90 Mins Express'}</span>
+              <span>{product.eta || '90 Mins Express'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
-                  <span>❄️</span>
+                  <ThermometerSnowflake className="w-3.5 h-3.5" />
                   <span>0°C Raw Cut</span>
                 </button>
                 <button
@@ -360,7 +360,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold">
-                      {idx === 0 ? '❄️ Raw' : idx === 1 ? '🔥 Cooked' : '📦 Cold Pack'}
+                      {idx === 0 ? 'Raw Cut' : idx === 1 ? 'Cooked Dish' : 'Cold Pack'}
                     </div>
                   </button>
                 ))}
@@ -469,7 +469,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
                 <div className="mt-1 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-3">
                   <span>Gross Weight: <strong>{activeWeightOption.grossWeight}</strong></span>
-                  <span className="text-amber-400">➔</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-amber-500" />
                   <span>Net Meat Weight: <strong>{activeWeightOption.netWeight}</strong></span>
                 </div>
                 {showWeightExplanation && (
@@ -637,11 +637,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           );
                         })}
                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300 ml-2">
-                          {userRating === 5 && '5★ Excellent (Fresh & Juicy)'}
-                          {userRating === 4 && '4★ Good & Clean Cut'}
-                          {userRating === 3 && '3★ Average'}
-                          {userRating === 2 && '2★ Needs Improvement'}
-                          {userRating === 1 && '1★ Poor'}
+                          {userRating === 5 && '5 Stars - Excellent (Fresh & Juicy)'}
+                          {userRating === 4 && '4 Stars - Good & Clean Cut'}
+                          {userRating === 3 && '3 Stars - Average'}
+                          {userRating === 2 && '2 Stars - Needs Improvement'}
+                          {userRating === 1 && '1 Star - Poor'}
                         </span>
                       </div>
                     </div>

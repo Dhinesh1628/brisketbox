@@ -116,13 +116,13 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
           action.price || prod.price,
           prod.mrp
         );
-        const toast = `🛒 Added ${prod.name} (${action.selectedWeight || '500g'}) to cart!`;
+        const toast = `Added ${prod.name} (${action.selectedWeight || '500g'}) to cart`;
         showToast(toast);
         return `Added ${prod.name} (${action.selectedWeight || '500g'}) to your cart`;
       }
     } else if (action.type === 'APPLY_COUPON') {
       applyCoupon(action.code || 'FRESH20');
-      const toast = `🎉 Applied 20% OFF Deal (${action.code || 'FRESH20'})!`;
+      const toast = `Applied 20% OFF Deal (${action.code || 'FRESH20'})!`;
       showToast(toast);
       return `Coupon ${action.code || 'FRESH20'} applied (20% OFF)`;
     } else if (action.type === 'OPEN_CART') {
@@ -160,12 +160,12 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
       onClose();
     } else if (card.actionType === 'APPLY_COUPON') {
       applyCoupon(card.code || 'FRESH20');
-      showToast(`🎉 Applied 20% OFF Deal (${card.code || 'FRESH20'})!`);
+      showToast(`Applied 20% OFF Deal (${card.code || 'FRESH20'})!`);
     } else if (card.actionType === 'ADD_TO_CART') {
       const prod = products?.find(p => p.id === card.productId) || products?.[0];
       if (prod) {
         addItem(prod, 1, prod.cutStyle || 'Master Butcher Cut', '500g', card.price || prod.price, prod.mrp);
-        showToast(`🛒 Added ${prod.name} to cart!`);
+        showToast(`Added ${prod.name} to cart`);
       }
     }
   };
@@ -373,11 +373,11 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-amber-800 dark:text-amber-300 font-medium">
-                      <span>⏱️ Prep: {msg.recipe.prepTime}</span>
+                      <span>Prep: {msg.recipe.prepTime}</span>
                       <span>•</span>
-                      <span>🔥 Cook: {msg.recipe.cookTime}</span>
+                      <span>Cook: {msg.recipe.cookTime}</span>
                       <span>•</span>
-                      <span>👥 {msg.recipe.servings}</span>
+                      <span>Serves: {msg.recipe.servings}</span>
                     </div>
                   </div>
                 )}
@@ -440,7 +440,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                           <button
                             onClick={() => {
                               addItem(prod, 1, prod.cutStyle || 'Master Butcher Cut', '500g', prod.price, prod.mrp);
-                              showToast(`🛒 Added ${prod.name} to cart!`);
+                              showToast(`Added ${prod.name} to cart`);
                             }}
                             className="px-2.5 py-1.5 bg-[#d11243] hover:bg-[#b80f3b] text-white text-[10px] font-extrabold rounded-lg shrink-0 flex items-center gap-1 shadow-xs active:scale-95 cursor-pointer"
                           >

@@ -334,7 +334,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
       if (Array.isArray(orderList)) {
         if (orderList.length > ordersCountRef.current && ordersCountRef.current > 0) {
           playButcherChime();
-          showNotification('🔔 New Customer Order Placed! Added to Prep Queue.');
+          showNotification('New Customer Order Placed! Added to Prep Queue.');
         }
         ordersCountRef.current = orderList.length;
         setOrders(orderList);
@@ -1219,7 +1219,6 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               <div>
                 <h1 className="text-xl font-bold text-[#0f172a] flex items-center gap-2">
                   <span>Good morning, {user.name ? user.name.split(' ')[0] : 'Master Butcher'}!</span>
-                  <span>👋</span>
                 </h1>
                 <p className="text-xs text-gray-500">
                   {user.address || 'Road No. 36, Jubilee Hills, Hyderabad'}
@@ -2525,7 +2524,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   className="mt-0.5 text-[#d11243]" 
                 />
                 <div>
-                  <div className="font-bold text-[#0f172a]">🥩 Out of Stock</div>
+                  <div className="font-bold text-[#0f172a]">Out of Stock</div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     Specific meat cut sold out at physical butcher station counter.
                   </p>
@@ -2549,7 +2548,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   className="mt-0.5 text-[#d11243]" 
                 />
                 <div>
-                  <div className="font-bold text-[#0f172a]">⚖️ Digital Scale / Equipment Offline</div>
+                  <div className="font-bold text-[#0f172a]">Digital Scale / Equipment Offline</div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     Scale calibration or refrigeration cold chain sensor maintenance.
                   </p>
@@ -2597,7 +2596,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   className="mt-0.5 text-[#d11243]" 
                 />
                 <div className="flex-1">
-                  <div className="font-bold text-[#0f172a]">📝 Operational Pause / Other</div>
+                  <div className="font-bold text-[#0f172a]">Operational Pause / Other</div>
                   {declineReason === 'other' && (
                     <input
                       type="text"
@@ -2692,7 +2691,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
-                      ★ 4.98
+                      4.98 Rating
                     </span>
                     <span className="text-[10px] text-gray-500">• 1,420 Deliveries</span>
                   </div>
@@ -2800,7 +2799,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   </span>
                   <span className="text-gray-500">•</span>
                   <span className={isWithinTolerance ? 'text-emerald-400' : 'text-rose-400'}>
-                    {isWithinTolerance ? '✓ Within ±5% Tolerance' : '⚠️ Exceeds ±5% Variance'}
+                    {isWithinTolerance ? 'Within ±5% Tolerance' : 'Exceeds ±5% Variance'}
                   </span>
                 </div>
               </div>
