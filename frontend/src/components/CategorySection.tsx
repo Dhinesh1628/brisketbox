@@ -1,87 +1,61 @@
 import React from 'react';
-import { 
-  Shield, 
-  Fish, 
-  Beef, 
-  Drumstick, 
-  UtensilsCrossed, 
-  Package, 
-  ArrowRight,
-  Sparkles,
-  CheckCircle2
-} from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
-export interface CategoryItem {
+export interface CategoryCircleItem {
   id: string;
   name: string;
   value: string;
-  subtitle: string;
-  tag: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
+  image: string;
+  badge?: string;
+  badgeColor?: string;
 }
 
-export const CATEGORIES: CategoryItem[] = [
+export const CATEGORIES: CategoryCircleItem[] = [
   {
-    id: 'all',
-    name: 'All Items',
-    value: 'All',
-    subtitle: 'Everything Fresh',
-    tag: 'Fast Delivery',
-    icon: Shield,
-    iconBg: 'bg-rose-100',
-    iconColor: 'text-[#d11243]'
+    id: 'chicken',
+    name: 'Chicken',
+    value: 'Fresh Chicken',
+    image: '/images/products/prod_6.jpg',
+    badge: 'Farm Fresh',
+    badgeColor: 'bg-emerald-600'
+  },
+  {
+    id: 'mutton',
+    name: 'Mutton',
+    value: 'Tender Mutton',
+    image: '/images/products/prod_4.jpg',
+    badge: 'Popular',
+    badgeColor: 'bg-[#d11243]'
   },
   {
     id: 'fish',
     name: 'Fish & Seafood',
     value: 'Fish & Seafood',
-    subtitle: 'Daily Fresh Catch',
-    tag: 'Cleaned & Cut',
-    icon: Fish,
-    iconBg: 'bg-cyan-100',
-    iconColor: 'text-cyan-700'
-  },
-  {
-    id: 'mutton',
-    name: 'Tender Mutton',
-    value: 'Tender Mutton',
-    subtitle: 'Tender & Fresh',
-    tag: 'Curry & Biryani',
-    icon: Beef,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-800'
-  },
-  {
-    id: 'chicken',
-    name: 'Fresh Chicken',
-    value: 'Fresh Chicken',
-    subtitle: 'Clean & Tender',
-    tag: 'Curry & Boneless',
-    icon: Drumstick,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-700'
+    image: '/images/products/prod_1.jpg',
+    badge: 'Daily Catch',
+    badgeColor: 'bg-blue-600'
   },
   {
     id: 'ready_to_cook',
     name: 'Ready to Cook',
     value: 'Ready to Cook',
-    subtitle: 'Marinated & Easy',
-    tag: 'Quick Meals',
-    icon: UtensilsCrossed,
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-700'
+    image: '/images/products/prod_7.jpg',
+    badge: 'NEW',
+    badgeColor: 'bg-[#d11243]'
   },
   {
     id: 'combos',
-    name: 'Value Combos',
+    name: 'Combos & Feast',
     value: 'Combo Box',
-    subtitle: 'Save More',
-    tag: 'Best Value',
-    icon: Package,
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-700'
+    image: '/images/products/prod_8.jpg',
+    badge: 'Save More',
+    badgeColor: 'bg-purple-600'
+  },
+  {
+    id: 'all',
+    name: 'All Cuts',
+    value: 'All',
+    image: '/images/hero_banner_meat.jpg'
   }
 ];
 
@@ -97,79 +71,89 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onViewAllSpecs
 }) => {
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Categories
+            Explore by Category
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Choose by type of cut
+            Hand-trimmed, vacuum-sealed cuts chilled strictly at 0°C to 4°C
           </p>
         </div>
 
         <button
           onClick={onViewAllSpecs}
-          className="text-xs font-semibold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
+          className="text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
         >
-          <span>All items</span>
+          <span>View All</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Categories Cards Grid / Scrollable Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {CATEGORIES.map((cat) => {
-          const isSelected = selectedCategory === cat.value;
-          const Icon = cat.icon;
+      {/* Licious-Style Circular Platter Grid / Horizontal Scroll */}
+      <div className="bg-white dark:bg-slate-900/90 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-start justify-between gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none">
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.value;
 
-          return (
-            <button
-              key={cat.id}
-              onClick={() => onSelectCategory(cat.value)}
-              className={`rounded-2xl p-4 text-left transition-all duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden group card-smooth ${
-                isSelected
-                  ? 'bg-[#d11243] text-white shadow-md shadow-rose-900/30 ring-2 ring-[#d11243] ring-offset-2 dark:ring-offset-slate-900'
-                  : 'bg-white dark:bg-slate-900 hover:bg-gray-50/80 dark:hover:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs hover:border-gray-300 dark:hover:border-slate-700'
-              }`}
-            >
-              {/* Icon Container */}
-              <div className="mb-3">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : `${cat.iconBg} ${cat.iconColor} dark:bg-slate-800 dark:text-rose-400 group-hover:scale-105`
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-              </div>
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => onSelectCategory(cat.value)}
+                className="flex flex-col items-center flex-1 min-w-[85px] sm:min-w-[100px] cursor-pointer group text-center select-none transition-transform focus:outline-none"
+              >
+                {/* Circular Platter Plate Container */}
+                <div className="relative">
+                  {/* Floating Badge (e.g. "NEW", "POPULAR") */}
+                  {cat.badge && (
+                    <span className={`absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-xs pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                      {cat.badge}
+                    </span>
+                  )}
 
-              {/* Text Info */}
-              <div className="space-y-1">
-                <div
-                  className={`font-black text-sm tracking-tight leading-tight ${
-                    isSelected ? 'text-white' : 'text-gray-950 dark:text-white'
-                  }`}
-                >
-                  {cat.name}
-                </div>
-
-                <div
-                  className={`text-[11px] font-medium leading-tight ${
-                    isSelected ? 'text-rose-100' : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  {cat.subtitle}
+                  {/* Circular Plate */}
+                  <div
+                    className={`w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-full overflow-hidden transition-all duration-300 relative bg-neutral-100 dark:bg-neutral-800 border-2 ${
+                      isSelected
+                        ? 'border-[#d11243] ring-4 ring-[#d11243]/20 dark:ring-rose-500/20 shadow-md scale-105'
+                        : 'border-slate-200/90 dark:border-slate-700 shadow-xs group-hover:shadow-lg group-hover:scale-105 group-hover:border-gray-300 dark:group-hover:border-slate-600'
+                    }`}
+                  >
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/images/hero_banner_meat.jpg';
+                      }}
+                    />
+                    {/* Subtle Circular Inner Rim Shadow to look like a ceramic plate */}
+                    <div className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] pointer-events-none" />
+                  </div>
                 </div>
 
-
-              </div>
-            </button>
-          );
-        })}
+                {/* Category Label */}
+                <div className="mt-2.5 space-y-0.5">
+                  <span
+                    className={`block text-xs sm:text-sm tracking-tight transition-colors line-clamp-1 ${
+                      isSelected
+                        ? 'font-black text-[#d11243] dark:text-rose-400'
+                        : 'font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#d11243] dark:group-hover:text-rose-400'
+                    }`}
+                  >
+                    {cat.name}
+                  </span>
+                  {isSelected && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#d11243] mx-auto animate-pulse" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
