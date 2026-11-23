@@ -28,7 +28,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
   React.useEffect(() => {
     if (isOpen && roleHint === 'admin') {
       setIdentifier('ops@brisketbox.in');
-      setPassword('admin123');
+      setPassword('Brisket#Admin2026!');
       setMode('login');
     }
   }, [isOpen, roleHint]);
@@ -101,7 +101,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
       setPassword('customer123');
     } else {
       setIdentifier('ops@brisketbox.in');
-      setPassword('admin123');
+      setPassword('Brisket#Admin2026!');
     }
   };
 

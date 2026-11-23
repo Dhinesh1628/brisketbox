@@ -62,7 +62,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // Auth Form State (when not authenticated as partner)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loginEmail, setLoginEmail] = useState('partner@brisketbox.in');
-  const [loginPassword, setLoginPassword] = useState('partner123');
+  const [loginPassword, setLoginPassword] = useState('Brisket#Station2026!');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
@@ -714,7 +714,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                 type="button"
                 onClick={() => {
                   setLoginEmail('partner@brisketbox.in');
-                  setLoginPassword('partner123');
+                  setLoginPassword('Brisket#Station2026!');
                 }}
                 className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
@@ -729,7 +729,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                 type="button"
                 onClick={() => {
                   setLoginEmail('newshop@brisketbox.in');
-                  setLoginPassword('partner123');
+                  setLoginPassword('Brisket#Station2026!');
                 }}
                 className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold text-left hover:bg-amber-100 shadow-xs transition cursor-pointer"
               >

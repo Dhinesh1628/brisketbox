@@ -49,7 +49,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // Auth Form State (when not authenticated as rider)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loginEmail, setLoginEmail] = useState('rider@brisketbox.in');
-  const [loginPassword, setLoginPassword] = useState('rider123');
+  const [loginPassword, setLoginPassword] = useState('Brisket#Rider2026!');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
@@ -598,7 +598,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 type="button"
                 onClick={() => {
                   setLoginEmail('rider@brisketbox.in');
-                  setLoginPassword('rider123');
+                  setLoginPassword('Brisket#Rider2026!');
                 }}
                 className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
@@ -613,7 +613,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 type="button"
                 onClick={() => {
                   setLoginEmail('mahesh.rider@gmail.com');
-                  setLoginPassword('rider123');
+                  setLoginPassword('Brisket#Rider2026!');
                 }}
                 className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
@@ -628,7 +628,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 type="button"
                 onClick={() => {
                   setLoginEmail('ramesh.rider@brisketbox.in');
-                  setLoginPassword('rider123');
+                  setLoginPassword('Brisket#Rider2026!');
                 }}
                 className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
@@ -643,7 +643,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 type="button"
                 onClick={() => {
                   setLoginEmail('imran.rider@brisketbox.in');
-                  setLoginPassword('rider123');
+                  setLoginPassword('Brisket#Rider2026!');
                 }}
                 className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
