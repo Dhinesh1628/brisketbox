@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1200px;
+      height: 1200px;
+      background: radial-gradient(circle at 80% 20%, #1e1112 0%, #0a0a0c 60%, #050506 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #ffffff;
+      padding: 70px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+    }
+    .glow-orb {
+      position: absolute;
+      top: -150px;
+      right: -100px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(225, 29, 72, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand img {
+      height: 52px;
+      object-fit: contain;
+    }
+    .tag {
+      background: rgba(225, 29, 72, 0.15);
+      border: 1px solid rgba(225, 29, 72, 0.4);
+      color: #fb7185;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 8px 18px;
+      border-radius: 9999px;
+    }
+    .content {
+      position: relative;
+      z-index: 2;
+      margin-top: 20px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .pill .dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+    }
+    h1 {
+      font-size: 56px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+    h1 span.highlight {
+      background: linear-gradient(135deg, #f43f5e, #fb7185);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.subtitle {
+      font-size: 22px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      max-width: 850px;
+      margin-bottom: 40px;
+    }
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    .card {
+      border-radius: 24px;
+      padding: 32px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .card.bad {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .card.good {
+      background: rgba(225, 29, 72, 0.08);
+      border: 1px solid rgba(225, 29, 72, 0.45);
+      box-shadow: 0 20px 40px -15px rgba(225, 29, 72, 0.2);
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card.bad .card-title { color: #f87171; }
+    .card.good .card-title { color: #fb7185; }
+    .temp-metric {
+      font-size: 44px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .card.bad .temp-metric { color: #ef4444; }
+    .card.good .temp-metric { color: #38bdf8; }
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card li {
+      font-size: 17px;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon-cross {
+      color: #ef4444;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .icon-check {
+      color: #10b981;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 24px;
+      position: relative;
+      z-index: 2;
+    }
+    .footer-left {
+      display: flex;
+      gap: 30px;
+      color: #94a3b8;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .footer-right {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 16px;
+      background: rgba(255,255,255,0.08);
+      padding: 10px 22px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <div class="header">
+    <div class="brand">
+      <img src="file:///C:/Users/dines/brisketbox/frontend/public/images/brisketbox-logo.png" alt="BrisketBox">
+    </div>
+    <div class="tag">COLD-CHAIN DEEP DIVE</div>
+  </div>
+
+  <div class="content">
+    <div class="pill">
+      <span class="dot"></span>
+      THE D2C FOOD INTEGRITY REPORT
+    </div>
+    <h1>Why 84% of Meat Delivered Online<br>Loses Freshness <span class="highlight">Before Your Doorstep</span></h1>
+    <p class="subtitle">Most delivery bikes carry meat in standard non-insulated tote bags. In 35°C Indian summers, temperature breaches occur within 18 minutes.</p>
+
+    <div class="comparison-grid">
+      <div class="card bad">
+        <div class="card-title">❌ Traditional Delivery</div>
+        <div class="temp-metric">14°C – 22°C</div>
+        <ul>
+          <li><span class="icon-cross">✕</span> Polythene bags & melting ice water</li>
+          <li><span class="icon-cross">✕</span> Microbial spike during traffic delays</li>
+          <li><span class="icon-cross">✕</span> Moisture loss destroys texture & taste</li>
+          <li><span class="icon-cross">✕</span> Single-use plastics dump in landfill</li>
+        </ul>
+      </div>
+
+      <div class="card good">
+        <div class="card-title">✅ BrisketBox ThermalVault™</div>
+        <div class="temp-metric">0°C – 4°C Constant</div>
+        <ul>
+          <li><span class="icon-check">✓</span> Medical-grade EPP reusable cold boxes</li>
+          <li><span class="icon-check">✓</span> Live IoT telemetry logged on every route</li>
+          <li><span class="icon-check">✓</span> Sealed freshness & zero drip loss</li>
+          <li><span class="icon-check">✓</span> 100% circular, zero single-use plastic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
+      <span>#FoodTech</span>
+      <span>#ColdChain</span>
+      <span>#CircularEconomy</span>
+      <span>#D2CIndia</span>
+    </div>
+    <div class="footer-right">
+      brisketbox.com
+    </div>
+  </div>
+</body>
+</html>

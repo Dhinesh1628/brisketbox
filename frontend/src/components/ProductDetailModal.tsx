@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Zap, ShieldCheck, Star, Award, CheckCircle2, ChevronRight, HelpCircle, Heart, MessageSquare, ThumbsUp, Send, Flame, ThermometerSnowflake, Package, ArrowRight } from 'lucide-react';
+import { X, Plus, Minus, Zap, ShieldCheck, Star, Award, CheckCircle2, ChevronRight, HelpCircle, Heart, MessageSquare, ThumbsUp, Send, Flame, ThermometerSnowflake, Package, ArrowRight, Clock } from 'lucide-react';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -374,8 +374,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <Flame className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                       <span>{visual.cookedDishName}</span>
                     </div>
-                    <span className="text-[10px] bg-amber-200/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold">
-                      ⏱️ {visual.cookingTime}
+                    <span className="text-[10px] bg-amber-200/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-800 dark:text-amber-200" />
+                      <span>{visual.cookingTime}</span>
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 leading-relaxed">

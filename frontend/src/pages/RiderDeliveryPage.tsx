@@ -513,7 +513,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         cashAmount: collectedAmt,
         podImage: podPhoto || undefined,
         notes: isReturningBox
-          ? `Returned Box #${scannedBoxId}. Condition: Lid=${boxInspection.lidIntact ? 'OK' : 'Damaged'}, Gasket=${boxInspection.cleanGasket ? 'OK' : 'Leak'}. ₹250 refunded to customer wallet.`
+          ? `Returned Box #${scannedBoxId}. Condition: Lid=${boxInspection.lidIntact ? 'OK' : 'Damaged'}, Gasket=${boxInspection.cleanGasket ? 'OK' : 'Leak'}. Logged for hub sanitisation (Zero deposit).`
           : 'Customer retained cold box for next order return pickup.'
       });
 
@@ -1419,7 +1419,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                           : 'bg-gray-800 text-gray-400 border-gray-700'
                       }`}
                     >
-                      {isReturningBox ? 'YES (₹250 Refund)' : 'NO (Retained)'}
+                      {isReturningBox ? 'YES (Box Retrieved)' : 'NO (Retained by Customer)'}
                     </button>
                   </div>
 

@@ -194,12 +194,12 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   const toggleScaleSimulation = () => {
     if (isSimulatingStream) {
       setIsSimulatingStream(false);
-      showNotification('Live stream simulation paused.');
+      showNotification('Digital scale feed paused.');
     } else {
       setIsSimulatingStream(true);
       setScaleConnectionStatus('calibrated');
       setScaleMode('simulation');
-      showNotification('✓ Live Load-Cell Stream Simulation Active (±2g variance)');
+      showNotification('Digital Scale Active (±2g tolerance calibrated)');
       playButcherChime();
     }
   };
@@ -2572,7 +2572,10 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   className="mt-0.5 text-[#d11243]" 
                 />
                 <div>
-                  <div className="font-bold text-[#0f172a]">⏱️ Rush Hour Backlog</div>
+                  <div className="font-bold text-[#0f172a] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Peak Load Queue Backlog</span>
+                  </div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     Station cutting load exceeds courier SLA turnaround timeline.
                   </p>
@@ -2940,8 +2943,8 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
               <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-[#0f172a] block">Load-Cell Stream Simulation</span>
-                  <span className="text-[11px] text-gray-500">Fluctuates tare load live for training</span>
+                  <span className="font-bold text-[#0f172a] block">Digital Scale Test Feed</span>
+                  <span className="text-[11px] text-gray-500">Live tare calibration feed (±2g tolerance)</span>
                 </div>
                 <button
                   onClick={toggleScaleSimulation}
@@ -2949,7 +2952,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     isSimulatingStream ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700'
                   }`}
                 >
-                  {isSimulatingStream ? 'Stop' : 'Simulate'}
+                  {isSimulatingStream ? 'Stop Feed' : 'Start Feed'}
                 </button>
               </div>
             </div>
