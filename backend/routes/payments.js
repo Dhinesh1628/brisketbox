@@ -7,7 +7,7 @@ import { getAuthTokenFromReq, verifyToken, authenticate, requireAdmin } from '..
 import { calculateOrderPricing } from '../services/pricingService.js';
 import { recordCouponUsage } from '../services/couponService.js';
 import { deductStock, releaseStock } from '../services/stockService.js';
-import { debitWallet } from '../services/walletService.js';
+import { debitWallet, creditWallet } from '../services/walletService.js';
 
 const router = express.Router();
 
@@ -67,13 +67,26 @@ router.post('/create-order', async (req, res) => {
     }
 
     // Authenticate user or create guest session
-    const user = getUserFromReq(req) || req.user || { 
+    const reqAuthUser = getUserFromReq(req) || req.user;
+    const isGuest = !reqAuthUser;
+
+    const user = reqAuthUser || { 
       id: `guest_${crypto.randomBytes(4).toString('hex')}`, 
       name: addressDetails?.fullName || 'Valued Customer', 
       email: addressDetails?.email || 'customer@brisketbox.in', 
       phone: addressDetails?.phone || '+91 98765 43210',
       walletBalance: 0
     };
+
+    // Guests are not allowed to place Cash on Delivery orders (prevents anonymous inventory tying)
+    if (paymentMethod === 'cod' && isGuest) {
+      return res.status(401).json({ error: 'Please sign in to place a Cash on Delivery order' });
+    }
+
+    // Guests are not allowed to use wallet store credit
+    if (useWallet && isGuest) {
+      return res.status(400).json({ error: 'Please sign in to use BrisketBox Wallet balance' });
+    }
 
     // 1. CRITICAL: Tested Server-Side Pricing Function (Ignores all client discounts/prices)
     let pricing;
@@ -101,20 +114,27 @@ router.post('/create-order', async (req, res) => {
       processedItems
     } = pricing;
 
+    // Upfront Wallet Balance Check & Debit (Prevents simultaneous multi-tab double spending)
+    if (walletDeduction > 0) {
+      if (isGuest) {
+        return res.status(400).json({ error: 'Please sign in to use BrisketBox Wallet balance' });
+      }
+      const dbUser = db.findById('users', user.id);
+      const availableBalance = Number(dbUser?.walletBalance || 0);
+      if (availableBalance < walletDeduction) {
+        return res.status(400).json({ 
+          error: `Insufficient wallet balance. Available: ₹${availableBalance}, requested: ₹${walletDeduction}` 
+        });
+      }
+    }
+
     // Cryptographically secure, collision-safe order number and PIN
     const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     const deliveryPin = crypto.randomInt(1000, 10000).toString();
 
     // 2. CASE A: 100% Wallet Paid (Fully paid via store credit)
     if (walletDeduction > 0 && netPayable === 0) {
-      // Deduct stock atomically
-      try {
-        await deductStock(processedItems);
-      } catch (stockErr) {
-        return res.status(400).json({ error: stockErr.message });
-      }
-
-      // Debit wallet with idempotency key
+      // Debit wallet with idempotency key first
       const walletIdempotencyKey = `wallet_order_${orderNumber}_debit`;
       try {
         await debitWallet({
@@ -126,9 +146,23 @@ router.post('/create-order', async (req, res) => {
           description: 'Order paid in full using BrisketBox Wallet store credit.'
         });
       } catch (walletErr) {
-        // Rollback stock if wallet deduction failed
-        await releaseStock(processedItems);
         return res.status(400).json({ error: walletErr.message });
+      }
+
+      // Deduct stock atomically
+      try {
+        await deductStock(processedItems);
+      } catch (stockErr) {
+        // Rollback debited wallet if stock fails
+        await creditWallet({
+          userId: user.id,
+          amount: walletDeduction,
+          idempotencyKey: `wallet_rollback_stock_${orderNumber}`,
+          orderId: orderNumber,
+          title: 'Wallet Rollback',
+          description: 'Stock deduction failed; store credit refunded.'
+        });
+        return res.status(400).json({ error: stockErr.message });
       }
 
       // Record coupon usage if applied
@@ -158,6 +192,8 @@ router.post('/create-order', async (req, res) => {
         paymentMethod: 'BrisketBox Wallet (Fully Paid)',
         paymentStatus: 'PAID',
         orderStatus: 'CONFIRMED',
+        stockDeducted: true,
+        walletDebited: true,
         assignedRider
       });
 
@@ -171,14 +207,6 @@ router.post('/create-order', async (req, res) => {
 
     // 3. CASE B: Cash on Delivery (COD)
     if (paymentMethod === 'cod') {
-      // Deduct stock atomically
-      try {
-        await deductStock(processedItems);
-      } catch (stockErr) {
-        return res.status(400).json({ error: stockErr.message });
-      }
-
-      // If partial wallet was used, debit wallet atomically
       if (walletDeduction > 0) {
         const walletIdempotencyKey = `wallet_order_${orderNumber}_partial_debit`;
         try {
@@ -191,9 +219,25 @@ router.post('/create-order', async (req, res) => {
             description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`
           });
         } catch (walletErr) {
-          await releaseStock(processedItems);
           return res.status(400).json({ error: walletErr.message });
         }
+      }
+
+      // Deduct stock atomically
+      try {
+        await deductStock(processedItems);
+      } catch (stockErr) {
+        if (walletDeduction > 0) {
+          await creditWallet({
+            userId: user.id,
+            amount: walletDeduction,
+            idempotencyKey: `wallet_rollback_stock_${orderNumber}`,
+            orderId: orderNumber,
+            title: 'Wallet Rollback',
+            description: 'Stock deduction failed; store credit refunded.'
+          });
+        }
+        return res.status(400).json({ error: stockErr.message });
       }
 
       if (couponCode) {
@@ -222,6 +266,8 @@ router.post('/create-order', async (req, res) => {
         paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + Cash on Delivery (₹${netPayable})` : 'cod',
         paymentStatus: 'PENDING',
         orderStatus: 'CONFIRMED',
+        stockDeducted: true,
+        walletDebited: walletDeduction > 0,
         assignedRider
       });
 
@@ -236,7 +282,23 @@ router.post('/create-order', async (req, res) => {
     }
 
     // 4. CASE C: Online Payment (Razorpay)
-    // Order is created in PENDING_PAYMENT status. Rider and butcher queues are NOT assigned until payment is verified.
+    // If partial wallet was selected, debit wallet upfront so it cannot be double-spent
+    if (walletDeduction > 0) {
+      const walletIdempotencyKey = `wallet_order_${orderNumber}_partial_debit`;
+      try {
+        await debitWallet({
+          userId: user.id,
+          amount: walletDeduction,
+          idempotencyKey: walletIdempotencyKey,
+          orderId: orderNumber,
+          title: `Partial Payment for #${orderNumber}`,
+          description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`
+        });
+      } catch (walletErr) {
+        return res.status(400).json({ error: walletErr.message });
+      }
+    }
+
     let razorpayOrderId = `order_${crypto.randomBytes(8).toString('hex')}`;
     
     if (razorpayInstance && !isDemoKey) {
@@ -254,6 +316,16 @@ router.post('/create-order', async (req, res) => {
         razorpayOrderId = rzpOrder.id;
       } catch (err) {
         console.error('[Razorpay] Order creation failed:', err.message);
+        if (walletDeduction > 0) {
+          await creditWallet({
+            userId: user.id,
+            amount: walletDeduction,
+            idempotencyKey: `wallet_rollback_rzp_fail_${orderNumber}`,
+            orderId: orderNumber,
+            title: 'Wallet Rollback',
+            description: 'Razorpay order creation failed; store credit refunded.'
+          });
+        }
         if (isProd) {
           return res.status(502).json({ error: 'Payment gateway temporarily unavailable. Please choose COD or try again.' });
         }
@@ -283,10 +355,12 @@ router.post('/create-order', async (req, res) => {
       city: city || 'Bengaluru',
       paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + Razorpay (₹${netPayable})` : 'razorpay',
       paymentStatus: 'PENDING',
-      orderStatus: 'PENDING_PAYMENT', // Unpaid online orders must stay PENDING_PAYMENT
+      orderStatus: 'PENDING_PAYMENT',
+      stockDeducted: false,
+      walletDebited: walletDeduction > 0,
       razorpayOrderId,
       amountInPaise,
-      assignedRider: null // Unpaid online orders must not reach rider queues
+      assignedRider: null
     });
 
     res.status(200).json({
@@ -313,7 +387,7 @@ router.post('/create-order', async (req, res) => {
 // ==========================================
 // 2. POST /api/payments/verify
 // ==========================================
-router.post('/verify', async (req, res) => {
+router.post('/verify', authenticate, async (req, res) => {
   try {
     const { 
       razorpay_order_id, 
@@ -332,12 +406,21 @@ router.post('/verify', async (req, res) => {
       return res.status(404).json({ error: 'Order not found for verification' });
     }
 
+    // Access control: only the owning customer or admin can verify payment
+    if (req.user && req.user.role !== 'admin' && order.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You are not authorized to verify payment for this order' });
+    }
+
     // Idempotency: If order is already PAID, return success immediately
     if (order.paymentStatus === 'PAID') {
+      const sanitized = { ...order };
+      if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+        delete sanitized.deliveryPin;
+      }
       return res.status(200).json({
         success: true,
         message: 'Order payment already verified and processed',
-        order
+        order: sanitized
       });
     }
 
@@ -351,7 +434,6 @@ router.post('/verify', async (req, res) => {
         return res.status(400).json({ error: 'Missing razorpay_signature for payment verification' });
       }
 
-      // Timing-safe HMAC SHA256 signature verification
       const body = razorpay_order_id + '|' + razorpay_payment_id;
       const expectedSignature = crypto
         .createHmac('sha256', RAZORPAY_KEY_SECRET)
@@ -366,7 +448,6 @@ router.post('/verify', async (req, res) => {
         isSignatureValid = false;
       }
 
-      // Verify payment details via Razorpay API (do not treat failed check as success)
       if (isSignatureValid && razorpayInstance) {
         try {
           const paymentDetails = await razorpayInstance.payments.fetch(razorpay_payment_id);
@@ -399,35 +480,17 @@ router.post('/verify', async (req, res) => {
     }
 
     if (!isSignatureValid) {
-      db.update('orders', order.id, {
-        paymentStatus: 'FAILED',
-        orderStatus: 'PENDING_PAYMENT'
-      });
+      // Do NOT set order paymentStatus to FAILED so malicious callers cannot sabotage legitimate pending orders
       return res.status(400).json({ error: 'Invalid payment signature. Verification failed.' });
     }
 
     // Deduct stock atomically now that payment is confirmed
-    try {
-      await deductStock(order.items);
-    } catch (stockErr) {
-      console.error('[Payments] Stock deduction error post-payment:', stockErr);
-      return res.status(409).json({ error: `Item out of stock during payment: ${stockErr.message}. Refund will be issued.` });
-    }
-
-    // Deduct wallet store credit if partial wallet was used
-    if (order.walletDeduction > 0 && order.userId) {
-      const walletIdempotencyKey = `wallet_order_${order.orderNumber || order.id}_partial_debit`;
+    if (!order.stockDeducted && Array.isArray(order.items)) {
       try {
-        await debitWallet({
-          userId: order.userId,
-          amount: order.walletDeduction,
-          idempotencyKey: walletIdempotencyKey,
-          orderId: order.orderNumber || order.id,
-          title: `Partial Payment for #${order.orderNumber || order.id}`,
-          description: `₹${order.walletDeduction} store credit deducted from BrisketBox Wallet.`
-        });
-      } catch (walletErr) {
-        console.warn('[Payments] Partial wallet deduction note:', walletErr.message);
+        await deductStock(order.items);
+      } catch (stockErr) {
+        console.error('[Payments] Stock deduction error post-payment:', stockErr);
+        return res.status(409).json({ error: `Item out of stock during payment: ${stockErr.message}. Refund will be issued.` });
       }
     }
 
@@ -436,9 +499,7 @@ router.post('/verify', async (req, res) => {
       recordCouponUsage(order.couponCode, { id: order.userId }, order.id);
     }
 
-    // Assign fleet rider now that payment is confirmed
     const assignedRider = assignFleetRiderForOrder();
-
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -447,6 +508,7 @@ router.post('/verify', async (req, res) => {
       orderStatus: 'CONFIRMED',
       status: 'Order Confirmed',
       lifecycleStatus: 'CONFIRMED',
+      stockDeducted: true,
       razorpayPaymentId: razorpay_payment_id,
       razorpaySignature: razorpay_signature || 'SERVER_VERIFIED',
       riderId: assignedRider.riderId,
@@ -460,10 +522,15 @@ router.post('/verify', async (req, res) => {
       ]
     });
 
+    const sanitized = { ...updatedOrder };
+    if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+      delete sanitized.deliveryPin;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Payment verified and order confirmed successfully',
-      order: updatedOrder
+      order: sanitized
     });
   } catch (err) {
     console.error('[Payments] Verify error:', err);
@@ -474,7 +541,7 @@ router.post('/verify', async (req, res) => {
 // ==========================================
 // 3. POST /api/payments/webhook
 // ==========================================
-router.post('/webhook', (req, res) => {
+router.post('/webhook', async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
@@ -513,22 +580,44 @@ router.post('/webhook', (req, res) => {
       const orderId = payment.order_id;
       const order = db.get('orders').find(o => o.razorpayOrderId === orderId);
 
-      if (order && order.paymentStatus !== 'PAID') {
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found for captured payment' });
+      }
+
+      // 1. Verify currency
+      if (payment.currency !== 'INR') {
+        db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        return res.status(400).json({ error: `Currency mismatch: Expected INR, got ${payment.currency}` });
+      }
+
+      // 2. Verify amount
+      const expectedPaise = order.amountInPaise || Math.round(order.totalAmount * 100);
+      if (payment.amount !== expectedPaise) {
+        db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        return res.status(400).json({ error: `Payment amount mismatch: Expected ${expectedPaise} paise, got ${payment.amount} paise` });
+      }
+
+      if (order.paymentStatus !== 'PAID') {
+        if (!order.stockDeducted && Array.isArray(order.items)) {
+          try {
+            await deductStock(order.items);
+          } catch (stockErr) {
+            console.error('[Webhook] Stock deduction error:', stockErr);
+          }
+        }
+
         const assignedRider = assignFleetRiderForOrder();
         db.update('orders', order.id, {
           paymentStatus: 'PAID',
           orderStatus: 'CONFIRMED',
+          status: 'Order Confirmed',
           lifecycleStatus: 'CONFIRMED',
+          stockDeducted: true,
           razorpayPaymentId: payment.id,
-          riderId: assignedRider.riderId,
-          riderFullName: assignedRider.riderFullName,
-          riderName: assignedRider.riderName,
-          riderPhone: assignedRider.riderPhone,
-          riderVehicle: assignedRider.riderVehicle,
-          deliveryExecutive: assignedRider.deliveryExecutive
+          assignedRider
         });
-        console.log(`[Webhook] Order ${order.id} marked PAID and CONFIRMED via webhook`);
       }
+      return res.status(200).json({ status: 'ok', received: true });
     } else if (event === 'payment.failed') {
       const payment = payload.payment.entity;
       const orderId = payment.order_id;
@@ -701,7 +790,9 @@ function createOrderRecord(params) {
     orderStatus,
     razorpayOrderId = '',
     amountInPaise = 0,
-    assignedRider = null
+    assignedRider = null,
+    stockDeducted = false,
+    walletDebited = false
   } = params;
 
   // Assign existing available cooler box, or null (do not auto-create fake coolers)
@@ -740,6 +831,8 @@ function createOrderRecord(params) {
     tipAmount: Number(tipAmount || 0),
     deliveryPin: deliveryPin || crypto.randomInt(1000, 10000).toString(),
     walletDeduction: Number(walletDeduction || 0),
+    stockDeducted: Boolean(stockDeducted),
+    walletDebited: Boolean(walletDebited),
     total: totalAmount,
     totalAmount,
     amountInPaise,

@@ -96,10 +96,16 @@ export function validateAndApplyCoupon(rawCode, user, subtotal) {
     return { valid: false, discount: 0, error: `Coupon "${code}" has reached its total redemption limit` };
   }
 
-  const userId = user?.id;
-  if (userId && !userId.startsWith('guest_')) {
-    const userUsages = allUsages.filter(u => u.code === code && (u.userId === userId || u.phone === user?.phone)).length;
-    if (coupon.maxPerUser && userUsages >= coupon.maxPerUser) {
+  if (coupon.maxPerUser) {
+    if (!user || !user.id || user.id.startsWith('guest_')) {
+      return {
+        valid: false,
+        discount: 0,
+        error: `Please sign in to apply coupon "${code}"`
+      };
+    }
+    const userUsages = allUsages.filter(u => u.code === code && (u.userId === user.id || (user.phone && u.phone === user.phone))).length;
+    if (userUsages >= coupon.maxPerUser) {
       return {
         valid: false,
         discount: 0,

@@ -860,7 +860,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.fssaiNumber}
                     onChange={(e) => setRegForm({ ...regForm, fssaiNumber: e.target.value })}
                     placeholder="11224330000491"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
                 <div>
@@ -969,7 +969,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // APPROVED BUTCHER PARTNER DASHBOARD (Complete Figma System)
   // =========================================================================
   return (
-    <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans selection:bg-[#d11243] selection:text-white pb-24 md:pb-16">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans selection:bg-[#d11243] selection:text-white pb-24 md:pb-16">
       
       {/* Top Bar Header (Figma: Header & Live Order Acceptance Master Toggle) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs px-4 sm:px-6 py-2.5">

@@ -109,7 +109,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                 <div className="relative pt-3.5 pb-0.5">
                   {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without ripping into circular border */}
                   {cat.badge && (
-                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-10 px-2.5 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase tracking-wider text-white shadow-sm ring-1 ring-white/40 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute -top-1 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
                       {cat.badge}
                     </span>
                   )}

@@ -53,7 +53,7 @@ import crypto from 'crypto';
 import { calculateOrderPricing } from './services/pricingService.js';
 import { recordCouponUsage } from './services/couponService.js';
 import { deductStock, releaseStock } from './services/stockService.js';
-import { debitWallet } from './services/walletService.js';
+import { debitWallet, creditWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
   findCooler,
@@ -1248,11 +1248,21 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
 });
 
 // Database-Persistent Handover PIN Verification (Persistent Attempt Limits & Fraud Lockout)
-const handleOrderHandover = (req, res) => {
+const handleOrderHandover = async (req, res) => {
   const { pin, deliveryPin, coolerReturned, podImage, notes, cashCollected, cashAmount } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
+  }
+
+  const isAdmin = req.user && req.user.role === 'admin';
+  const isAssignedRider = req.user && (req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId));
+  if (!isAdmin && !isAssignedRider) {
+    return res.status(403).json({ error: 'Access denied: Only the assigned delivery rider or operations admin can complete order handover.' });
+  }
+
+  if (order.orderStatus === 'DELIVERED') {
+    return res.status(400).json({ error: 'Order has already been delivered and verified.' });
   }
 
   const enteredPin = String(pin || deliveryPin || '').trim();
@@ -1313,12 +1323,31 @@ const handleOrderHandover = (req, res) => {
   const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
   const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
 
+  // Cooler deposit refund: ONLY if deposit was actually paid, not already refunded, and cooler was returned
+  const depositPaid = Number(order.coolerDeposit || 0);
+  let depositRefundedThisTime = false;
+  if (coolerReturned && depositPaid > 0 && !order.coolerDepositRefunded && order.userId) {
+    try {
+      await creditWallet({
+        userId: order.userId,
+        amount: depositPaid,
+        idempotencyKey: `refund_cooler_${order.id}`,
+        orderId: order.orderNumber || order.id,
+        title: 'Cold Box Deposit Refund',
+        description: `Doorstep cooler returned for Order #${order.orderNumber || order.id}`
+      });
+      depositRefundedThisTime = true;
+    } catch (walletErr) {
+      console.warn('[Handover] Wallet refund error:', walletErr.message);
+    }
+  }
+
   const updatedLog = [
     ...(order.tempLog || []),
     {
       time: timeStr,
       temp: 1.8,
-      event: `Delivered & Verified via 4-digit PIN.${collectedCashNum > 0 ? ` Cash Collected: ₹${collectedCashNum}.` : ''} Cooler Box returned: ${coolerReturned ? 'YES (₹250 Refunded)' : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
+      event: `Delivered & Verified via 4-digit PIN.${collectedCashNum > 0 ? ` Cash Collected: ₹${collectedCashNum}.` : ''} Cooler Box returned: ${coolerReturned ? (depositPaid > 0 ? `YES (₹${depositPaid} Refunded)` : 'YES (₹0 deposit returned)') : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
     }
   ];
 
@@ -1328,6 +1357,7 @@ const handleOrderHandover = (req, res) => {
     lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
     lifecycleTimestamps: timestamps,
     coolerReturned: !!coolerReturned,
+    coolerDepositRefunded: (depositPaid > 0 && (depositRefundedThisTime || order.coolerDepositRefunded)),
     podImage: podImage || order.podImage,
     handoverNotes: notes || order.handoverNotes,
     deliveredAt: nowIso,
@@ -1346,42 +1376,20 @@ const handleOrderHandover = (req, res) => {
     }
   }
 
-  // If customer returned cooler box, automatically refund ₹250 to customer's wallet!
-  if (coolerReturned && order.userId) {
-    const customer = db.findById('users', order.userId);
-    if (customer) {
-      const currentWallet = customer.walletBalance || 0;
-      const newWallet = currentWallet + 250;
-      const currentDep = customer.depositBalance || 250;
-      const newDep = Math.max(0, currentDep - 250);
+  if (coolerReturned && order.coolerId) {
+    db.update('coolers', order.coolerId, { status: 'available' });
+  }
 
-      const refundTx = {
-        id: `TX-REFUND-${Date.now()}`,
-        amount: 250,
-        type: 'credit',
-        title: 'Cold Box Deposit Refund',
-        description: `Doorstep cooler returned for Order #${order.id}`,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: nowIso
-      };
-
-      db.update('users', customer.id, {
-        walletBalance: newWallet,
-        depositBalance: newDep,
-        walletTransactions: [refundTx, ...(customer.walletTransactions || [])],
-        activeCoolersCount: Math.max(0, (customer.activeCoolersCount || 1) - 1)
-      });
-    }
-
-    if (order.coolerId) {
-      db.update('coolers', order.coolerId, { status: 'available' });
-    }
+  // Strip deliveryPin for non-owner customers
+  const sanitized = { ...updatedOrder };
+  if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+    delete sanitized.deliveryPin;
   }
 
   res.json({
     success: true,
     message: 'Delivery handover completed and verified',
-    order: updatedOrder
+    order: sanitized
   });
 };
 
@@ -1412,8 +1420,6 @@ const handleUpdateStatus = (req, res) => {
     coolerId, 
     notes, 
     note, 
-    deliveryPin, 
-    coolerReturned,
     weighedWeight,
     batchLotId,
     sealTag,
@@ -1421,21 +1427,26 @@ const handleUpdateStatus = (req, res) => {
     riderLocation,
     deliveryExecutive
   } = req.body;
+
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  // If status is delivered with PIN, delegate to handover
-  if (status === 'delivered' || status === 'Delivered') {
-    return handleOrderHandover(req, res);
+  const isAdmin = req.user && req.user.role === 'admin';
+  const isAssignedRider = req.user && req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId);
+  const isAssignedPartner = req.user && req.user.role === 'partner' && (order.partnerId === req.user.id || !order.partnerId);
+
+  if (!isAdmin && !isAssignedRider && !isAssignedPartner) {
+    return res.status(403).json({ error: 'Access denied: Only authorized station partners, assigned riders, or operations admins can update order status.' });
   }
 
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  // Delivery CANNOT be marked via status update; it MUST go through PIN verification
+  if (status === 'delivered' || status === 'Delivered' || orderStatus === 'DELIVERED') {
+    return res.status(400).json({ error: 'Orders can only be marked DELIVERED via the /api/orders/:id/handover route with customer delivery PIN verification.' });
+  }
 
   const resolvedOrderStatus = orderStatus || (
-    status === 'Delivered' ? 'DELIVERED' :
     status === 'Out for Delivery' || status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' :
     status === 'Packed' || status === 'Cold Box Packed' || status === 'ready_for_dispatch' ? 'PACKED' :
     status === 'Quality Check' || status === 'vacuum_packed' ? 'QUALITY_CHECK' :
@@ -1443,6 +1454,18 @@ const handleUpdateStatus = (req, res) => {
     status === 'Cancelled' ? 'CANCELLED' :
     status === 'Confirmed' ? 'CONFIRMED' : order.orderStatus
   );
+
+  // Validate state machine transition
+  if (resolvedOrderStatus && resolvedOrderStatus !== order.orderStatus) {
+    if (!isValidTransition(order.orderStatus, resolvedOrderStatus)) {
+      return res.status(400).json({
+        error: `Invalid order state transition from '${order.orderStatus}' to '${resolvedOrderStatus}'.`
+      });
+    }
+  }
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   let newTemp = order.liveTemp || 1.8;
   if (resolvedOrderStatus === 'OUT_FOR_DELIVERY') {
@@ -1474,14 +1497,20 @@ const handleUpdateStatus = (req, res) => {
     tempLog: updatedLog
   });
 
-  res.json(updatedOrder);
+  // Never leak deliveryPin to non-owner customers
+  const sanitized = { ...updatedOrder };
+  if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+    delete sanitized.deliveryPin;
+  }
+
+  res.json(sanitized);
 };
 
 app.patch('/api/orders/:id/status', authenticate, handleUpdateStatus);
 app.put('/api/orders/:id/status', authenticate, handleUpdateStatus);
 
 // Customer Order Cancellation (Only allowed before order is PACKED)
-app.post('/api/orders/:id/cancel', authenticate, (req, res) => {
+app.post('/api/orders/:id/cancel', authenticate, async (req, res) => {
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
@@ -1498,9 +1527,25 @@ app.post('/api/orders/:id/cancel', authenticate, (req, res) => {
     });
   }
 
-  // Restore inventory atomically
-  if (Array.isArray(order.items)) {
+  // Restore inventory atomically ONLY if stock was previously deducted
+  if (order.stockDeducted && Array.isArray(order.items)) {
     await releaseStock(order.items);
+  }
+
+  // Refund wallet credit if wallet was used
+  if (order.walletDeduction > 0 && order.userId) {
+    try {
+      await creditWallet({
+        userId: order.userId,
+        amount: order.walletDeduction,
+        idempotencyKey: `wallet_refund_cancel_${order.id}`,
+        orderId: order.orderNumber || order.id,
+        title: `Refund for Order #${order.orderNumber || order.id}`,
+        description: 'Store credit refunded due to order cancellation.'
+      });
+    } catch (walletErr) {
+      console.warn('[Cancel] Wallet refund error:', walletErr.message);
+    }
   }
 
   // Release cooler
@@ -1515,10 +1560,16 @@ app.post('/api/orders/:id/cancel', authenticate, (req, res) => {
   const updated = db.update('orders', order.id, {
     orderStatus: 'CANCELLED',
     status: 'Cancelled',
+    stockDeducted: false,
     paymentStatus: order.paymentStatus === 'PAID' ? 'REFUND_PENDING' : order.paymentStatus
   });
 
-  res.json({ success: true, message: 'Order cancelled successfully', order: updated });
+  const sanitized = { ...updated };
+  if (req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+    delete sanitized.deliveryPin;
+  }
+
+  res.json({ success: true, message: 'Order cancelled successfully', order: sanitized });
 });
 
 // Customer Concierge Support & Contact Form Submission (Anti-Spam Rate Limited)
@@ -1556,13 +1607,26 @@ app.post('/api/contact', contactLimiter, (req, res) => {
 });
 
 app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Sensor telemetry simulation is disabled in production' });
+  }
+
   const order = db.findById('orders', req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
+  const isOwner = order.userId === req.user.id;
+  const isAssignedRider = req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId);
+  const isAssignedPartner = req.user.role === 'partner' && (order.partnerId === req.user.id || !order.partnerId);
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwner && !isAssignedRider && !isAssignedPartner && !isAdmin) {
+    return res.status(403).json({ error: 'Access denied: You are not authorized to access or simulate this order' });
+  }
+
   const delta = (Math.random() * 0.4 - 0.2);
-  const newTemp = Number(Math.max(0.2, Math.min(2.8, order.liveTemp + delta)).toFixed(1));
+  const newTemp = Number(Math.max(0.2, Math.min(2.8, (order.liveTemp || 1.8) + delta)).toFixed(1));
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -1575,12 +1639,16 @@ app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
     }
   ];
 
-  const updated = db.update('orders', order.id, {
+  db.update('orders', order.id, {
     liveTemp: newTemp,
     tempLog: updatedLog
   });
 
-  res.json(updated);
+  res.json({
+    success: true,
+    liveTemp: newTemp,
+    tempLog: updatedLog
+  });
 });
 
 // ==========================================

@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+import { User } from '../models/User.js';
 import { db } from '../db.js';
 import crypto from 'crypto';
 
@@ -17,16 +19,8 @@ function withWalletLock(callback) {
 
 /**
  * Debits store credit from a user's wallet with an idempotency key.
- * Backed by a permanent ledger to prevent double spending.
- *
- * @param {object} params
- * @param {string} params.userId
- * @param {number} params.amount
- * @param {string} params.idempotencyKey
- * @param {string} [params.orderId]
- * @param {string} [params.title]
- * @param {string} [params.description]
- * @returns {Promise<{ success: boolean, transaction: object, newBalance: number }>}
+ * Backed by an immutable ledger to prevent double spending.
+ * In MongoDB production, uses atomic $inc with condition { walletBalance: { $gte: numAmount } }.
  */
 export async function debitWallet({
   userId,
@@ -49,7 +43,6 @@ export async function debitWallet({
     const ledger = db.get('walletLedger') || [];
     const existingTx = ledger.find(tx => tx.idempotencyKey === idempotencyKey);
     if (existingTx) {
-      // Idempotency: return previously recorded transaction
       const user = db.findById('users', userId);
       return {
         success: true,
@@ -59,6 +52,58 @@ export async function debitWallet({
       };
     }
 
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+    if (isMongo) {
+      const txId = `tx_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+      const userBefore = await User.findOne({ id: userId });
+      if (!userBefore) {
+        throw new Error(`User "${userId}" not found for wallet debit`);
+      }
+      if ((userBefore.walletBalance || 0) < numAmount) {
+        throw new Error(`Insufficient wallet balance. Available: ₹${userBefore.walletBalance || 0}, Requested: ₹${numAmount}`);
+      }
+
+      const transaction = {
+        id: txId,
+        idempotencyKey,
+        userId,
+        amount: numAmount,
+        type: 'debit',
+        title,
+        description,
+        balanceBefore: userBefore.walletBalance,
+        balanceAfter: userBefore.walletBalance - numAmount,
+        orderId,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedUser = await User.findOneAndUpdate(
+        { id: userId, walletBalance: { $gte: numAmount } },
+        { 
+          $inc: { walletBalance: -numAmount },
+          $push: { walletTransactions: transaction }
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        throw new Error(`Insufficient wallet balance during concurrent transaction.`);
+      }
+
+      const localUser = db.findById('users', userId);
+      if (localUser) {
+        db.update('users', localUser.id, {
+          walletBalance: updatedUser.walletBalance,
+          walletTransactions: [transaction, ...(localUser.walletTransactions || [])]
+        });
+      }
+      db.insert('walletLedger', transaction);
+
+      return { success: true, transaction, newBalance: updatedUser.walletBalance };
+    }
+
+    // LowDB fallback
     const user = db.findById('users', userId);
     if (!user) {
       throw new Error(`User "${userId}" not found for wallet debit`);
@@ -85,14 +130,12 @@ export async function debitWallet({
       timestamp: new Date().toISOString()
     };
 
-    // Update user balance & user transaction history
     const userTransactions = [transaction, ...(user.walletTransactions || [])];
     db.update('users', user.id, {
       walletBalance: newBalance,
       walletTransactions: userTransactions
     });
 
-    // Record in immutable ledger
     db.insert('walletLedger', transaction);
 
     return { success: true, transaction, newBalance };
@@ -102,15 +145,6 @@ export async function debitWallet({
 /**
  * Credits store credit to a user's wallet with an idempotency key.
  * Backed by an immutable ledger to prevent duplicate rewards or refunds.
- *
- * @param {object} params
- * @param {string} params.userId
- * @param {number} params.amount
- * @param {string} params.idempotencyKey
- * @param {string} [params.orderId]
- * @param {string} [params.title]
- * @param {string} [params.description]
- * @returns {Promise<{ success: boolean, transaction: object, newBalance: number }>}
  */
 export async function creditWallet({
   userId,
@@ -142,6 +176,51 @@ export async function creditWallet({
       };
     }
 
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+    if (isMongo) {
+      const txId = `tx_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+      const userBefore = await User.findOne({ id: userId });
+      if (!userBefore) {
+        throw new Error(`User "${userId}" not found for wallet credit`);
+      }
+
+      const transaction = {
+        id: txId,
+        idempotencyKey,
+        userId,
+        amount: numAmount,
+        type: 'credit',
+        title,
+        description,
+        balanceBefore: userBefore.walletBalance || 0,
+        balanceAfter: (userBefore.walletBalance || 0) + numAmount,
+        orderId,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedUser = await User.findOneAndUpdate(
+        { id: userId },
+        { 
+          $inc: { walletBalance: numAmount },
+          $push: { walletTransactions: transaction }
+        },
+        { new: true }
+      );
+
+      const localUser = db.findById('users', userId);
+      if (localUser) {
+        db.update('users', localUser.id, {
+          walletBalance: updatedUser.walletBalance,
+          walletTransactions: [transaction, ...(localUser.walletTransactions || [])]
+        });
+      }
+      db.insert('walletLedger', transaction);
+
+      return { success: true, transaction, newBalance: updatedUser.walletBalance };
+    }
+
+    // LowDB fallback
     const user = db.findById('users', userId);
     if (!user) {
       throw new Error(`User "${userId}" not found for wallet credit`);

@@ -1,11 +1,30 @@
 {
   "users": [
     {
+      "id": "test_u_1",
+      "walletBalance": 250,
+      "walletTransactions": [
+        {
+          "id": "tx_1795461907861_bf5d55",
+          "idempotencyKey": "k1",
+          "userId": "test_u_1",
+          "amount": 150,
+          "type": "credit",
+          "title": "Wallet Credit",
+          "description": "Store credit credited to wallet",
+          "balanceBefore": 100,
+          "balanceAfter": 250,
+          "orderId": null,
+          "timestamp": "2026-11-23T19:25:07.861Z"
+        }
+      ]
+    },
+    {
       "_id": "6ae4e960a752ca05794d5ccb",
       "id": "usr_admin",
       "name": "Rajeshwar Rao (Operations Head)",
       "email": "ops@sagarfresh.in",
-      "password": "$2b$10$bL0hlHy1bIJnKT2BjDgAJ.yU7vDiC5NE6rrl3S76iKAw0qK0cuaSa",
+      "password": "$2b$10$Z0mkJ9UHTrCp3UvdB6LqgO527RhxrgUxfuhqOuik1A2AwgP6RyqZW",
       "role": "admin",
       "phone": "+91 98450 12890",
       "city": "Bengaluru",
@@ -21,7 +40,7 @@
       "id": "usr_customer",
       "name": "Pooja Sundaram",
       "email": "pooja.sundaram@gmail.com",
-      "password": "$2b$10$7pCuM4WEljeUIYwLzoU/DOqLW1XbOLXemt5b7i2CGMTD5ukKHTRFm",
+      "password": "$2b$10$1ov9IaTwrvenwofig3G9geWP3WzWcLJLhKzBeIGJd6ARKCCYTVmUS",
       "role": "customer",
       "phone": "+91 98765 43210",
       "city": "Bengaluru",
@@ -79,7 +98,7 @@
       "id": "usr_f331d56a",
       "name": "Phase1 Check",
       "email": "phase1check1794998317701@example.com",
-      "password": "$2b$10$/3MCK3ob42PdTLZS.RjSueJU4p4W51vwXCw8YHl6.ebpVAI6s75PC",
+      "password": "$2b$10$j2T9tAGO8bQAVL2IOTl9K.bFjM3G158zGzbeh7b289Gj1OfrrL8LC",
       "role": "customer",
       "phone": "+91 98765 00000",
       "city": "Bengaluru",
@@ -99,7 +118,7 @@
       "id": "usr_rider_1",
       "name": "Suresh Patil",
       "email": "rider@brisketbox.in",
-      "password": "$2b$10$1TZ7pIXXMWcXPfaNdFaXiuRtMZ67xwlFk0YXrmfjAUb9FJ/GvieV.",
+      "password": "$2b$10$9TU/YJsHYsT.iQplsD0ca.sBiEe.ZgIvTG37bhA8lKl81SqrQpviK",
       "role": "rider",
       "phone": "+91 97412 88301",
       "city": "Bengaluru",
@@ -129,7 +148,7 @@
       "id": "usr_rider_pending",
       "name": "Mahesh Kumar",
       "email": "mahesh.rider@gmail.com",
-      "password": "$2b$10$1TZ7pIXXMWcXPfaNdFaXiuRtMZ67xwlFk0YXrmfjAUb9FJ/GvieV.",
+      "password": "$2b$10$T/ZzgDFQV2Lu1v62coeIbuUbBmimT9XbHEkg0GHa84Ag2bBwzeBHu",
       "role": "rider",
       "phone": "+91 98450 11223",
       "city": "Bengaluru",
@@ -159,7 +178,7 @@
       "id": "usr_rider_3",
       "name": "Ramesh Gowda",
       "email": "ramesh.rider@brisketbox.in",
-      "password": "$2b$10$3wtDQNpLAZDXeSUqrpCRnug8hTXbwIcyE0Hj0R1G3QSI4c524yVu.",
+      "password": "$2b$10$4xl0jNNDeCg.9aJ/I9ahQebp/v1YA/HgDXFbgOQBggWfun68BOf5W",
       "role": "rider",
       "phone": "+91 98860 33441",
       "city": "Bengaluru",
@@ -190,7 +209,7 @@
       "id": "usr_rider_4",
       "name": "Imran Pasha",
       "email": "imran.rider@brisketbox.in",
-      "password": "$2b$10$Fiy4fBiNNOapZ19z17l86eYmddNE1tfBBowa6B53vJ34Bic1gxlXe",
+      "password": "$2b$10$ZNC2Excvw7yQs7oyzL2T1uZ8zNrXqyaHNpQM1k9nVhDQYq02mK686",
       "role": "rider",
       "phone": "+91 97311 55662",
       "city": "Bengaluru",
@@ -220,7 +239,7 @@
       "id": "usr_partner_1",
       "name": "Abdul Rahim (Master Butcher)",
       "email": "partner@brisketbox.in",
-      "password": "$2b$10$sk85ftnMqNIxPmACiMGM/enf2HetOpv2ihSXeyfBnFm87imauWjM.",
+      "password": "$2b$10$coFFEjJUshInnggdJ569euFq9/2XIFk2FnKEpTdJzJXrEk9eGyQLS",
       "role": "partner",
       "approvalStatus": "approved",
       "phone": "+91 98860 33445",
@@ -244,7 +263,7 @@
       "id": "usr_partner_pending",
       "name": "Karthik Gowda (Owner)",
       "email": "karthik.poultry@gmail.com",
-      "password": "$2b$10$jn3WyDk9/uVdzLnDpHcYKOKmEEBfKTmk9GdgWNFUwFe63rPEWOB4e",
+      "password": "$2b$10$JWT4LDD8amTNBkQgwagGr.o7pZ7J0Tqq8o/7EjVOKv25trIXoJgVC",
       "role": "partner",
       "approvalStatus": "pending_approval",
       "phone": "+91 97310 99887",
@@ -516,7 +535,7 @@
       "coolerCode": "GOMEAT-BOX-BLR-417",
       "model": "ThermalVault 18L - Reusable EPP Cold-Gel Box",
       "status": "with_customer",
-      "currentOrderId": null,
+      "currentOrderId": "ORD-417-DELIVERED",
       "currentUserId": "usr_customer",
       "currentUserName": "Pooja Sundaram",
       "cyclesUsed": 1,
@@ -572,8 +591,8 @@
       "qrCode": "GOMEAT-BOX-BLR-103",
       "coolerCode": "GOMEAT-BOX-BLR-103",
       "model": "ThermalVault Ultra-3L EPP",
-      "status": "with_customer",
-      "currentOrderId": "ORD-9281",
+      "status": "damaged",
+      "currentOrderId": "ORD-103-BREACH",
       "currentUserId": "usr_customer",
       "currentUserName": "Pooja Sundaram",
       "cyclesUsed": 8,
@@ -583,7 +602,8 @@
       "assignedHub": "Mahadevapura Dark Hub",
       "createdAt": "2026-11-10T08:37:35.823Z",
       "updatedAt": "2026-11-10T08:37:35.823Z",
-      "__v": 0
+      "__v": 0,
+      "maintenanceReason": "Thermal gasket compromised • Sensor reached 5.8°C (>4.0°C safe limit)"
     },
     {
       "_id": "6afdd563a12093e0ddeeb142",
@@ -777,6 +797,34 @@
     }
   ],
   "orders": [
+    {
+      "id": "ORD-CANCEL-WALLET",
+      "userId": "cust_audit_1",
+      "orderStatus": "CANCELLED",
+      "paymentStatus": "REFUND_PENDING",
+      "walletDeduction": 150,
+      "stockDeducted": false,
+      "items": [
+        {
+          "productId": "prod_audit_test",
+          "quantity": 1
+        }
+      ],
+      "status": "Cancelled"
+    },
+    {
+      "id": "ORD-CANCEL-UNPAID",
+      "userId": "cust_audit_1",
+      "orderStatus": "CANCELLED",
+      "stockDeducted": false,
+      "items": [
+        {
+          "productId": "prod_audit_test",
+          "quantity": 2
+        }
+      ],
+      "status": "Cancelled"
+    },
     {
       "_id": "6af1431d8597919bceb15680",
       "id": "ORD-1406",
@@ -2028,6 +2076,128 @@
       "temperatureLog": [],
       "updatedAt": "2026-11-18T22:52:09.322Z",
       "__v": 0
+    },
+    {
+      "id": "ORD-417-DELIVERED",
+      "orderNumber": "ORD-417-DELIVERED",
+      "userId": "usr_customer",
+      "customerName": "Pooja Sundaram",
+      "customerEmail": "pooja.sundaram@gmail.com",
+      "customerPhone": "+91 98765 43210",
+      "deliveryAddress": "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
+      "city": "Bengaluru",
+      "coolerId": "BOX-BLR-417",
+      "coolerModel": "Insulated Cold Bag",
+      "status": "Delivered",
+      "orderStatus": "DELIVERED",
+      "lifecycleStatus": "DELIVERED",
+      "items": [
+        {
+          "productId": "prod_1",
+          "name": "Seer Fish / Surmai (Large Steaks)",
+          "price": 799,
+          "quantity": 1,
+          "unit": "500g",
+          "netWeight": "450g",
+          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
+        },
+        {
+          "productId": "prod_3",
+          "name": "Tender Curry Cut Broiler Chicken (Skinless)",
+          "price": 249,
+          "quantity": 2,
+          "unit": "500g",
+          "netWeight": "900g",
+          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
+        }
+      ],
+      "total": 1299,
+      "coolerDeposit": 250,
+      "createdAt": "2026-11-11T12:00:00.000Z",
+      "deliveredAt": "2026-11-11T14:30:00.000Z",
+      "tempLog": [
+        {
+          "time": "08:00 AM",
+          "temp": 0.8,
+          "event": "Sealed with chilled ice-gel packs at Mahadevapura Dark Hub"
+        },
+        {
+          "time": "08:30 AM",
+          "temp": 1.2,
+          "event": "Dispatched with EV Cold-Chain Courier"
+        },
+        {
+          "time": "09:15 AM",
+          "temp": 1.8,
+          "event": "Delivered at customer doorstep (Sub-4C guaranteed)"
+        }
+      ]
+    },
+    {
+      "id": "ORD-103-BREACH",
+      "orderNumber": "ORD-103-BREACH",
+      "userId": "usr_customer",
+      "customerName": "Pooja Sundaram",
+      "customerEmail": "pooja.sundaram@gmail.com",
+      "customerPhone": "+91 98765 43210",
+      "deliveryAddress": "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
+      "city": "Bengaluru",
+      "coolerId": "BOX-BLR-103",
+      "coolerModel": "insulated bag 24L - Dual Phase ColdGel Box",
+      "status": "Delivered",
+      "orderStatus": "DELIVERED",
+      "lifecycleStatus": "DELIVERED",
+      "items": [
+        {
+          "productId": "prod_2",
+          "name": "Young Goat / Mutton Biryani Cut (Tender)",
+          "price": 549,
+          "quantity": 2,
+          "unit": "500g",
+          "netWeight": "1000g",
+          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
+        },
+        {
+          "productId": "prod_4",
+          "name": "White Prawns / Jhinga (Cleaned & Deveined)",
+          "price": 499,
+          "quantity": 1,
+          "unit": "500g",
+          "netWeight": "450g",
+          "chillingMethod": "0°C to 4°C chilled pack Cold Chain"
+        }
+      ],
+      "total": 1598,
+      "totalAmount": 1598,
+      "createdAt": "2026-11-08T09:00:00.000Z",
+      "deliveredAt": "2026-11-08T10:45:00.000Z",
+      "coolerReturned": false,
+      "deliveryExecutive": "Suresh Patil (EV Fleet #14, +91 97412 88301)",
+      "riderFullName": "Suresh Patil",
+      "riderId": "usr_rider_1",
+      "paymentMethod": "UPI (Google Pay)",
+      "tempLog": [
+        {
+          "time": "09:00",
+          "temp": 1.4,
+          "event": "Cuts packed with chilled gel bricks at Halal Cuts Station"
+        },
+        {
+          "time": "09:30",
+          "temp": 3.2,
+          "event": "Dispatched with EV Chilled Courier"
+        },
+        {
+          "time": "10:15",
+          "temp": 5.4,
+          "event": "ALERT: Sensor rose above 4C safe threshold"
+        },
+        {
+          "time": "10:45",
+          "temp": 5.8,
+          "event": "Delivered at doorstep - Gasket seal compromised (5.8C)"
+        }
+      ]
     }
   ],
   "coolerReturns": [
@@ -2078,5 +2248,60 @@
       "status": "OPEN",
       "createdAt": "2026-11-11T04:58:23.977Z"
     }
-  ]
+  ],
+  "walletLedger": [
+    {
+      "id": "tx_1795462003796_0b15e1",
+      "idempotencyKey": "wallet_refund_cancel_ORD-CANCEL-WALLET-1795462003792",
+      "userId": "cust_audit_mwtnpwhm",
+      "amount": 150,
+      "type": "credit",
+      "title": "Refund for Order #ORD-CANCEL-WALLET-1795462003792",
+      "description": "Store credit refunded due to order cancellation.",
+      "balanceBefore": 500,
+      "balanceAfter": 650,
+      "orderId": "ORD-CANCEL-WALLET-1795462003792",
+      "timestamp": "2026-11-23T19:26:43.797Z"
+    },
+    {
+      "id": "tx_1795461985189_144aaa",
+      "idempotencyKey": "wallet_refund_cancel_ORD-CANCEL-WALLET-1795461985186",
+      "userId": "cust_audit_mwtnpi4c",
+      "amount": 150,
+      "type": "credit",
+      "title": "Refund for Order #ORD-CANCEL-WALLET-1795461985186",
+      "description": "Store credit refunded due to order cancellation.",
+      "balanceBefore": 500,
+      "balanceAfter": 650,
+      "orderId": "ORD-CANCEL-WALLET-1795461985186",
+      "timestamp": "2026-11-23T19:26:25.190Z"
+    },
+    {
+      "id": "tx_1795461907861_bf5d55",
+      "idempotencyKey": "k1",
+      "userId": "test_u_1",
+      "amount": 150,
+      "type": "credit",
+      "title": "Wallet Credit",
+      "description": "Store credit credited to wallet",
+      "balanceBefore": 100,
+      "balanceAfter": 250,
+      "orderId": null,
+      "timestamp": "2026-11-23T19:25:07.861Z"
+    },
+    {
+      "id": "tx_1795461824148_fc8c25",
+      "idempotencyKey": "wallet_refund_cancel_ORD-CANCEL-WALLET",
+      "userId": "cust_audit_1",
+      "amount": 150,
+      "type": "credit",
+      "title": "Refund for Order #ORD-CANCEL-WALLET",
+      "description": "Store credit refunded due to order cancellation.",
+      "balanceBefore": 500,
+      "balanceAfter": 650,
+      "orderId": "ORD-CANCEL-WALLET",
+      "timestamp": "2026-11-23T19:23:44.148Z"
+    }
+  ],
+  "couponUsages": []
 }

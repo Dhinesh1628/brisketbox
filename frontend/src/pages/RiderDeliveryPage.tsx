@@ -556,7 +556,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (!user || user.role !== 'rider') {
     return (
-      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -726,7 +726,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     value={regForm.vehicleNumber}
                     onChange={(e) => setRegForm({ ...regForm, vehicleNumber: e.target.value })}
                     placeholder="KA-04-EV-9999"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
@@ -739,7 +739,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   value={regForm.licenseNumber}
                   onChange={(e) => setRegForm({ ...regForm, licenseNumber: e.target.value })}
                   placeholder="DL-0420240091823"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -751,7 +751,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   value={regForm.upiId}
                   onChange={(e) => setRegForm({ ...regForm, upiId: e.target.value })}
                   placeholder="rider@oksbi or phone@paytm"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -775,7 +775,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (user?.approvalStatus === 'pending_approval') {
     return (
-      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -858,7 +858,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   const deliveredOrders = orders.filter((o) => o.orderStatus === 'DELIVERED');
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
       
       {/* Top Rider Partner Header */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 sm:px-6 py-2.5">
@@ -1282,7 +1282,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                           placeholder={String(selectedOrder.total)}
                           value={cashCollectedInput}
                           onChange={(e) => setCashCollectedInput(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-amber-800 rounded-lg text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
+                          className="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-amber-950 font-mono text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
                       <div className="text-right">
@@ -1512,7 +1512,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 placeholder={String(cashInHand)}
                 value={depositAmountInput}
                 onChange={(e) => setDepositAmountInput(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-500 focus:bg-white"
               />
             </div>
 
