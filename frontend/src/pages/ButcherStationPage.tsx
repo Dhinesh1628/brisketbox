@@ -678,14 +678,14 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // =========================================================================
   if (!user || user.role !== 'partner') {
     return (
-      <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col font-sans selection:bg-[#d11243]">
-        <header className="bg-slate-950/90 border-b border-slate-800 px-4 py-3">
+      <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans selection:bg-[#d11243]">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 shadow-xs">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#d11243] flex items-center justify-center font-black text-white shadow-md">
                 <Scissors className="w-4 h-4" />
               </div>
-              <span className="font-black text-sm tracking-tight text-white">GoMeat Partner Station</span>
+              <span className="font-black text-sm tracking-tight text-[#0f172a]">BrisketBox Butcher Station</span>
             </div>
             {onBackToStore && (
               <button
@@ -701,11 +701,11 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
-            <h1 className="text-xl font-black text-white">Butcher & Partner Shop Portal</h1>
+            <h1 className="text-xl font-black text-[#0f172a]">Butcher & Partner Shop Portal</h1>
             <p className="text-xs text-gray-400">Artisanal Fresh Cuts, Live KDS Terminal & Inventory</p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+          <div className="p-3.5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2 text-xs">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
               Quick 1-Click Demo Profiles:
             </span>
@@ -716,7 +716,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   setLoginEmail('partner@brisketbox.in');
                   setLoginPassword('partner123');
                 }}
-                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center gap-1">
                   <Check className="w-3 h-3 text-emerald-400" />
@@ -820,7 +820,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   value={regForm.shopName}
                   onChange={(e) => setRegForm({ ...regForm, shopName: e.target.value })}
                   placeholder="GoMeat Artisanal Cuts & Poultry Hub"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -833,7 +833,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.ownerName}
                     onChange={(e) => setRegForm({ ...regForm, ownerName: e.target.value })}
                     placeholder="Master Butcher"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
                 <div>
@@ -844,7 +844,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.phone}
                     onChange={(e) => setRegForm({ ...regForm, phone: e.target.value })}
                     placeholder="+91 98800 00000"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
@@ -858,7 +858,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.email}
                     onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
                     placeholder="shop@gomeat.in"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
                 <div>
@@ -869,7 +869,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.password}
                     onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
                     placeholder="••••••••"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
@@ -882,7 +882,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   value={regForm.address}
                   onChange={(e) => setRegForm({ ...regForm, address: e.target.value })}
                   placeholder="Road No. 36, Jubilee Hills, Hyderabad"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -905,7 +905,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     value={regForm.operatingHours}
                     onChange={(e) => setRegForm({ ...regForm, operatingHours: e.target.value })}
                     placeholder="05:30 AM - 09:30 PM"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
@@ -930,12 +930,12 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // =========================================================================
   if (user?.approvalStatus === 'pending_approval') {
     return (
-      <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col font-sans">
-        <header className="bg-slate-950/90 border-b border-slate-800 px-4 py-3">
+      <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 shadow-xs">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Store className="w-5 h-5 text-amber-400" />
-              <span className="font-black text-sm text-white">GoMeat Partner Station</span>
+              <span className="font-black text-sm text-[#0f172a]">BrisketBox Butcher Station</span>
             </div>
             <button
               onClick={logout}
@@ -959,7 +959,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left text-xs space-y-2 w-full">
+          <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs text-left text-xs space-y-2 w-full">
             <div className="flex justify-between">
               <span className="text-gray-400">Shop ID:</span>
               <span className="font-mono text-white font-bold">{user.shopId || user.id}</span>
@@ -2762,7 +2762,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
       {/* ========================================================================= */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#070b13] text-gray-100 w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-slate-800 max-h-[90vh] overflow-y-auto space-y-5">
+          <div className="bg-white text-[#0f172a] w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto space-y-5">
             
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
@@ -2770,7 +2770,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   <Scissors className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-white">
+                  <h3 className="font-extrabold text-base text-[#0f172a]">
                     Master Butcher Prep Station
                   </h3>
                   <span className="text-xs text-gray-400">
@@ -2785,13 +2785,13 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             </div>
 
             {/* Digital Scale Load-Cell Display */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-1 text-center sm:text-left">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   DIGITAL SCALE BENCH TARE
                 </span>
                 <div className="flex items-baseline gap-2 justify-center sm:justify-start">
-                  <span className="text-4xl font-mono font-black text-amber-400">
+                  <span className="text-4xl font-mono font-black text-[#0f172a]">
                     {weighedGrams}g
                   </span>
                   <span className="text-xs text-gray-400 font-bold">/ Target: {targetGrams}g</span>

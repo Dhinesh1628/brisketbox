@@ -561,8 +561,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (!user || user.role !== 'rider') {
     return (
-      <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col font-sans selection:bg-[#d11243]">
-        <header className="bg-slate-950/90 border-b border-slate-800 px-4 py-3">
+      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+        <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#d11243] to-rose-700 flex items-center justify-center font-black text-white shadow-md">
@@ -573,7 +573,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             {onBackToStore && (
               <button
                 onClick={onBackToStore}
-                className="text-xs font-bold text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-slate-500 hover:text-white flex items-center gap-1 cursor-pointer"
               >
                 <Store className="w-3.5 h-3.5 text-rose-400" />
                 <span>Store</span>
@@ -584,12 +584,12 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
-            <h1 className="text-xl font-black text-white">Delivery Partner Portal</h1>
-            <p className="text-xs text-gray-400">0°C to 4°C ThermalVault Cold-Chain Express Logistics</p>
+            <h1 className="text-xl font-black text-slate-900">Delivery Partner Portal</h1>
+            <p className="text-xs text-slate-500">0°C to 4°C ThermalVault Cold-Chain Express Logistics</p>
           </div>
 
           {/* Quick Demo Access Bar */}
-          <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2 text-xs">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
               Quick 1-Click Demo Profiles:
             </span>
@@ -600,7 +600,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   setLoginEmail('rider@brisketbox.in');
                   setLoginPassword('rider123');
                 }}
-                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center justify-between">
                   <span>Suresh Patil</span>
@@ -615,7 +615,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   setLoginEmail('mahesh.rider@gmail.com');
                   setLoginPassword('rider123');
                 }}
-                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center justify-between">
                   <span>Mahesh Kumar</span>
@@ -630,7 +630,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   setLoginEmail('ramesh.rider@brisketbox.in');
                   setLoginPassword('rider123');
                 }}
-                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center justify-between">
                   <span>Ramesh Gowda</span>
@@ -645,7 +645,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   setLoginEmail('imran.rider@brisketbox.in');
                   setLoginPassword('rider123');
                 }}
-                className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center justify-between">
                   <span>Imran Pasha</span>
@@ -657,11 +657,11 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           </div>
 
           {/* Tab Switcher */}
-          <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs font-bold">
+          <div className="flex rounded-xl bg-slate-200/80 p-1 border border-slate-300 text-xs font-bold">
             <button
               onClick={() => { setAuthMode('login'); setLoginError(null); }}
               className={`flex-1 py-2 rounded-lg transition cursor-pointer ${
-                authMode === 'login' ? 'bg-[#d11243] text-white shadow-xs' : 'text-gray-400 hover:text-white'
+                authMode === 'login' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Rider Sign In
@@ -669,7 +669,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <button
               onClick={() => { setAuthMode('register'); setLoginError(null); }}
               className={`flex-1 py-2 rounded-lg transition cursor-pointer ${
-                authMode === 'register' ? 'bg-[#d11243] text-white shadow-xs' : 'text-gray-400 hover:text-white'
+                authMode === 'register' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Partner Registration
@@ -691,28 +691,28 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           )}
 
           {authMode === 'login' ? (
-            <form onSubmit={handleRiderLogin} className="space-y-3.5 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-xs">
+            <form onSubmit={handleRiderLogin} className="space-y-3.5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs text-slate-800">
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Rider Email or Phone</label>
+                <label className="block text-slate-700 font-bold mb-1">Rider Email or Phone</label>
                 <input
                   type="text"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="rider@brisketbox.in or +91 97412 88301"
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Password</label>
+                <label className="block text-slate-700 font-bold mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -726,63 +726,63 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRiderRegister} className="space-y-3 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-xs">
+            <form onSubmit={handleRiderRegister} className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs text-slate-800">
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Full Legal Name</label>
+                <label className="block text-slate-700 font-bold mb-1">Full Legal Name</label>
                 <input
                   type="text"
                   required
                   value={regForm.name}
                   onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
                   placeholder="Suresh Patil"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Email</label>
+                  <label className="block text-slate-700 font-bold mb-1">Email</label>
                   <input
                     type="email"
                     required
                     value={regForm.email}
                     onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
                     placeholder="ramesh@gmail.com"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Mobile Phone</label>
+                  <label className="block text-slate-700 font-bold mb-1">Mobile Phone</label>
                   <input
                     type="tel"
                     required
                     value={regForm.phone}
                     onChange={(e) => setRegForm({ ...regForm, phone: e.target.value })}
                     placeholder="+91 98801 00000"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Set Password</label>
+                <label className="block text-slate-700 font-bold mb-1">Set Password</label>
                 <input
                   type="password"
                   required
                   value={regForm.password}
                   onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Vehicle Type</label>
+                  <label className="block text-slate-700 font-bold mb-1">Vehicle Type</label>
                   <select
                     value={regForm.vehicleType}
                     onChange={(e) => setRegForm({ ...regForm, vehicleType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                   >
                     <option value="Electric 2-Wheeler (EV)">Electric 2-Wheeler (EV)</option>
                     <option value="Motorcycle (Petrol)">Motorcycle (Petrol)</option>
@@ -790,39 +790,39 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Vehicle Reg Number</label>
+                  <label className="block text-slate-700 font-bold mb-1">Vehicle Reg Number</label>
                   <input
                     type="text"
                     required
                     value={regForm.vehicleNumber}
                     onChange={(e) => setRegForm({ ...regForm, vehicleNumber: e.target.value })}
                     placeholder="KA-04-EV-9999"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Driving License Number</label>
+                <label className="block text-slate-700 font-bold mb-1">Driving License Number</label>
                 <input
                   type="text"
                   required
                   value={regForm.licenseNumber}
                   onChange={(e) => setRegForm({ ...regForm, licenseNumber: e.target.value })}
                   placeholder="DL-0420240091823"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">UPI ID for Payouts</label>
+                <label className="block text-slate-700 font-bold mb-1">UPI ID for Payouts</label>
                 <input
                   type="text"
                   required
                   value={regForm.upiId}
                   onChange={(e) => setRegForm({ ...regForm, upiId: e.target.value })}
                   placeholder="rider@oksbi or phone@paytm"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
                 />
               </div>
 
@@ -846,8 +846,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (user?.approvalStatus === 'pending_approval') {
     return (
-      <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col font-sans selection:bg-[#d11243]">
-        <header className="bg-slate-950/90 border-b border-slate-800 px-4 py-3">
+      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+        <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bike className="w-5 h-5 text-amber-400" />
@@ -864,21 +864,21 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         </header>
 
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-12 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-amber-950/80 border border-amber-600/60 flex items-center justify-center text-amber-400 shadow-xl">
+          <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-xs">
             <Clock className="w-8 h-8 animate-pulse" />
           </div>
 
           <div className="space-y-1.5">
-            <h2 className="text-lg font-black text-white">Application Under Review</h2>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+            <h2 className="text-lg font-black text-slate-900">Application Under Review</h2>
+            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
               Hello <strong className="text-white">{user.name}</strong>, your delivery rider application has been submitted to BrisketBox Central Operations.
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left text-xs space-y-2 w-full">
+          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs text-left text-xs space-y-2 w-full">
             <div className="flex justify-between">
               <span className="text-gray-400">Account ID:</span>
-              <span className="font-mono text-white font-bold">{user.id}</span>
+              <span className="font-mono text-slate-900 font-bold">{user.id}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Application Status:</span>
@@ -888,29 +888,29 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Registered Vehicle:</span>
-              <span className="text-gray-200">{user.vehicleType || 'Electric 2-Wheeler'}</span>
+              <span className="text-slate-800">{user.vehicleType || 'Electric 2-Wheeler'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Estimated Review:</span>
-              <span className="text-emerald-400 font-bold">Within 2–4 Hours</span>
+              <span className="text-emerald-600 font-bold">Within 2–4 Hours</span>
             </div>
           </div>
 
           <p className="text-[11px] text-gray-500">
-            For urgent dispatch inquiries, contact Central Hub Ops at <strong className="text-gray-300">+91 97412 88301</strong>.
+            For urgent dispatch inquiries, contact Central Hub Ops at <strong className="text-slate-700">+91 97412 88301</strong>.
           </p>
 
           <div className="flex gap-2 w-full pt-2">
             <button
               onClick={() => window.location.reload()}
-              className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold cursor-pointer transition flex items-center justify-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Refresh Status</span>
             </button>
             <button
               onClick={logout}
-              className="px-4 py-2.5 bg-rose-950/60 border border-rose-800 text-rose-300 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-900/60 transition"
+              className="px-4 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold cursor-pointer hover:bg-rose-100 transition"
             >
               Sign Out
             </button>
@@ -929,10 +929,10 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   const deliveredOrders = orders.filter((o) => o.orderStatus === 'DELIVERED');
 
   return (
-    <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col font-sans selection:bg-[#d11243]">
+    <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
       
       {/* Top Rider Partner Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d11243] to-rose-700 flex items-center justify-center font-black text-white shadow-md">
@@ -940,12 +940,12 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-sm tracking-tight text-white">{user.name}</span>
-                <span className="px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-900 text-[10px] font-mono font-bold">
+                <span className="font-black text-sm tracking-tight text-slate-900">{user.name}</span>
+                <span className="px-1.5 py-0.2 rounded bg-rose-50 text-[#d11243] border border-rose-200 text-[10px] font-mono font-bold">
                   {user.id ? `RD-${user.id.slice(-4).toUpperCase()}` : 'RD-819'}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400">{user.vehicleType || 'EV Cold Fleet'} • Hub Depot</p>
+              <p className="text-[11px] text-slate-500 font-medium">{user.vehicleType || 'EV Cold Fleet'} • Hub Depot</p>
             </div>
           </div>
 
@@ -958,7 +958,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               }}
               title={soundEnabled ? "Audio Alerts: ON" : "Audio Alerts: OFF"}
               className={`p-2 rounded-xl border transition cursor-pointer ${
-                soundEnabled ? 'bg-amber-950/60 text-amber-300 border-amber-800 hover:bg-amber-900/60' : 'bg-slate-800 text-gray-500 border-slate-700'
+                soundEnabled ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
               }`}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -966,9 +966,9 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
             {/* Offline/Online Network Indicator */}
             <div className={`px-2 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 ${
-              isOffline ? 'bg-amber-950/80 text-amber-300 border-amber-800 animate-pulse' : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+              isOffline ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
             }`}>
-              {isOffline ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
+              {isOffline ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-600" />}
               <span>{isOffline ? 'Elevator/Offline' : '4G Online'}</span>
             </div>
 
@@ -988,7 +988,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <button
               onClick={logout}
               title="Sign Out of Rider App"
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-rose-300 border border-slate-700 transition cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 transition cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -1002,42 +1002,42 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         {/* Action Notice Toast */}
         {actionNotice && (
           <div className="p-3 bg-emerald-950/90 border border-emerald-700 text-emerald-200 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{actionNotice}</span>
           </div>
         )}
 
         {/* Top Active Shift KPI Card */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-400">Shift Earnings:</span>
-              <span className="text-xl font-black font-mono text-emerald-400">
+              <span className="text-xs font-bold text-slate-500">Shift Earnings:</span>
+              <span className="text-xl font-black font-mono text-emerald-600">
                 ₹{user.earningsToday || (deliveredOrders.length * 50 + 150)}
               </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 text-[10px] font-bold border border-slate-700 flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
               <Award className="w-3 h-3 text-amber-400" />
               <span>4.9 Rating</span>
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-slate-800/80">
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
-              <span className="text-[10px] text-gray-500 block uppercase font-bold">Assigned</span>
-              <span className="text-base font-black text-white">{activeOrders.length}</span>
+          <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-slate-100">
+            <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/70">
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Assigned</span>
+              <span className="text-base font-black text-slate-900">{activeOrders.length}</span>
             </div>
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
-              <span className="text-[10px] text-gray-500 block uppercase font-bold">Completed</span>
-              <span className="text-base font-black text-emerald-400">{deliveredOrders.length}</span>
+            <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/70">
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Completed</span>
+              <span className="text-base font-black text-emerald-600">{deliveredOrders.length}</span>
             </div>
             <div 
               onClick={() => setIsCashDepositModalOpen(true)}
               title="Click to view Cash in Hand & Deposit at Hub"
-              className="p-2 rounded-xl bg-slate-950/60 border border-amber-900/40 hover:border-amber-600 transition cursor-pointer"
+              className="p-2 rounded-xl bg-slate-950/60 border border-amber-200 hover:border-amber-400 bg-amber-50/50 transition cursor-pointer"
             >
-              <span className="text-[10px] text-amber-400 block uppercase font-bold">Cash in Hand</span>
-              <span className="text-base font-black text-amber-300 font-mono">₹{cashInHand}</span>
+              <span className="text-[10px] text-amber-800 block uppercase font-bold">Cash in Hand</span>
+              <span className="text-base font-black text-amber-700 font-mono">₹{cashInHand}</span>
             </div>
           </div>
         </div>
@@ -1059,11 +1059,11 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         )}
 
         {/* View Tabs */}
-        <div className="flex rounded-2xl bg-slate-900 p-1 border border-slate-800 text-xs font-bold">
+        <div className="flex rounded-xl bg-slate-200/80 p-1 border border-slate-300/60 text-xs font-bold">
           <button
             onClick={() => setCurrentScreen('runs')}
             className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentScreen === 'runs' ? 'bg-[#d11243] text-white shadow-xs' : 'text-gray-400 hover:text-white'
+              currentScreen === 'runs' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
@@ -1072,7 +1072,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           <button
             onClick={() => setCurrentScreen('earnings')}
             className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentScreen === 'earnings' ? 'bg-[#d11243] text-white shadow-xs' : 'text-gray-400 hover:text-white'
+              currentScreen === 'earnings' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <DollarSign className="w-3.5 h-3.5" />
@@ -1092,7 +1092,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 </p>
                 <button
                   onClick={loadOrders}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-gray-200 rounded-xl text-xs font-bold cursor-pointer transition inline-flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-800 rounded-xl text-xs font-bold cursor-pointer transition inline-flex items-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Refresh Queue</span>
@@ -1105,33 +1105,33 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 return (
                   <div 
                     key={ord.id} 
-                    className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl"
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 space-y-4 shadow-xs"
                   >
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-sm text-white font-mono">
+                          <span className="font-black text-sm text-slate-900 font-mono">
                             #{ord.orderNumber || ord.id}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-black uppercase">
+                          <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[#d11243] border border-rose-200 text-[10px] font-black uppercase">
                             {stage.replace(/_/g, ' ')}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-slate-500 mt-0.5">
                           {(ord.items || []).length} Pack(s) • ₹{ord.total} • {ord.paymentMethod || 'Prepaid'}
                         </p>
                       </div>
 
                       <div className="text-right">
-                        <span className="text-[10px] text-gray-500 block">Cold Box</span>
-                        <span className="font-mono text-emerald-400 font-bold text-xs">{ord.coolerId}</span>
+                        <span className="text-[10px] text-slate-500 block">Cold Box</span>
+                        <span className="font-mono text-emerald-700 font-bold text-xs bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">{ord.coolerId}</span>
                       </div>
                     </div>
 
                     {/* Customer & Address Card with 1-Tap Google Maps Navigation */}
-                    <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-2.5 text-xs">
+                    <div className="p-3.5 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-white text-sm">{ord.customerName}</span>
+                        <span className="font-extrabold text-slate-900 text-sm">{ord.customerName}</span>
                         <div className="flex items-center gap-1.5">
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ord.deliveryAddress + ', Bengaluru')}&travelmode=two_wheeler`}
@@ -1144,19 +1144,19 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                           </a>
                           <a
                             href={`tel:${ord.customerPhone}`}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold text-[11px] hover:bg-emerald-900/80"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 font-bold text-[11px] shadow-xs"
                           >
                             <Phone className="w-3 h-3" />
                             <span>Call</span>
                           </a>
                         </div>
                       </div>
-                      <div className="flex items-start gap-1.5 text-gray-300">
+                      <div className="flex items-start gap-1.5 text-slate-700">
                         <MapPin className="w-3.5 h-3.5 text-[#d11243] shrink-0 mt-0.5" />
                         <span className="leading-snug">{ord.deliveryAddress}</span>
                       </div>
                       {ord.deliveryNotes && (
-                        <p className="text-[11px] text-amber-300/90 bg-amber-950/30 p-1.5 rounded-lg border border-amber-900/40">
+                        <p className="text-xs text-amber-900 bg-amber-50 p-2.5 rounded-lg border border-amber-200 font-medium">
                           Note: "{ord.deliveryNotes}"
                         </p>
                       )}
@@ -1225,7 +1225,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                       {stage === 'OUT_FOR_DELIVERY' && (
                         <button
                           onClick={() => handleAdvanceLifecycle(ord, 'ARRIVED_AT_CUSTOMER')}
-                          className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                          className="flex-1 py-2.5 bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
                         >
                           <MapPin className="w-3.5 h-3.5" />
                           <span>Arrived at Customer Doorstep</span>
@@ -1246,7 +1246,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                       {stage !== 'ARRIVED_AT_CUSTOMER' && stage !== 'ORDER_ASSIGNED' && (
                         <button
                           onClick={() => handleOpenHandover(ord)}
-                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-gray-300 font-bold rounded-xl text-xs transition cursor-pointer"
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
                         >
                           Doorstep Handover
                         </button>
@@ -1262,20 +1262,20 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         {/* SCREEN 2: EARNINGS & HISTORY */}
         {currentScreen === 'earnings' && (
           <div className="space-y-4">
-            <div className="p-4 bg-slate-900 rounded-3xl border border-slate-800 space-y-2">
-              <span className="text-xs font-bold text-gray-400">Completed Shift Deliveries</span>
-              <div className="divide-y divide-slate-800 text-xs">
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+              <span className="text-xs font-bold text-slate-500">Completed Shift Deliveries</span>
+              <div className="divide-y divide-slate-100 text-xs">
                 {deliveredOrders.length === 0 ? (
                   <p className="text-gray-500 py-4 text-center">No delivered orders completed in this shift yet.</p>
                 ) : (
                   deliveredOrders.map(ord => (
                     <div key={ord.id} className="py-3 flex items-center justify-between">
                       <div>
-                        <div className="font-mono font-bold text-white">#{ord.orderNumber || ord.id}</div>
+                        <div className="font-mono font-bold text-slate-900">#{ord.orderNumber || ord.id}</div>
                         <div className="text-[11px] text-gray-400">{ord.customerName} • {ord.deliveryAddress.slice(0, 30)}...</div>
                       </div>
                       <div className="text-right">
-                        <span className="font-black text-emerald-400 block">+₹50</span>
+                        <span className="font-black text-emerald-600 block">+₹50</span>
                         <span className="text-[10px] text-gray-500">Delivered</span>
                       </div>
                     </div>
@@ -1294,15 +1294,15 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
           <div onClick={() => setSelectedOrder(null)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
 
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 text-gray-100 z-10 space-y-4 text-xs shadow-2xl">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+          <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl p-5 text-slate-900 z-10 space-y-4 text-xs shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-extrabold text-white text-sm">
+                <Lock className="w-4 h-4 text-emerald-600" />
+                <h3 className="font-extrabold text-slate-900 text-sm">
                   Verify Handover • #{selectedOrder.orderNumber || selectedOrder.id}
                 </h3>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-white cursor-pointer">
+              <button onClick={() => setSelectedOrder(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1313,7 +1313,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <h4 className="text-base font-black text-white">Delivery Verified & Complete!</h4>
-                <p className="text-xs text-gray-400">Cold box recorded. ₹50 added to your rider payout.</p>
+                <p className="text-xs text-slate-500">Cold box recorded. ₹50 added to your rider payout.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1332,29 +1332,29 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
                 {/* Cash on Delivery (COD) Collection Box */}
                 {(selectedOrder.paymentMethod?.toLowerCase().includes('cash') || selectedOrder.paymentMethod?.toLowerCase().includes('cod')) && (
-                  <div className="p-3.5 rounded-2xl bg-amber-950/80 border border-amber-600/70 space-y-2.5">
+                  <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-amber-200 flex items-center gap-1.5">
+                      <span className="font-bold text-amber-900 flex items-center gap-1.5">
                         <Banknote className="w-4 h-4 text-amber-400" />
                         <span>Cash to Collect (COD):</span>
                       </span>
-                      <span className="font-mono font-black text-amber-300 text-base">₹{selectedOrder.total}</span>
+                      <span className="font-mono font-black text-amber-800 text-base">₹{selectedOrder.total}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-900/60">
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-200/80">
                       <div>
-                        <label className="text-[10px] text-gray-400 block mb-1">Cash Received (₹)</label>
+                        <label className="text-[10px] text-slate-600 block mb-1">Cash Received (₹)</label>
                         <input
                           type="number"
                           placeholder={String(selectedOrder.total)}
                           value={cashCollectedInput}
                           onChange={(e) => setCashCollectedInput(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-amber-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-amber-800 rounded-lg text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
                         />
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-gray-400 block mb-1">Change to Return</span>
-                        <span className="font-mono font-bold text-emerald-400 text-sm block pt-1">
+                        <span className="text-[10px] text-slate-600 block mb-1">Change to Return</span>
+                        <span className="font-mono font-bold text-emerald-600 text-sm block pt-1">
                           ₹{Math.max(0, (Number(cashCollectedInput) || selectedOrder.total) - selectedOrder.total)}
                         </span>
                       </div>
@@ -1365,7 +1365,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 {/* 4-Digit PIN Input Box */}
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <label className="font-bold text-gray-300">
+                    <label className="font-bold text-slate-700">
                       Customer Handover PIN:
                     </label>
                     <span className="text-[10px] text-gray-500 font-mono">
@@ -1397,7 +1397,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     type="button"
                     disabled={pinLockoutSeconds > 0}
                     onClick={handleFillDemoPin}
-                    className="text-[10px] text-emerald-400 hover:underline pt-1 cursor-pointer disabled:opacity-40"
+                    className="text-[10px] text-emerald-600 hover:underline pt-1 cursor-pointer disabled:opacity-40"
                   >
                     Auto-Fill Demo PIN ({selectedOrder.deliveryPin || '4291'})
                   </button>
@@ -1424,11 +1424,11 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   </div>
 
                   {isReturningBox && (
-                    <div className="text-[11px] text-gray-400 space-y-2 pt-1 border-t border-slate-800">
+                    <div className="text-[11px] text-gray-400 space-y-2 pt-1 border-t border-slate-200">
                       <div className="flex items-center justify-between">
                         <span>Cold Box Tag:</span>
                         <div className="flex items-center gap-2">
-                          <strong className="text-white font-mono">{scannedBoxId}</strong>
+                          <strong className="text-slate-900 font-mono">{scannedBoxId}</strong>
                           <button
                             type="button"
                             onClick={startCameraScanner}
@@ -1491,12 +1491,12 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           <div onClick={stopCameraScanner} className="fixed inset-0 bg-black/85 backdrop-blur-md" />
 
           <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 text-gray-100 z-10 space-y-3.5 text-xs shadow-2xl">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4 text-sky-400" />
                 <h3 className="font-black text-white text-sm">Scan Cold Box Barcode</h3>
               </div>
-              <button onClick={stopCameraScanner} className="text-gray-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
+              <button onClick={stopCameraScanner} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
 
             {/* Video Viewfinder with animated laser scanline */}
@@ -1517,7 +1517,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               {!isCameraActive && (
                 <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center space-y-2">
                   <Camera className="w-8 h-8 text-sky-400" />
-                  <span className="text-xs font-bold text-gray-200">
+                  <span className="text-xs font-bold text-slate-800">
                     {cameraError || 'Activating live video stream...'}
                   </span>
                   <button
@@ -1532,7 +1532,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
             {/* Instant Quick-Select Barcodes */}
             <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold block">1-Tap Tag Emulation (Hub Cold Boxes):</span>
+              <span className="text-[10px] text-amber-800 uppercase font-bold block">1-Tap Tag Emulation (Hub Cold Boxes):</span>
               <div className="grid grid-cols-2 gap-1.5">
                 {['BOX-BLR-417', 'BOX-BLR-182', 'BOX-BLR-633', 'BOX-BLR-983'].map(tag => (
                   <button
@@ -1549,7 +1549,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
             <button
               onClick={stopCameraScanner}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-gray-300 font-bold transition cursor-pointer"
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-700 font-bold transition cursor-pointer"
             >
               Close Scanner
             </button>
@@ -1564,29 +1564,29 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
           <div onClick={() => setIsCashDepositModalOpen(false)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
 
-          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 text-gray-100 z-10 space-y-4 text-xs shadow-2xl">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-5 text-slate-900 z-10 space-y-4 text-xs shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Banknote className="w-4 h-4 text-amber-400" />
                 <h3 className="font-black text-white text-sm">Hub Cash Reconciliation</h3>
               </div>
-              <button onClick={() => setIsCashDepositModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
+              <button onClick={() => setIsCashDepositModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold block">Current Floating Cash in Hand</span>
-              <span className="text-3xl font-black font-mono text-amber-400">₹{cashInHand}</span>
-              <span className="text-[10px] text-gray-500 block">Maximum Allowed Holding: ₹2,000</span>
+            <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-center space-y-1">
+              <span className="text-[10px] text-amber-800 uppercase font-bold block">Current Floating Cash in Hand</span>
+              <span className="text-3xl font-black font-mono text-amber-800">₹{cashInHand}</span>
+              <span className="text-[10px] text-slate-500 block">Maximum Allowed Holding: ₹2,000</span>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-gray-300 block">Amount to Deposit at Mahadevapura Hub</label>
+              <label className="text-[11px] font-bold text-slate-700 block">Amount to Deposit at Mahadevapura Hub</label>
               <input
                 type="number"
                 placeholder={String(cashInHand)}
                 value={depositAmountInput}
                 onChange={(e) => setDepositAmountInput(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
               />
             </div>
 
