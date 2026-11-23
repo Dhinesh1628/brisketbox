@@ -932,8 +932,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
       
       {/* Top Rider Partner Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 sm:px-6 py-2.5">
+        <div className="max-w-4xl w-full mx-auto flex items-center justify-between gap-3 min-w-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d11243] to-rose-700 flex items-center justify-center font-black text-white shadow-md">
               <Bike className="w-5 h-5" />
@@ -997,7 +997,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       </header>
 
       {/* Main Rider App Viewport */}
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 pt-6 pb-28 space-y-4">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-5 pb-28 space-y-4 min-w-0">
 
         {/* Action Notice Toast */}
         {actionNotice && (

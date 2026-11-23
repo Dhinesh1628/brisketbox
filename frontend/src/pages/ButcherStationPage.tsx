@@ -1007,31 +1007,31 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
     <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans selection:bg-[#d11243] selection:text-white pb-24 md:pb-16">
       
       {/* Top Bar Header (Figma: Header & Live Order Acceptance Master Toggle) */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs px-4 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs px-4 sm:px-6 py-2.5">
+        <div className="max-w-7xl w-full mx-auto flex items-center justify-between gap-3 min-w-0">
           
           {/* Shop Branding */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#d11243] flex items-center justify-center font-black text-white shadow-sm shrink-0">
-              <Scissors className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#d11243] flex items-center justify-center font-black text-white shadow-xs shrink-0">
+              <Scissors className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm tracking-tight text-[#0f172a]">
-                  {user.shopName || user.name || 'GoMeat Master Station'}
+                <span className="font-extrabold text-xs sm:text-sm tracking-tight text-[#0f172a] truncate">
+                  {user.shopName || user.name || 'BrisketBox Master Station'}
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider">
+                <span className="hidden lg:inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider shrink-0">
                   FSSAI Certified
                 </span>
               </div>
-              <p className="text-[11px] text-gray-500 truncate max-w-xs sm:max-w-md">
+              <p className="text-[10px] sm:text-[11px] text-gray-500 truncate max-w-[220px] sm:max-w-md">
                 {user.address || 'Road No. 36, Jubilee Hills, Hyderabad'} • 90 Mins Dispatch
               </p>
             </div>
           </div>
 
           {/* Quick Header Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             
             {/* Live Order Acceptance Master Toggle (Figma Node: 1165:763) */}
             <div 
@@ -1107,7 +1107,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 pt-4 space-y-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 space-y-4 min-w-0">
         
         {/* Action Notice Toast */}
         {actionNotice && (
@@ -1122,9 +1122,9 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           </div>
         )}
 
-        {/* Desktop Tab Navigation Bar (Figma Segmented Navigation) */}
-        <div className="hidden md:flex items-center justify-between border-b border-gray-200 pb-3">
-          <div className="flex items-center gap-2">
+        {/* Desktop Tab Navigation Bar (Figma Segmented Navigation with Safe Horizontal Scroll) */}
+        <div className="hidden md:flex items-center justify-between border-b border-gray-200 pb-3 gap-3 min-w-0 w-full">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 min-w-0 flex-1">
             
             <button
               onClick={() => setPartnerTab('dashboard')}
@@ -1197,7 +1197,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setShowAddProductModal(true)}
               className="px-3 py-2 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"

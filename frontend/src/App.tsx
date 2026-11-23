@@ -222,7 +222,7 @@ const MainApp: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <main className={`flex-1 w-full ${['rider', 'butcher'].includes(currentTab) ? 'p-0 max-w-full' : 'max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5'} overflow-x-hidden`}>
+      <main className={`flex-1 w-full min-w-0 ${['rider', 'butcher'].includes(currentTab) ? 'p-0 max-w-full' : 'max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5'}`}>
         {currentTab === 'catalog' && (
           <CatalogPage 
             onNavigateToReturns={() => {
