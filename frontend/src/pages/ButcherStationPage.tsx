@@ -61,8 +61,8 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
   // Auth Form State (when not authenticated as partner)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('partner@brisketbox.in');
-  const [loginPassword, setLoginPassword] = useState('Brisket#Station2026!');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
@@ -705,42 +705,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             <p className="text-xs text-gray-400">Artisanal Fresh Cuts, Live KDS Terminal & Inventory</p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2 text-xs">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              Quick 1-Click Demo Profiles:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('partner@brisketbox.in');
-                  setLoginPassword('Brisket#Station2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center gap-1">
-                  <Check className="w-3 h-3 text-emerald-400" />
-                  <span>Approved Partner</span>
-                </div>
-                <div className="text-[10px] text-emerald-700/80 truncate font-medium">Road No. 36, Jubilee Hills</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('newshop@brisketbox.in');
-                  setLoginPassword('Brisket#Station2026!');
-                }}
-                className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold text-left hover:bg-amber-100 shadow-xs transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-amber-400" />
-                  <span>Pending Audit</span>
-                </div>
-                <div className="text-[10px] text-amber-700/80 truncate font-medium">Hitech City Cold Station</div>
-              </button>
-            </div>
-          </div>
+          
 
           <div className="flex border-b border-slate-200">
             <button

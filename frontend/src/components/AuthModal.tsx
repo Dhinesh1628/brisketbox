@@ -130,7 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
                   required
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
-                  placeholder="e.g. pooja.sundaram@gmail.com or 9876543210"
+                  placeholder="e.g. name@example.com or 10-digit mobile"
                   className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -150,19 +150,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
                   placeholder="Enter your password"
                   className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
-              </div>
-            </div>
-
-            {/* Credential Reference Box (Shows credentials so user knows what to type!) */}
-            <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-[11px] space-y-1 text-gray-600 dark:text-gray-300">
-              <span className="font-bold text-gray-800 dark:text-gray-200 block">Registered Account Credentials:</span>
-              <div className="flex justify-between items-center py-0.5">
-                <span>Customer (Pooja):</span>
-                <span className="font-mono text-gray-900 dark:text-white font-semibold">pooja.sundaram@gmail.com / customer123</span>
-              </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span>Hub Admin (Rajeshwar):</span>
-                <span className="font-mono text-[#d11243] dark:text-rose-400 font-semibold">ops@brisketbox.in / admin123</span>
               </div>
             </div>
 

@@ -1,43 +1,44 @@
 import express from 'express';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
 import Razorpay from 'razorpay';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db.js';
 import { assignFleetRiderForOrder } from '../dispatch.js';
+import { getAuthTokenFromReq, verifyToken } from '../services/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
 
 const getUserFromReq = (req) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-  const token = authHeader.split(' ')[1];
+  const token = getAuthTokenFromReq(req);
+  if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyToken(token);
     return db.findById('users', decoded.id) || null;
   } catch (e) {
     return null;
   }
 };
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_BrisketBoxDemoKey';
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'BrisketBoxTestSecret2026';
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'BrisketBoxWebhookSecret2026';
+const isProd = process.env.NODE_ENV === 'production';
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || (isProd ? '' : 'rzp_test_placeholder');
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || (isProd ? '' : 'test_secret_placeholder');
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || (isProd ? '' : 'test_webhook_placeholder');
 
 // Initialize Razorpay instance
 let razorpayInstance = null;
-try {
-  razorpayInstance = new Razorpay({
-    key_id: RAZORPAY_KEY_ID,
-    key_secret: RAZORPAY_KEY_SECRET
-  });
-} catch (e) {
-  console.warn('[Razorpay] Initialization warning:', e.message);
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+  try {
+    razorpayInstance = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET
+    });
+  } catch (e) {
+    console.warn('[Razorpay] Initialization warning:', e.message);
+  }
 }
 
 // Helper to determine if we are in test/simulation mode
-const isDemoKey = RAZORPAY_KEY_ID.includes('BrisketBoxDemoKey') || RAZORPAY_KEY_ID === 'rzp_test_placeholder';
+const isDemoKey = !isProd && (RAZORPAY_KEY_ID.includes('placeholder') || RAZORPAY_KEY_ID.includes('DemoKey'));
 
 // ==========================================
 // 1. POST /api/payments/create-order

@@ -16,7 +16,11 @@ try {
 let isConnected = false;
 
 export async function connectMongoDB() {
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sagarfresh';
+  const isProd = process.env.NODE_ENV === 'production';
+  const uri = process.env.MONGODB_URI || (isProd ? '' : 'mongodb://127.0.0.1:27017/brisketbox');
+  if (isProd && !uri) {
+    throw new Error('[FATAL] MONGODB_URI is required in production environment.');
+  }
   
   try {
     mongoose.set('strictQuery', false);
@@ -39,7 +43,7 @@ export function getMongoStatus() {
   const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
   const stateIndex = mongoose.connection.readyState;
   return {
-    configuredUri: process.env.MONGODB_URI ? 'Configured in environment' : 'mongodb://127.0.0.1:27017/sagarfresh (default)',
+    configuredUri: process.env.MONGODB_URI ? 'Configured in environment' : 'mongodb://127.0.0.1:27017/brisketbox (local default)',
     status: states[stateIndex] || 'Disconnected',
     isConnected: stateIndex === 1,
     host: mongoose.connection.host || null,

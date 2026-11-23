@@ -1,3 +1,14 @@
+import {
+  validateProductionEnv,
+  getJwtSecret,
+  createToken,
+  authenticate,
+  requireAdmin,
+  requireRole,
+  requireApproved,
+  setAuthCookie,
+  clearAuthCookie
+} from './services/auth.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,9 +38,11 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+validateProductionEnv();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
+// JWT_SECRET centralized via getJwtSecret() in services/auth.js
 
 process.on('uncaughtException', (err) => {
   console.error('[Server Error: Uncaught Exception]:', err?.message || err);
@@ -66,9 +79,24 @@ app.use(helmet({
   xXssProtection: true
 }));
 
-// 3. Permissive & Secure Cross-Origin Resource Sharing (CORS) Configuration
+// 3. Environment-Based Whitelisted Cross-Origin Resource Sharing (CORS) Configuration
+const defaultOrigins = [
+  'https://brisketbox.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
+const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultOrigins;
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Razorpay-Signature']
@@ -92,6 +120,33 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
   message: { error: 'Too many login attempts. For security, please wait 15 minutes before trying again.' }
+});
+
+const pinLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, default: false },
+  message: { error: 'Too many PIN verification attempts. Please wait 5 minutes before trying again.' }
+});
+
+const chatbotLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, default: false },
+  message: { error: 'Too many queries. Please slow down.' }
+});
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, default: false },
+  message: { error: 'Too many payment requests. Please try again later.' }
 });
 
 const contactLimiter = rateLimit({
@@ -139,7 +194,7 @@ app.use(express.json({
 }));
 
 // Razorpay Payments Router
-app.use('/api/payments', paymentsRouter);
+app.use('/api/payments', paymentLimiter, paymentsRouter);
 
 // Fleet & Cold-Chain Analytics Engine Router
 app.use('/api/analytics', analyticsRouter);
@@ -180,57 +235,7 @@ app.get('/api', (req, res) => {
 });
 
 // Middleware
-const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required. Please sign in.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.findById('users', decoded.id);
-    if (!user) {
-      return res.status(401).json({ error: 'User account not found' });
-    }
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-  }
-};
-
-const requireAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ error: 'Operations admin permissions required' });
-  }
-  next();
-};
-
-const requireRole = (...roles) => (req, res, next) => {
-  if (!req.user || (!roles.includes(req.user.role) && req.user.role !== 'admin')) {
-    return res.status(403).json({ error: `Access forbidden: Requires ${roles.join(' or ')} permission` });
-  }
-  next();
-};
-
-const requireApproved = (req, res, next) => {
-  if (['rider', 'partner'].includes(req.user?.role) && req.user.approvalStatus !== 'approved' && req.user.role !== 'admin') {
-    return res.status(403).json({ 
-      error: `Your account is pending administrator approval. Please wait for operations verification.`,
-      approvalStatus: req.user.approvalStatus || 'pending_approval'
-    });
-  }
-  next();
-};
-
-const createToken = (user) => {
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name, shopId: user.shopId },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-};
+// Auth middleware centralized in services/auth.js
 
 // ==========================================
 // 1. AUTHENTICATION (Google OAuth 2.0 & Email/Password)
@@ -285,14 +290,9 @@ app.post('/api/auth/login', authLimiter, (req, res) => {
     return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
   }
 
-  // Find user by email (supports ops@brisketbox.in and legacy ops@sagarfresh.in) or by phone number match
   const cleanPhone = input.replace(/[^0-9]/g, '');
   const user = db.get('users').find(u => {
-    if (u.email) {
-      const uEmail = u.email.toLowerCase();
-      if (uEmail === input) return true;
-      if ((input === 'ops@brisketbox.in' && uEmail === 'ops@sagarfresh.in') || (input === 'ops@sagarfresh.in' && uEmail === 'ops@brisketbox.in')) return true;
-    }
+    if (u.email && u.email.toLowerCase() === input) return true;
     if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
       const uPhoneClean = u.phone.replace(/[^0-9]/g, '');
       return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
@@ -300,15 +300,20 @@ app.post('/api/auth/login', authLimiter, (req, res) => {
     return false;
   });
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Customer2026!' || password === 'Brisket#Admin2026!' || password === 'customer123' || password === 'admin123'));
+  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
   if (!user || !isPwMatch) {
     return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
   }
 
   const token = createToken(user);
+  setAuthCookie(res, token);
   const { password: _, ...userWithoutPw } = user;
   res.json({ user: userWithoutPw, token });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true, message: 'Logged out successfully' });
 });
 
 app.get('/api/auth/me', authenticate, (req, res) => {
@@ -629,7 +634,7 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 // 4A. RIDER ECOSYSTEM ENDPOINTS
 // ==========================================
 
-app.post('/api/rider/register', (req, res) => {
+app.post('/api/rider/register', authLimiter, (req, res) => {
   const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body;
   if (!name || !email || !password || !phone) {
     return res.status(400).json({ error: 'Name, email, phone, and password are required for rider onboarding' });
@@ -668,7 +673,7 @@ app.post('/api/rider/register', (req, res) => {
   });
 });
 
-app.post('/api/rider/login', (req, res) => {
+app.post('/api/rider/login', authLimiter, (req, res) => {
   const { email, password } = req.body;
   const input = (email || '').toLowerCase().trim();
   if (!input || !password) {
@@ -682,8 +687,7 @@ app.post('/api/rider/login', (req, res) => {
     return false;
   });
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Rider2026!' || password === 'rider123'));
+  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
   if (!user || !isPwMatch) {
     return res.status(401).json({ error: 'Invalid credentials. Please verify your rider credentials.' });
   }
@@ -723,14 +727,14 @@ app.get('/api/rider/me', authenticate, requireRole('rider'), (req, res) => {
   res.json(safeRider);
 });
 
-app.patch('/api/rider/status', authenticate, requireRole('rider'), (req, res) => {
+app.patch('/api/rider/status', authenticate, requireRole('rider'), requireApproved, (req, res) => {
   const { online } = req.body;
   const updated = db.update('users', req.user.id, { online: !!online });
   const { password: _, ...safeRider } = updated;
   res.json(safeRider);
 });
 
-app.get('/api/rider/orders', authenticate, requireRole('rider'), (req, res) => {
+app.get('/api/rider/orders', authenticate, requireRole('rider'), requireApproved, (req, res) => {
   const allOrders = db.get('orders');
   const assigned = allOrders.filter(o => 
     o.riderId === req.user.id || 
@@ -740,7 +744,7 @@ app.get('/api/rider/orders', authenticate, requireRole('rider'), (req, res) => {
   res.json(assigned);
 });
 
-app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), (req, res) => {
+app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, (req, res) => {
   const { lifecycleStatus, pin, coolerReturned, podImage, notes } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) {
@@ -802,7 +806,7 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
 });
 
 // Cold-chain compliance scan per analytical-scripts/cooler_health.py
-app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, res) => {
+app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireApproved, (req, res) => {
   const { coolerId, orderId } = req.body;
   if (!coolerId) {
     return res.status(400).json({ error: 'Cooler ID is required' });
@@ -841,7 +845,7 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, re
 // 4B. BUTCHER / PARTNER SHOP ENDPOINTS
 // ==========================================
 
-app.post('/api/partner/register', (req, res) => {
+app.post('/api/partner/register', authLimiter, (req, res) => {
   const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body;
   if (!shopName || !ownerName || !email || !password) {
     return res.status(400).json({ error: 'Shop name, owner name, email, and password are required' });
@@ -879,7 +883,7 @@ app.post('/api/partner/register', (req, res) => {
   });
 });
 
-app.post('/api/partner/login', (req, res) => {
+app.post('/api/partner/login', authLimiter, (req, res) => {
   const { email, password } = req.body;
   const input = (email || '').toLowerCase().trim();
   if (!input || !password) {
@@ -893,8 +897,7 @@ app.post('/api/partner/login', (req, res) => {
     return false;
   });
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Station2026!' || password === 'partner123'));
+  const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
   if (!user || !isPwMatch) {
     return res.status(401).json({ error: 'Invalid credentials. Please verify your shop partner login.' });
   }
@@ -918,6 +921,7 @@ app.post('/api/partner/login', (req, res) => {
   }
 
   const token = createToken(user);
+  setAuthCookie(res, token);
   const { password: _, ...userWithoutPw } = user;
   res.json({ user: userWithoutPw, token });
 });
@@ -927,13 +931,13 @@ app.get('/api/partner/me', authenticate, requireRole('partner'), (req, res) => {
   res.json(safePartner);
 });
 
-app.get('/api/partner/products', authenticate, requireRole('partner'), (req, res) => {
+app.get('/api/partner/products', authenticate, requireRole('partner'), requireApproved, (req, res) => {
   const allProds = db.get('products');
   const partnerProds = allProds.filter(p => p.partnerId === req.user.shopId || (!p.partnerId && req.user.role === 'admin'));
   res.json(partnerProds.length > 0 ? partnerProds : allProds);
 });
 
-app.post('/api/partner/products', authenticate, requireRole('partner'), (req, res) => {
+app.post('/api/partner/products', authenticate, requireRole('partner'), requireApproved, (req, res) => {
   const { name, category, description, price, mrp, unit, netWeight, pieces, serves, origin, cutStyle, stock, image } = req.body;
   if (!name || !price || !category) {
     return res.status(400).json({ error: 'Name, price, and category are required' });
@@ -968,7 +972,7 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), (req, re
   res.status(201).json(newProd);
 });
 
-app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), (req, res) => {
+app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), requireApproved, (req, res) => {
   const { stock, inStock } = req.body;
   const prod = db.findById('products', req.params.id);
   if (!prod) return res.status(404).json({ error: 'Product not found' });
@@ -981,13 +985,13 @@ app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'
   res.json(updated);
 });
 
-app.get('/api/partner/orders', authenticate, requireRole('partner'), (req, res) => {
+app.get('/api/partner/orders', authenticate, requireRole('partner'), requireApproved, (req, res) => {
   const allOrders = db.get('orders');
   const partnerOrders = allOrders.filter(o => o.partnerId === req.user.shopId || req.user.role === 'admin' || !o.partnerId);
   res.json(partnerOrders);
 });
 
-app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), (req, res) => {
+app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, (req, res) => {
   const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId, itemPrepList, dressingLossLog } = req.body;
   const order = db.findById('orders', req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -1242,7 +1246,7 @@ const handleOrderHandover = (req, res) => {
   });
 };
 
-app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), (req, res) => {
+app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), requireApproved, (req, res) => {
   const { amount, depotId } = req.body;
   const rider = db.findById('users', req.user.id);
   const currentCash = rider?.cashInHand || 0;

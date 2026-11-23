@@ -19,8 +19,8 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) => {
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState('customer@brisketbox.com');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,16 +40,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) 
     } finally {
       setLoading(false);
     }
-  };
-
-  const setDemoUser = () => {
-    setIdentifier('customer@brisketbox.com');
-    setPassword('password123');
-  };
-
-  const setDemoAdmin = () => {
-    setIdentifier('admin@brisketbox.com');
-    setPassword('admin123');
   };
 
   return (
@@ -119,18 +109,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onClose, onSuccess }) 
             )}
           </Pressable>
 
-          {/* DEMO ACCOUNTS QUICK FILL */}
-          <View style={styles.demoSection}>
-            <Text style={styles.demoTitle}>Quick Fill Demo Credentials</Text>
-            <View style={styles.demoButtons}>
-              <Pressable style={styles.demoBtn} onPress={setDemoUser}>
-                <Text style={styles.demoBtnText}>Customer Demo</Text>
-              </Pressable>
-              <Pressable style={styles.demoBtn} onPress={setDemoAdmin}>
-                <Text style={styles.demoBtnText}>Admin Demo</Text>
-              </Pressable>
-            </View>
-          </View>
+          
 
           <View style={styles.securityNote}>
             <ShieldCheck size={14} color="#15803d" />

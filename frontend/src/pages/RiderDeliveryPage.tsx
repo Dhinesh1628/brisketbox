@@ -48,8 +48,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   
   // Auth Form State (when not authenticated as rider)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('rider@brisketbox.in');
-  const [loginPassword, setLoginPassword] = useState('Brisket#Rider2026!');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
@@ -446,12 +446,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     }
   };
 
-  const handleFillDemoPin = () => {
-    if (!selectedOrder) return;
-    const pin = (selectedOrder.deliveryPin || '4821').split('');
-    setDeliveryPin(pin);
-    pinInputRefs[3].current?.focus();
-  };
+  
 
   const handleSubmitHandover = async () => {
     if (!selectedOrder) return;
@@ -588,73 +583,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <p className="text-xs text-slate-500">0°C to 4°C ThermalVault Cold-Chain Express Logistics</p>
           </div>
 
-          {/* Quick Demo Access Bar */}
-          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2 text-xs">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              Quick 1-Click Demo Profiles:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Suresh Patil</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #1</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">rider@brisketbox.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('mahesh.rider@gmail.com');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Mahesh Kumar</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #2</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">mahesh.rider@gmail.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('ramesh.rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Ramesh Gowda</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #3</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">ramesh.rider@brisketbox.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('imran.rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Imran Pasha</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #4</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">imran.rider@brisketbox.in</div>
-              </button>
-            </div>
-          </div>
+          
 
           {/* Tab Switcher */}
           <div className="flex rounded-xl bg-slate-200/80 p-1 border border-slate-300 text-xs font-bold">
@@ -1397,14 +1326,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     <p className="text-[11px] text-rose-400 font-semibold">{pinError}</p>
                   )}
 
-                  <button
-                    type="button"
-                    disabled={pinLockoutSeconds > 0}
-                    onClick={handleFillDemoPin}
-                    className="text-[10px] text-emerald-600 hover:underline pt-1 cursor-pointer disabled:opacity-40"
-                  >
-                    Auto-Fill Demo PIN ({selectedOrder.deliveryPin || '4291'})
-                  </button>
+                  
                 </div>
 
                 {/* ThermalVault Box Collection */}

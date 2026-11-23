@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 const DATA_FILE = isVercel 
-  ? (fs.existsSync(path.join('/tmp', 'brisketbox_data.json')) ? path.join('/tmp', 'brisketbox_data.json') : path.join('/tmp', 'sagar_data.json')) 
+  ? path.join('/tmp', 'brisketbox_data.json') 
   : path.join(__dirname, 'data.json');
 
 const getModel = (collection) => {
@@ -23,168 +24,89 @@ const getModel = (collection) => {
   }
 };
 
-const hashPassword = (pw) => bcrypt.hashSync(pw, 10);
+const isDemoSeedEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_SEED === 'true';
 
-const INITIAL_DATA = {
-  users: [
+const getInitialUsers = () => {
+  if (!isDemoSeedEnabled) return [];
+  const devPassword = process.env.DEV_DEMO_PASSWORD || crypto.randomBytes(12).toString('hex');
+  const demoHash = bcrypt.hashSync(devPassword, 10);
+  if (!process.env.DEV_DEMO_PASSWORD) {
+    console.info('[DEV DEMO SEED] Generated random demo password for local session (never committed).');
+  }
+  return [
     {
       id: "usr_admin",
-      name: "Rajeshwar Rao (Operations Head)",
+      name: "Operations Admin",
       email: "ops@brisketbox.in",
-      password: hashPassword("Brisket#Admin2026!"),
+      password: demoHash,
       role: "admin",
       phone: "+91 90000 00000",
       city: "Bengaluru",
-      address: "BrisketBox Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
+      address: "BrisketBox Operations Center, Mahadevapura, Bengaluru 560048",
       depositBalance: 0,
       upiId: "ops@icici",
       createdAt: "2026-01-15T08:00:00.000Z"
     },
     {
       id: "usr_customer",
-      name: "Pooja Sundaram",
-      email: "pooja.sundaram@gmail.com",
-      password: hashPassword("Brisket#Customer2026!"),
+      name: "Demo Customer",
+      email: "customer@brisketbox.in",
+      password: demoHash,
       role: "customer",
-      phone: "+91 98765 43210",
+      phone: "+91 98765 00000",
       city: "Bengaluru",
-      address: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      depositBalance: 500,
-      upiId: "pooja@okhdfcbank",
+      address: "Indiranagar, Bengaluru 560038",
+      depositBalance: 0,
+      upiId: "customer@upi",
       createdAt: "2026-02-10T11:20:00.000Z"
     },
     {
       id: "usr_rider_1",
-      name: "Suresh Patil",
+      name: "Demo Rider",
       email: "rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
+      password: demoHash,
       role: "rider",
       approvalStatus: "approved",
-      phone: "+91 97412 88301",
+      phone: "+91 97412 00000",
       city: "Bengaluru",
-      address: "B-22, Kodihalli, HAL 2nd Stage, Indiranagar, Bengaluru 560008",
-      vehicleType: "EV 2-Wheeler (Ather 450X)",
-      vehicleNumber: "KA-04-EV-819",
-      licenseNumber: "KA0420220019281",
-      upiId: "suresh.patil@okaxis",
-      idDocType: "Driving License (Smart Card)",
+      address: "Indiranagar, Bengaluru 560008",
+      vehicleType: "EV 2-Wheeler",
+      vehicleNumber: "KA-04-EV-000",
+      licenseNumber: "KA0420220000000",
+      upiId: "rider@upi",
+      idDocType: "Driving License",
       assignedHub: "Bengaluru Central Hub Depot",
       isOnline: true,
-      rating: 4.92,
-      earningsToday: 480,
-      totalDeliveries: 342,
+      rating: 5.0,
+      earningsToday: 0,
+      totalDeliveries: 0,
       createdAt: "2026-03-01T08:00:00.000Z"
     },
     {
-      id: "usr_rider_pending",
-      name: "Mahesh Kumar",
-      email: "mahesh.rider@gmail.com",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 98450 11223",
-      city: "Bengaluru",
-      address: "14/2, Whitefield Main Road, Bengaluru 560066",
-      vehicleType: "EV 2-Wheeler (Ola S1 Pro)",
-      vehicleNumber: "KA-03-HA-4412",
-      licenseNumber: "KA0320230099182",
-      upiId: "mahesh.kumar@oksbi",
-      idDocType: "Driving License",
-      assignedHub: "Mahadevapura Dark Hub",
-      isOnline: true,
-      rating: 4.85,
-      earningsToday: 240,
-      totalDeliveries: 120,
-      cashInHand: 0,
-      createdAt: "2026-11-10T09:00:00.000Z"
-    },
-    {
-      id: "usr_rider_3",
-      name: "Ramesh Gowda",
-      email: "ramesh.rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 98860 33441",
-      city: "Bengaluru",
-      address: "28, 12th Main Road, HAL 2nd Stage, Indiranagar, Bengaluru 560008",
-      vehicleType: "EV 2-Wheeler (TVS iQube Electric)",
-      vehicleNumber: "KA-05-EJ-1920",
-      licenseNumber: "KA0520210088219",
-      upiId: "ramesh.gowda@okhdfcbank",
-      idDocType: "Driving License",
-      assignedHub: "Indiranagar Regional Hub",
-      isOnline: true,
-      rating: 4.88,
-      earningsToday: 350,
-      totalDeliveries: 214,
-      cashInHand: 0,
-      createdAt: "2026-03-05T08:00:00.000Z"
-    },
-    {
-      id: "usr_rider_4",
-      name: "Imran Pasha",
-      email: "imran.rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 97311 55662",
-      city: "Bengaluru",
-      address: "77, 80 Feet Road, Koramangala 4th Block, Bengaluru 560034",
-      vehicleType: "EV 2-Wheeler (Bajaj Chetak EV)",
-      vehicleNumber: "KA-01-MJ-7744",
-      licenseNumber: "KA0120200055123",
-      upiId: "imran.pasha@okaxis",
-      idDocType: "Driving License",
-      assignedHub: "Koramangala Cold Hub",
-      isOnline: true,
-      rating: 4.95,
-      earningsToday: 520,
-      totalDeliveries: 418,
-      cashInHand: 0,
-      createdAt: "2026-02-15T08:00:00.000Z"
-    },
-    {
       id: "usr_partner_1",
-      name: "Abdul Rahim (Master Butcher)",
+      name: "Demo Partner",
       email: "partner@brisketbox.in",
-      password: hashPassword("Brisket#Station2026!"),
+      password: demoHash,
       role: "partner",
       approvalStatus: "approved",
-      phone: "+91 98860 33445",
+      phone: "+91 98860 00000",
       city: "Bengaluru",
-      address: "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
+      address: "100 Feet Road, Indiranagar, Bengaluru 560038",
       shopId: "shop_central_butcher",
-      shopName: "Halal Cuts & Coastal Harbor Station #14",
-      shopAddress: "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
-      fssaiNumber: "FSSAI-11223344556677",
+      shopName: "BrisketBox Central Station",
+      shopAddress: "100 Feet Road, Indiranagar, Bengaluru 560038",
+      fssaiNumber: "",
       operatingHours: "06:00 AM - 10:00 PM",
       categories: ["Fish & Seafood", "Mutton & Lamb", "Farm Fresh Chicken"],
-      rating: 4.95,
-      totalOrdersHandled: 890,
-      createdAt: "2026-02-01T08:00:00.000Z"
-    },
-    {
-      id: "usr_partner_pending",
-      name: "Karthik Gowda (Owner)",
-      email: "karthik.poultry@gmail.com",
-      password: hashPassword("Brisket#Station2026!"),
-      role: "partner",
-      approvalStatus: "pending_approval",
-      phone: "+91 97310 99887",
-      city: "Bengaluru",
-      address: "NH 48, Nelamangala Rural, Bengaluru 562123",
-      shopId: "shop_nelamangala_fresh",
-      shopName: "Nelamangala Organic Broiler & Country Birds",
-      shopAddress: "NH 48, Nelamangala Rural, Bengaluru 562123",
-      fssaiNumber: "FSSAI-22446688001122",
-      operatingHours: "07:00 AM - 09:00 PM",
-      categories: ["Farm Fresh Chicken", "Eggs & Specialties"],
       rating: 5.0,
       totalOrdersHandled: 0,
-      createdAt: "2026-11-10T10:30:00.000Z"
+      createdAt: "2026-02-01T08:00:00.000Z"
     }
-  ],
+  ];
+};
+
+const INITIAL_DATA = {
+  users: getInitialUsers(),
     products: [
     {
       id: "prod_1",

@@ -298,7 +298,7 @@ const MainApp: React.FC = () => {
           ) : (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
               <h3 className="font-bold text-gray-900 dark:text-white text-sm">Operations Admin Authentication Required</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials (ops@brisketbox.in / admin123).</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials.</p>
               <button
                 onClick={() => handleOpenAuth('admin')}
                 className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs"

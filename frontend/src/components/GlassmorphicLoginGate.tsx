@@ -20,18 +20,10 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
 }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [identifier, setIdentifier] = useState(roleHint === 'admin' ? 'ops@brisketbox.in' : '');
-  const [password, setPassword] = useState(roleHint === 'admin' ? 'admin123' : '');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-
-  React.useEffect(() => {
-    if (isOpen && roleHint === 'admin') {
-      setIdentifier('ops@brisketbox.in');
-      setPassword('Brisket#Admin2026!');
-      setMode('login');
-    }
-  }, [isOpen, roleHint]);
 
   // Registration fields
   const [regName, setRegName] = useState('');
@@ -93,17 +85,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
     }
   };
 
-  const autofillDemo = (role: 'customer' | 'admin') => {
-    setError(null);
-    setMode('login');
-    if (role === 'customer') {
-      setIdentifier('pooja.sundaram@gmail.com');
-      setPassword('customer123');
-    } else {
-      setIdentifier('ops@brisketbox.in');
-      setPassword('Brisket#Admin2026!');
-    }
-  };
+
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center overflow-y-auto ${isModalMode ? 'bg-black/75 backdrop-blur-md p-4' : 'w-full h-full'}`}>
@@ -297,13 +279,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
                   <span>Remember me</span>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={() => autofillDemo('admin')}
-                  className="text-slate-300 hover:text-white underline text-[11px]"
-                >
-                  Ops Admin?
-                </button>
+                
               </div>
 
               {/* Main Pill Login Button (Exact Reference Styling) */}
@@ -390,7 +366,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
               onError={(err) => {
                 const msg = err || '';
                 if (msg.includes('JSON') || msg.includes('token') || msg.includes('server error') || msg.includes('Unexpected token')) {
-                  setError('Authentication service initializing. Please try again or use 1-Click Demo Login below.');
+                  setError('Authentication service initializing. Please try again.');
                 } else {
                   setError(msg);
                 }
@@ -398,31 +374,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
             />
           </div>
 
-          {/* Quick 1-Click Demo Fill Credentials Chips */}
-          <div className="mt-5 pt-4 border-t border-white/15 space-y-2">
-            <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider block text-center">
-              Quick 1-Click Demo Access:
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <button
-                type="button"
-                onClick={() => autofillDemo('customer')}
-                className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
-              >
-                <UserIcon className="w-3 h-3 text-cyan-300" />
-                <span>Customer (Pooja)</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => autofillDemo('admin')}
-                className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
-              >
-                <Shield className="w-3 h-3 text-rose-300" />
-                <span>Admin (Rajeshwar)</span>
-              </button>
-            </div>
-          </div>
 
           {/* Toggle Register / Login Link */}
           <div className="mt-4 text-center text-xs text-slate-300 space-y-2">
