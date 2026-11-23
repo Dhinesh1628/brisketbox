@@ -13,41 +13,67 @@ try {
   // Ignore if custom DNS cannot be set
 }
 
-let isConnected = false;
+// Global Mongoose connection cache for serverless (Vercel) connection reuse
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 export async function connectMongoDB() {
   const isProd = process.env.NODE_ENV === 'production';
   const uri = process.env.MONGODB_URI || (isProd ? '' : 'mongodb://127.0.0.1:27017/brisketbox');
+
   if (isProd && !uri) {
-    throw new Error('[FATAL] MONGODB_URI is required in production environment.');
+    throw new Error('[FATAL] MONGODB_URI is strictly required in production environment.');
   }
-  
-  try {
+
+  // If already connected, return cached connection immediately
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(uri, {
+    const opts = {
       serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000
+      connectTimeoutMS: 5000,
+      maxPoolSize: 10,
+      bufferCommands: false
+    };
+
+    cached.promise = mongoose.connect(uri, opts).then((m) => {
+      console.log(`[MongoDB] Connected successfully to: ${m.connection.host}/${m.connection.name}`);
+      return m;
     });
-    isConnected = true;
-    console.log(`[MongoDB] Connected successfully to: ${mongoose.connection.host}/${mongoose.connection.name}`);
-    return true;
-  } catch (err) {
-    isConnected = false;
-    console.warn(`[MongoDB] Connection notice (${err.message}).`);
-    console.warn(`[MongoDB] Running with local persistent document store fallback.`);
-    return false;
   }
+
+  try {
+    cached.conn = await cached.promise;
+    return cached.conn;
+  } catch (err) {
+    cached.promise = null;
+    if (isProd) {
+      // In production, startup must fail immediately if MongoDB cannot connect
+      throw new Error(`[FATAL] Failed to connect to MongoDB in production: ${err.message}`);
+    }
+    console.warn(`[MongoDB] Connection notice (${err.message}). Running with local persistent document store in non-production.`);
+    return null;
+  }
+}
+
+export function isMongoConnected() {
+  return mongoose.connection && mongoose.connection.readyState === 1;
 }
 
 export function getMongoStatus() {
   const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
-  const stateIndex = mongoose.connection.readyState;
+  const stateIndex = mongoose.connection ? mongoose.connection.readyState : 0;
   return {
     configuredUri: process.env.MONGODB_URI ? 'Configured in environment' : 'mongodb://127.0.0.1:27017/brisketbox (local default)',
     status: states[stateIndex] || 'Disconnected',
     isConnected: stateIndex === 1,
-    host: mongoose.connection.host || null,
-    dbName: mongoose.connection.name || null,
+    host: mongoose.connection?.host || null,
+    dbName: mongoose.connection?.name || null,
     collections: ['users', 'products', 'orders', 'coolers', 'coolerreturns']
   };
 }

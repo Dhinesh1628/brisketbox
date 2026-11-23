@@ -8,10 +8,8 @@ import { User, Product, Order, Cooler, CoolerReturn } from './mongo.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
-const DATA_FILE = isVercel 
-  ? path.join('/tmp', 'brisketbox_data.json') 
-  : path.join(__dirname, 'data.json');
+const isProd = process.env.NODE_ENV === 'production';
+const DATA_FILE = isProd ? null : path.join(__dirname, 'data.json');
 
 const getModel = (collection) => {
   switch (collection) {
@@ -680,8 +678,21 @@ class Database {
   }
 
   init() {
+    if (isProd) {
+      this.data = {
+        users: [],
+        products: [],
+        orders: [],
+        coolers: [],
+        coolerReturns: [],
+        couponUsages: [],
+        walletLedger: []
+      };
+      console.log('[DB] Production mode: MongoDB is the exclusive source of truth (no /tmp JSON fallback).');
+      return;
+    }
     try {
-      if (fs.existsSync(DATA_FILE)) {
+      if (DATA_FILE && fs.existsSync(DATA_FILE)) {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.data = JSON.parse(raw);
         if (!this.data.coolers) this.data.coolers = [];
@@ -812,6 +823,9 @@ class Database {
   }
 
   save() {
+    if (isProd || !DATA_FILE) {
+      return; // Never write JSON documents in production
+    }
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
     } catch (err) {
@@ -834,7 +848,11 @@ class Database {
     this.data[collection].unshift(item);
     this.save();
 
-    // Persist to MongoDB asynchronously if connected
+    // In production, MongoDB is the exclusive source of truth
+    if (isProd && mongoose.connection.readyState !== 1) {
+      throw new Error('Database connection is offline');
+    }
+    // Persist to MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       const Model = getModel(collection);
       if (Model) {

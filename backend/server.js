@@ -32,6 +32,7 @@ import {
   clearAuthCookie
 } from './services/auth.js';
 import express from 'express';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -139,6 +140,21 @@ const generalLimiter = rateLimit({
   message: { error: 'Too many requests from this IP address. Please try again in 15 minutes.' }
 });
 app.use('/api/', generalLimiter);
+
+// Database Availability Gate: Return 503 if MongoDB is disconnected in production
+app.use('/api', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (req.path === '/health' || req.path === '/api/health') {
+      return next();
+    }
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        error: 'Service Unavailable: Database connection is offline. Please try again shortly.'
+      });
+    }
+  }
+  next();
+});
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -2224,13 +2240,25 @@ app.patch('/api/orders/:id/courier', authenticate, requireAdmin, (req, res) => {
   res.json(updated);
 });
 
-// Global Production Error Guard (Prevents stack trace leaks)
+// Central Production Error Handler (Zero stack trace or internal path leaks)
 app.use((err, req, res, next) => {
   const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
-  const statusCode = err.status || err.statusCode || 500;
-  
+  const statusCode = err.status || err.statusCode || (err.name === 'ZodError' ? 400 : 500);
+
   if (err.message && err.message.includes('CORS')) {
     return res.status(403).json({ error: 'Access denied by BrisketBox CORS policy' });
+  }
+
+  if (err.name === 'ZodError') {
+    return res.status(400).json({
+      error: 'Request validation failed',
+      details: err.errors ? err.errors.map(e => ({ field: (e.path || []).join('.'), message: e.message })) : []
+    });
+  }
+
+  // Sanitize MongoDB / Mongoose errors
+  if (err.name === 'CastError' || err.name === 'ValidationError') {
+    return res.status(400).json({ error: 'Invalid data format or database constraint violation' });
   }
 
   console.error(`[API Error] ${req.method} ${req.url}:`, err.message || err);

@@ -4,10 +4,10 @@ const orderItemSchema = new mongoose.Schema({
   productId: { type: String, required: true },
   name: { type: String, required: true },
   price: { type: Number, required: true },
-  quantity: { type: Number, required: true },
-  cutStyle: { type: String, default: 'Standard Curry Cut' },
+  quantity: { type: Number, required: true, min: 1 },
+  cutStyle: { type: String, default: 'Master Butchered' },
   unit: { type: String, default: '500g' },
-  netWeight: { type: String, default: '450g' },
+  netWeight: { type: String, default: '500g' },
   imageUrl: { type: String, default: '' },
   image: { type: String, default: '' }
 }, { _id: false });
@@ -19,24 +19,27 @@ const tempLogSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  orderNumber: { type: String, default: function() { return this.id || `ORD-${Date.now()}`; } },
-  userId: { type: String, required: true },
+  id: { type: String, required: true, unique: true, index: true },
+  orderNumber: { type: String, required: true, unique: true, index: true },
+  userId: { type: String, required: true, index: true },
   customerName: { type: String, required: true },
   customerEmail: { type: String, required: true },
   customerPhone: { type: String, required: true },
   items: [orderItemSchema],
   
-  // Pricing breakdown
-  subtotal: { type: Number, required: true },
-  discountAmount: { type: Number, default: 0 },
+  // Pricing breakdown strictly verified on server
+  subtotal: { type: Number, required: true, min: 0 },
+  discountAmount: { type: Number, default: 0, min: 0 },
   couponCode: { type: String, default: null },
-  coolerDeposit: { type: Number, default: 250 },
-  deliveryFee: { type: Number, default: 0 },
-  total: { type: Number, required: true },
-  totalAmount: { type: Number, default: function() { return this.total || 0; } },
+  coolerDeposit: { type: Number, default: 0, min: 0 },
+  shippingFee: { type: Number, default: 0, min: 0 },
+  tipAmount: { type: Number, default: 0, min: 0 },
+  walletDeduction: { type: Number, default: 0, min: 0 },
+  total: { type: Number, required: true, min: 0 },
+  totalAmount: { type: Number, required: true, min: 0 },
+  amountInPaise: { type: Number, default: 0 },
 
-  // Delivery & Address details
+  // Delivery & Location details
   deliveryAddress: { type: String, required: true },
   addressDetails: {
     fullName: { type: String },
@@ -50,68 +53,104 @@ const orderSchema = new mongoose.Schema({
     pincode: { type: String },
     instructions: { type: String }
   },
-  deliverySlot: { type: String, default: '⚡ Express Delivery in 90 Mins' },
-  city: { type: String, default: 'Bengaluru' },
+  deliverySlot: { type: String, default: 'Today, Express in 90 Mins' },
+  city: { type: String, default: 'Bengaluru', index: true },
   deliveryNotes: { type: String, default: '' },
 
-  // Order Pipeline Status (Independent from Payment Status)
+  // Order Pipeline State Machine
   orderStatus: {
     type: String,
     enum: [
-      'PENDING',
+      'PENDING_PAYMENT',
       'CONFIRMED',
       'PREPARING',
-      'QUALITY_CHECK',
-      'PACKED',
+      'READY_FOR_PICKUP',
       'OUT_FOR_DELIVERY',
+      'ARRIVED',
       'DELIVERED',
       'CANCELLED'
     ],
-    default: 'CONFIRMED'
+    default: 'PENDING_PAYMENT',
+    index: true
   },
-  // Legacy status string for backward compatibility with existing views
-  status: { type: String, default: 'Order Confirmed' },
+  lifecycleStatus: {
+    type: String,
+    enum: [
+      'PENDING_PAYMENT',
+      'CONFIRMED',
+      'PREPARING',
+      'READY_FOR_PICKUP',
+      'OUT_FOR_DELIVERY',
+      'ARRIVED',
+      'DELIVERED',
+      'CANCELLED'
+    ],
+    default: 'PENDING_PAYMENT',
+    index: true
+  },
+  status: { type: String, default: 'Pending Payment' },
 
   // Payment Tracking
   paymentMethod: { type: String, default: 'razorpay' },
   paymentStatus: {
     type: String,
     enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
-    default: 'PENDING'
+    default: 'PENDING',
+    index: true
   },
-  razorpayOrderId: { type: String, default: '' },
-  razorpayPaymentId: { type: String, default: '' },
+  razorpayOrderId: { type: String, default: '', index: true },
+  razorpayPaymentId: { type: String, default: '', index: true },
   razorpaySignature: { type: String, default: '' },
-  paymentDetails: {
-    method: { type: String },
-    bank: { type: String },
-    wallet: { type: String },
-    vpa: { type: String },
-    paidAt: { type: Date }
-  },
 
-  // Cold-Box & Deposit Management
-  coolerId: { type: String, required: true },
-  coolerModel: { type: String, default: 'ThermalVault 18L - Reusable EPP Cold-Gel Box' },
+  // Handover PIN Security
+  deliveryPin: { type: String, default: '' },
+  pinAttempts: { type: Number, default: 0 },
+  pinLockedUntil: { type: Date, default: null },
+
+  // Cold Box & Reusable Logistics
+  coolerId: { type: String, default: null, index: true },
+  coolerModel: { type: String, default: null },
   coldBoxRefundStatus: {
     type: String,
-    enum: ['NOT_REQUESTED', 'REQUESTED', 'APPROVED', 'REFUND_PROCESSING', 'REFUNDED', 'REJECTED'],
-    default: 'NOT_REQUESTED'
+    enum: ['NOT_REQUESTED', 'REQUESTED', 'APPROVED', 'REFUNDED', 'REJECTED'],
+    default: 'NOT_REQUESTED',
+    index: true
   },
   refundId: { type: String, default: '' },
-  refundTxnId: { type: String, default: '' },
-  refundProcessedAt: { type: Date },
+  refundAmount: { type: Number, default: 0 },
+  refundProcessedAt: { type: Date, default: null },
 
-  // Cold-Chain Telemetry
-  liveTemp: { type: Number, default: 1.8 },
+  // Fleet & Partner Assignments
+  riderId: { type: String, default: null, index: true },
+  riderFullName: { type: String, default: null },
+  riderName: { type: String, default: null },
+  riderPhone: { type: String, default: null },
+  riderVehicle: { type: String, default: null },
+  deliveryExecutive: { type: String, default: null },
+  partnerId: { type: String, default: null, index: true },
+  partnerName: { type: String, default: null },
+
+  // Cold Chain Telemetry
+  liveTemp: { type: Number, default: 0.8 },
   tempLog: [tempLogSchema],
-  temperatureLog: [tempLogSchema],
   trackingCode: { type: String, default: '' },
-  etaMinutes: { type: Number, default: 35 },
-  deliveryExecutive: { type: String, default: 'Suresh Patil (EV Fleet #14, +91 97412 88301)' }
+  lifecycleTimestamps: {
+    confirmedAt: { type: String, default: null },
+    assignedAt: { type: String, default: null },
+    preparingAt: { type: String, default: null },
+    outForDeliveryAt: { type: String, default: null },
+    arrivedAt: { type: String, default: null },
+    deliveredAt: { type: String, default: null },
+    coolerReturnedAt: { type: String, default: null }
+  }
 }, {
   timestamps: true,
-  strict: false
+  strict: true
 });
+
+orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ riderId: 1, orderStatus: 1 });
+orderSchema.index({ partnerId: 1, orderStatus: 1 });
+orderSchema.index({ createdAt: -1 });
 
 export const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
