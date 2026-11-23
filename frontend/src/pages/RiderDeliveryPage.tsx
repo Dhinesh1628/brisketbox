@@ -958,7 +958,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
               }}
               title={soundEnabled ? "Audio Alerts: ON" : "Audio Alerts: OFF"}
               className={`p-2 rounded-xl border transition cursor-pointer ${
-                soundEnabled ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                soundEnabled ? 'bg-slate-100 text-[#d11243] border-slate-200 hover:bg-slate-200' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'
               }`}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -966,7 +966,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
 
             {/* Offline/Online Network Indicator */}
             <div className={`px-2 py-1 rounded-xl text-[10px] font-bold border flex items-center gap-1 ${
-              isOffline ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              isOffline ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}>
               {isOffline ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-600" />}
               <span>{isOffline ? 'Elevator/Offline' : '4G Online'}</span>
@@ -997,7 +997,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       </header>
 
       {/* Main Rider App Viewport */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 pt-4 pb-28 space-y-4">
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 pt-6 pb-28 space-y-4">
 
         {/* Action Notice Toast */}
         {actionNotice && (
@@ -1034,17 +1034,17 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <div 
               onClick={() => setIsCashDepositModalOpen(true)}
               title="Click to view Cash in Hand & Deposit at Hub"
-              className="p-2 rounded-xl bg-slate-950/60 border border-amber-200 hover:border-amber-400 bg-amber-50/50 transition cursor-pointer"
+              className="p-2 rounded-xl bg-amber-50/70 border border-amber-200 hover:border-amber-300 hover:bg-amber-100/60 transition cursor-pointer shadow-xs"
             >
               <span className="text-[10px] text-amber-800 block uppercase font-bold">Cash in Hand</span>
-              <span className="text-base font-black text-amber-700 font-mono">₹{cashInHand}</span>
+              <span className="text-base font-black text-amber-800 font-mono">₹{cashInHand}</span>
             </div>
           </div>
         </div>
 
         {/* Offline Queue Resilience Banner */}
         {offlineQueueCount > 0 && (
-          <div className="p-3 bg-amber-950/80 border border-amber-600/70 rounded-2xl text-xs flex items-center justify-between text-amber-200">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs flex items-center justify-between text-amber-900 shadow-xs">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-400 shrink-0" />
               <span><strong>{offlineQueueCount} run(s)</strong> stored locally in offline elevator queue.</span>
@@ -1058,25 +1058,29 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           </div>
         )}
 
-        {/* View Tabs */}
-        <div className="flex rounded-xl bg-slate-200/80 p-1 border border-slate-300/60 text-xs font-bold">
+        {/* View Tabs - Clean Industrial Segmented Bar */}
+        <div className="flex border-b border-slate-200 bg-white rounded-xl px-2 shadow-xs">
           <button
             onClick={() => setCurrentScreen('runs')}
-            className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentScreen === 'runs' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-3 text-xs font-bold transition border-b-2 flex items-center justify-center gap-2 cursor-pointer ${
+              currentScreen === 'runs' 
+                ? 'border-[#d11243] text-[#d11243]' 
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Package className="w-3.5 h-3.5" />
+            <Package className="w-4 h-4" />
             <span>Active Deliveries ({activeOrders.length})</span>
           </button>
           <button
             onClick={() => setCurrentScreen('earnings')}
-            className={`flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentScreen === 'earnings' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-3 text-xs font-bold transition border-b-2 flex items-center justify-center gap-2 cursor-pointer ${
+              currentScreen === 'earnings' 
+                ? 'border-[#d11243] text-[#d11243]' 
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>History ({deliveredOrders.length})</span>
+            <DollarSign className="w-4 h-4" />
+            <span>Delivery History ({deliveredOrders.length})</span>
           </button>
         </div>
 
@@ -1246,7 +1250,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                       {stage !== 'ARRIVED_AT_CUSTOMER' && stage !== 'ORDER_ASSIGNED' && (
                         <button
                           onClick={() => handleOpenHandover(ord)}
-                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                          className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
                         >
                           Doorstep Handover
                         </button>

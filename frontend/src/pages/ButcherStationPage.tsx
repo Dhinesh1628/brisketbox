@@ -722,7 +722,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   <Check className="w-3 h-3 text-emerald-400" />
                   <span>Approved Partner</span>
                 </div>
-                <div className="text-[9px] text-gray-400 truncate">Road No. 36, Jubilee Hills</div>
+                <div className="text-[10px] text-emerald-700/80 truncate font-medium">Road No. 36, Jubilee Hills</div>
               </button>
 
               <button
@@ -731,22 +731,22 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   setLoginEmail('newshop@brisketbox.in');
                   setLoginPassword('partner123');
                 }}
-                className="p-2 rounded-xl bg-amber-950/60 border border-amber-800 text-amber-300 text-[11px] font-bold text-left hover:bg-amber-900/60 transition cursor-pointer"
+                className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold text-left hover:bg-amber-100 shadow-xs transition cursor-pointer"
               >
                 <div className="font-extrabold flex items-center gap-1">
                   <Clock className="w-3 h-3 text-amber-400" />
                   <span>Pending Audit</span>
                 </div>
-                <div className="text-[9px] text-gray-400 truncate">Hitech City Cold Station</div>
+                <div className="text-[10px] text-amber-700/80 truncate font-medium">Hitech City Cold Station</div>
               </button>
             </div>
           </div>
 
-          <div className="flex border-b border-slate-800">
+          <div className="flex border-b border-slate-200">
             <button
               onClick={() => { setAuthMode('login'); setLoginError(null); }}
               className={`flex-1 py-3 text-xs font-bold cursor-pointer transition border-b-2 ${
-                authMode === 'login' ? 'border-[#d11243] text-[#d11243]' : 'border-transparent text-gray-400 hover:text-gray-200'
+                authMode === 'login' ? 'border-[#d11243] text-[#d11243]' : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
               Sign In to Station
@@ -754,7 +754,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
             <button
               onClick={() => { setAuthMode('register'); setLoginError(null); }}
               className={`flex-1 py-3 text-xs font-bold cursor-pointer transition border-b-2 ${
-                authMode === 'register' ? 'border-[#d11243] text-[#d11243]' : 'border-transparent text-gray-400 hover:text-gray-200'
+                authMode === 'register' ? 'border-[#d11243] text-[#d11243]' : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
               Register Butcher Shop
@@ -762,14 +762,14 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           </div>
 
           {loginError && (
-            <div className="p-3 bg-rose-950/80 border border-rose-800 text-rose-300 rounded-xl text-xs flex items-center gap-2">
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{loginError}</span>
             </div>
           )}
 
           {regSuccess && (
-            <div className="p-3 bg-emerald-950/80 border border-emerald-800 text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{regSuccess}</span>
             </div>
@@ -778,26 +778,26 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           {authMode === 'login' ? (
             <form onSubmit={handlePartnerLogin} className="space-y-4 text-xs">
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Partner Email / Terminal ID</label>
+                <label className="block text-slate-700 font-bold text-xs mb-1.5">Partner Email / Terminal ID</label>
                 <input
                   type="email"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="partner@brisketbox.in"
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:ring-2 focus:ring-rose-100 shadow-xs transition"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Station Access Key</label>
+                <label className="block text-slate-700 font-bold text-xs mb-1.5">Station Access Key</label>
                 <input
                   type="password"
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:ring-2 focus:ring-rose-100 shadow-xs transition"
                 />
               </div>
 
@@ -813,7 +813,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           ) : (
             <form onSubmit={handlePartnerRegister} className="space-y-3 text-xs">
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Butcher Shop / Brand Name</label>
+                <label className="block text-slate-700 font-bold text-xs mb-1.5">Butcher Shop / Brand Name</label>
                 <input
                   type="text"
                   required
@@ -826,7 +826,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Owner Name</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">Owner Name</label>
                   <input
                     type="text"
                     required
@@ -837,7 +837,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Phone Number</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">Phone Number</label>
                   <input
                     type="tel"
                     required
@@ -851,7 +851,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Business Email</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">Business Email</label>
                   <input
                     type="email"
                     required
@@ -862,7 +862,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Password</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">Password</label>
                   <input
                     type="password"
                     required
@@ -875,7 +875,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               </div>
 
               <div>
-                <label className="block text-gray-300 font-bold mb-1">Shop Address</label>
+                <label className="block text-slate-700 font-bold text-xs mb-1.5">Shop Address</label>
                 <input
                   type="text"
                   required
@@ -888,7 +888,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">FSSAI License</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">FSSAI License</label>
                   <input
                     type="text"
                     required
@@ -899,7 +899,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-bold mb-1">Operating Hours</label>
+                  <label className="block text-slate-700 font-bold text-xs mb-1.5">Operating Hours</label>
                   <input
                     type="text"
                     value={regForm.operatingHours}
@@ -2764,7 +2764,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white text-[#0f172a] w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto space-y-5">
             
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#d11243] flex items-center justify-center text-white font-black">
                   <Scissors className="w-5 h-5" />
