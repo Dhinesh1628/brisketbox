@@ -4,13 +4,16 @@ import {
   Check, 
   ChevronLeft, 
   ChevronRight, 
-  Sparkles,
-  ShieldCheck,
-  Zap,
-  ThermometerSnowflake,
-  Clock,
-  Award,
-  Package
+  Sparkles, 
+  ShieldCheck, 
+  Flame, 
+  Snowflake, 
+  Clock, 
+  Award, 
+  Package,
+  Layers,
+  Thermometer,
+  Compass
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSound } from '../context/SoundContext';
@@ -24,68 +27,47 @@ interface HeroSectionProps {
 interface BannerSlide {
   id: string;
   badge: string;
-  badgeIcon: React.ComponentType<{ className?: string }>;
+  categoryName: string;
   title: string;
   subtitle: string;
   description: string;
   price: number;
   mrp: number;
   unit: string;
-  image: string;
+  rawImage: string;
   cookedImage: string;
+  cookedTitle: string;
   cutTag: string;
-  accentColor: string;
-  bgClass: string;
+  origin: string;
+  tempReading: string;
+  accentHex: string;
+  accentBg: string;
+  glowColor: string;
+  remainingStock: number;
   productData: Product;
 }
 
 const HERO_SLIDES: BannerSlide[] = [
   {
-    id: 'prod_4',
-    badge: 'Chef Choice • Fresh Today',
-    badgeIcon: Award,
-    title: 'Rich Mutton Biryani & Curry Cut',
-    subtitle: 'Artisanal Young Goat • Ribs & Shoulder Pieces',
-    description: 'Freshly cut, tender bone-in pieces slow-chilled at 0°C to 4°C. Perfect for weekend dum biryani and rich rogan josh curries.',
-    price: 549,
-    mrp: 599,
-    unit: '500g',
-    image: '/images/products/prod_4.jpg',
-    cookedImage: '/images/products/cooked_mutton_rogan_josh.jpg',
-    cutTag: 'Bone-in Curry Cut',
-    accentColor: '#d11243',
-    bgClass: 'from-stone-900 via-neutral-900 to-black',
-    productData: {
-      id: 'prod_4',
-      name: 'Mutton Rogan Josh',
-      category: 'mutton',
-      description: 'Tender young goat cuts with rib and shoulder pieces.',
-      price: 549,
-      mrp: 599,
-      unit: '500g',
-      chillingMethod: 'Chilled at 0°C to 4°C',
-      catchDate: 'Fresh today',
-      origin: 'Dindigul Farms',
-      cutStyle: 'Bone-in curry cut',
-      stock: 22,
-      image: '/images/products/prod_4.jpg'
-    }
-  },
-  {
     id: 'prod_1',
     badge: 'Coastal Daily Catch • Harbor Fresh',
-    badgeIcon: Sparkles,
+    categoryName: 'Coastal Sea Fish',
     title: 'Surmai (Seer Fish) Prime Steaks',
     subtitle: 'Center-Cut Round Steaks • Cleaned & Descaled',
-    description: 'Sourced daily from coastal harbor landings. Firm, flaky steaks trimmed with zero off-flavors, chilled continuously for immediate tawa fry.',
+    description: 'Sourced daily from coastal harbor landings. Firm, pearlescent flaky steaks trimmed with zero off-flavors, chilled at 0.8°C for instant pan searing.',
     price: 649,
     mrp: 699,
     unit: '500g',
-    image: '/images/products/prod_1.jpg',
+    rawImage: '/images/products/prod_1.jpg',
     cookedImage: '/images/products/cooked_surmai_tawa_fry.jpg',
+    cookedTitle: 'Crispy Coastal Tawa Fry',
     cutTag: 'Center Cut Steaks',
-    accentColor: '#0284c7',
-    bgClass: 'from-slate-900 via-neutral-900 to-black',
+    origin: 'Mangalore Deep Harbor',
+    tempReading: '0.8°C',
+    accentHex: '#0284c7',
+    accentBg: 'from-sky-500/20 via-sky-900/10 to-transparent',
+    glowColor: 'rgba(2, 132, 199, 0.25)',
+    remainingStock: 18,
     productData: {
       id: 'prod_1',
       name: 'Surmai (Seer Fish) Steaks',
@@ -103,20 +85,61 @@ const HERO_SLIDES: BannerSlide[] = [
     }
   },
   {
+    id: 'prod_4',
+    badge: 'Artisanal Batch • Hand Trimmed',
+    categoryName: 'Pasture-Raised Mutton',
+    title: 'Rich Mutton Biryani & Curry Cut',
+    subtitle: 'Young Goat • Perfectly Balanced Ribs & Shoulder',
+    description: 'Freshly cut tender bone-in pieces, meticulously trimmed of excess tallow and slow-chilled. Crafted for aromatic dum biryanis and velvety rogan josh.',
+    price: 549,
+    mrp: 599,
+    unit: '500g',
+    rawImage: '/images/products/prod_4.jpg',
+    cookedImage: '/images/products/cooked_mutton_rogan_josh.jpg',
+    cookedTitle: 'Velvety Kashmiri Rogan Josh',
+    cutTag: 'Bone-in Curry Cut',
+    origin: 'Dindigul Certified Farms',
+    tempReading: '1.2°C',
+    accentHex: '#d11243',
+    accentBg: 'from-rose-500/20 via-rose-950/20 to-transparent',
+    glowColor: 'rgba(209, 18, 67, 0.25)',
+    remainingStock: 12,
+    productData: {
+      id: 'prod_4',
+      name: 'Mutton Rogan Josh',
+      category: 'mutton',
+      description: 'Tender young goat cuts with rib and shoulder pieces.',
+      price: 549,
+      mrp: 599,
+      unit: '500g',
+      chillingMethod: 'Chilled at 0°C to 4°C',
+      catchDate: 'Fresh today',
+      origin: 'Dindigul Farms',
+      cutStyle: 'Bone-in curry cut',
+      stock: 22,
+      image: '/images/products/prod_4.jpg'
+    }
+  },
+  {
     id: 'prod_6',
-    badge: 'Farm Fresh • Naturally Reared',
-    badgeIcon: ShieldCheck,
-    title: 'Country Chicken (Nati Koli) Curry Cut',
-    subtitle: '100% Antibiotic-Residue Free • Firm Texture',
-    description: 'Free-roaming country chicken with rich, earthy flavor and tender meat. Pre-cleaned and expertly portioned for traditional slow pepper curries.',
+    badge: 'Free-Roaming • 100% Antibiotic Residue-Free',
+    categoryName: 'Village Country Poultry',
+    title: 'Nati Koli (Country Chicken) Cut',
+    subtitle: 'Authentic Free-Range • Lean & Dense Muscle Texture',
+    description: 'Free-roaming country chicken with natural, deep earthy flavor. Expertly portioned for slow-cooked traditional pepper gravies that evoke village nostalgia.',
     price: 389,
     mrp: 429,
     unit: '500g',
-    image: '/images/products/prod_6.jpg',
+    rawImage: '/images/products/prod_6.jpg',
     cookedImage: '/images/products/cooked_nati_koli.jpg',
+    cookedTitle: 'Spiced Black Pepper Roast',
     cutTag: 'Traditional Curry Cut',
-    accentColor: '#ea580c',
-    bgClass: 'from-amber-950 via-neutral-900 to-black',
+    origin: 'Karnataka Bio-Farms',
+    tempReading: '1.0°C',
+    accentHex: '#d97706',
+    accentBg: 'from-amber-500/20 via-amber-950/20 to-transparent',
+    glowColor: 'rgba(217, 119, 6, 0.25)',
+    remainingStock: 24,
     productData: {
       id: 'prod_6',
       name: 'Country Chicken Curry Cut',
@@ -135,19 +158,24 @@ const HERO_SLIDES: BannerSlide[] = [
   },
   {
     id: 'prod_3',
-    badge: 'Ready to Cook • Peeled & Deveined',
-    badgeIcon: Zap,
+    badge: 'Ready to Cook • Tail-On Cleaned',
+    categoryName: 'Deep Sea Crustaceans',
     title: 'Jumbo Sea Prawns (Tail-On)',
-    subtitle: 'Juicy Coastal Catch • Zero Preservatives',
-    description: 'Plump ocean prawns carefully deveined with tail shells left intact for superior pan-searing. Ideal for garlic butter, tandoori, and biryani.',
+    subtitle: 'De-veined Cleaned Catch • Zero Preservatives',
+    description: 'Plump ocean prawns carefully deveined with the tail preserved for maximum caramelization. Pristine snap and sweet ocean finish for garlic butter sautés.',
     price: 599,
     mrp: 679,
     unit: '350g',
-    image: '/images/products/prod_3.jpg',
+    rawImage: '/images/products/prod_3.jpg',
     cookedImage: '/images/products/cooked_tiger_prawns.jpg',
+    cookedTitle: 'Garlic Butter Pan-Seared Prawns',
     cutTag: 'Tail-on Deveined',
-    accentColor: '#0d9488',
-    bgClass: 'from-teal-950 via-neutral-900 to-black',
+    origin: 'Karwar Deep Shelf',
+    tempReading: '0.6°C',
+    accentHex: '#0d9488',
+    accentBg: 'from-teal-500/20 via-teal-950/20 to-transparent',
+    glowColor: 'rgba(13, 148, 136, 0.25)',
+    remainingStock: 15,
     productData: {
       id: 'prod_3',
       name: 'Jumbo Prawns',
@@ -173,30 +201,51 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const { addItem } = useCart();
   const { playPopSound } = useSound();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewCooked, setViewCooked] = useState(false);
   const [addedCutId, setAddedCutId] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [slideProgress, setSlideProgress] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
   const currentSlide = HERO_SLIDES[currentIndex];
 
-  // Silky 5-second auto-slide interval (pauses on hover)
+  // Reset cooked toggle whenever slide changes
+  useEffect(() => {
+    setViewCooked(false);
+    setSlideProgress(0);
+  }, [currentIndex]);
+
+  // Smooth slide progress counter and auto-advance every 6 seconds
   useEffect(() => {
     if (isHovered) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isHovered]);
+
+    const intervalTime = 60; // tick every 60ms
+    const totalTicks = 6000 / intervalTime; // 100 ticks
+
+    const timer = setInterval(() => {
+      setSlideProgress((prev) => {
+        if (prev >= 100) {
+          setCurrentIndex((current) => (current + 1) % HERO_SLIDES.length);
+          return 0;
+        }
+        return prev + (100 / totalTicks);
+      });
+    }, intervalTime);
+
+    return () => clearInterval(timer);
+  }, [isHovered, currentIndex]);
 
   const handleNext = () => {
+    setSlideProgress(0);
     setCurrentIndex((prev) => (prev + 1) % HERO_SLIDES.length);
   };
 
   const handlePrev = () => {
+    setSlideProgress(0);
     setCurrentIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   };
 
-  // Keyboard navigation for Arrow Right & Arrow Left
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
@@ -206,10 +255,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setCurrentIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+        handleNext();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setCurrentIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+        handlePrev();
       }
     };
 
@@ -245,100 +294,112 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     setTimeout(() => setAddedCutId(null), 1800);
   };
 
-  const BadgeIcon = currentSlide.badgeIcon;
-
   return (
     <div className="space-y-4">
-      {/* Main Showcase Banner */}
-      <div
+      {/* Cinematic Showcase Stage */}
+      <section
+        aria-label="Artisanal Meat & Seafood Showcase"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-neutral-950 text-white shadow-md border border-neutral-800 transition-all duration-300"
+        className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-[#0c0d10] text-white border border-neutral-800/80 shadow-2xl transition-all duration-500"
       >
-        {/* Background Visual Fade */}
-        <div className="absolute inset-0 z-0">
-          <img
-            key={currentSlide.id}
-            src={currentSlide.image}
-            alt={currentSlide.title}
-            className="w-full h-full object-cover opacity-25 scale-105 filter blur-xs transition-opacity duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/60 md:to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent md:hidden" />
-        </div>
+        {/* Dynamic Theatrical Ambient Glow that tracks active slide */}
+        <div 
+          className="absolute -top-32 -left-32 w-96 h-96 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 opacity-60"
+          style={{ backgroundColor: currentSlide.accentHex }}
+        />
+        <div 
+          className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full blur-[160px] pointer-events-none transition-all duration-1000 opacity-40"
+          style={{ backgroundColor: currentSlide.accentHex }}
+        />
 
-        {/* Content Layout */}
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 items-center gap-6 p-6 sm:p-8 md:p-10 min-h-[380px] sm:min-h-[420px]">
-          {/* Left Text Column */}
-          <div className="md:col-span-7 space-y-4">
-            {/* Top Pill Tags */}
+        {/* Subtle Slate Background Texture */}
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
+
+        {/* Content Stage Grid */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 items-center gap-8 p-6 sm:p-8 lg:p-12 min-h-[460px] lg:min-h-[500px]">
+          
+          {/* Left Column: Telemetry, Story & Conversion */}
+          <div className="lg:col-span-7 space-y-5">
+            
+            {/* Freshness Telemetry Badges */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-rose-300">
-                <BadgeIcon className="w-3.5 h-3.5 text-[#d11243]" />
+                <span className="w-2 h-2 rounded-full bg-[#d11243] animate-pulse" />
                 <span>{currentSlide.badge}</span>
               </div>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <ThermometerSnowflake className="w-3.5 h-3.5" />
-                <span>0°C to 4°C Fresh</span>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide">
+                <Thermometer className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{currentSlide.tempReading} Cold-Locked</span>
               </div>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                <Clock className="w-3.5 h-3.5" />
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
                 <span>90 Mins Delivery</span>
               </div>
             </div>
 
-            {/* Title & Subtitle */}
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+            {/* Headline and Cut Taxonomy */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-neutral-400">
+                <Compass className="w-3.5 h-3.5 text-[#d11243]" />
+                <span>{currentSlide.origin}</span>
+                <span>•</span>
+                <span className="text-white">{currentSlide.categoryName}</span>
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.12]">
                 {currentSlide.title}
               </h1>
-              <p className="text-sm sm:text-base font-semibold text-gray-300">
+
+              <p className="text-sm sm:text-base font-medium text-neutral-300">
                 {currentSlide.subtitle}
               </p>
             </div>
 
-            {/* Description */}
-            <p className="text-xs sm:text-sm text-gray-400 max-w-xl line-clamp-2 sm:line-clamp-3 leading-relaxed">
+            {/* Editorial Description */}
+            <p className="text-xs sm:text-sm text-neutral-400 max-w-xl leading-relaxed">
               {currentSlide.description}
             </p>
 
-            {/* Pricing & CTA Controls */}
-            <div className="pt-2 flex flex-wrap items-center gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white">
+            {/* Pricing Matrix & Call to Action */}
+            <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6">
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                   ₹{currentSlide.price}
                 </span>
-                <span className="text-sm text-gray-400 line-through">
+                <span className="text-sm sm:text-base text-neutral-500 line-through">
                   ₹{currentSlide.mrp}
                 </span>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/25">
                   {Math.round(((currentSlide.mrp - currentSlide.price) / currentSlide.mrp) * 100)}% OFF
                 </span>
-                <span className="text-xs text-gray-400 font-medium">
+                <span className="text-xs text-neutral-400 font-semibold">
                   / {currentSlide.unit}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm cursor-pointer transition-all duration-200 ${
+                  className={`px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg cursor-pointer transition-all duration-300 ${
                     addedCutId === currentSlide.id
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-[#d11243] hover:bg-[#b80f3b] text-white hover:shadow-rose-900/40 active:scale-95'
+                      ? 'bg-emerald-600 text-white shadow-emerald-900/50 scale-102'
+                      : 'bg-[#d11243] hover:bg-[#b80f3b] text-white hover:shadow-rose-900/50 hover:scale-102 active:scale-98'
                   }`}
                 >
                   {addedCutId === currentSlide.id ? (
                     <>
                       <Check className="w-4 h-4 stroke-[3]" />
-                      <span>Added to Box</span>
+                      <span>Added to Chill Box</span>
                     </>
                   ) : (
                     <>
-                      <span>Add to Box</span>
+                      <span>Add to Chill Box</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -347,27 +408,98 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <button
                   type="button"
                   onClick={onExploreCuts}
-                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs border border-white/15 backdrop-blur-md cursor-pointer transition"
+                  className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/15 backdrop-blur-md cursor-pointer transition duration-200"
                 >
-                  Explore Cuts
+                  View All Cuts
                 </button>
               </div>
             </div>
+
+            {/* Dispatch Scarcity Note */}
+            <div className="flex items-center gap-2 text-[11px] text-neutral-400 pt-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>Only <strong className="text-white">{currentSlide.remainingStock} packs</strong> left for morning dispatch. Hand-cut on order.</span>
+            </div>
           </div>
 
-          {/* Right Platter Image Column */}
-          <div className="md:col-span-5 flex justify-center items-center relative">
-            <div className="relative w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl group">
+          {/* Right Column: Interactive Ceramic Showcase Platter */}
+          <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
+            
+            {/* The Floating Ceramic Stage */}
+            <div className="relative w-72 h-72 sm:w-88 sm:h-88 lg:w-96 lg:h-96 rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-neutral-900 group">
+              
+              {/* Product Visual with Crossfade between Raw and Cooked */}
               <img
-                src={currentSlide.image}
-                alt={currentSlide.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                src={viewCooked ? currentSlide.cookedImage : currentSlide.rawImage}
+                alt={viewCooked ? currentSlide.cookedTitle : currentSlide.title}
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                <span>{currentSlide.cutTag}</span>
-                <span className="text-emerald-400 font-bold">In Stock Today</span>
+
+              {/* Edge Gradient for Editorial Depth */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+
+              {/* Top Interactive Toggle Pill: Raw Cut vs Sizzling Dish */}
+              <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between z-20">
+                <div className="flex items-center bg-black/75 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => setViewCooked(false)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
+                      !viewCooked
+                        ? 'bg-[#d11243] text-white shadow-sm'
+                        : 'text-neutral-300 hover:text-white'
+                    }`}
+                  >
+                    <Snowflake className="w-3 h-3" />
+                    <span>Raw Fresh Cut</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewCooked(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all duration-200 cursor-pointer ${
+                      viewCooked
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-neutral-300 hover:text-white'
+                    }`}
+                  >
+                    <Flame className="w-3 h-3 text-amber-300" />
+                    <span>Cooked Dish</span>
+                  </button>
+                </div>
+
+                {/* Status Badge */}
+                <div className="hidden sm:inline-flex items-center gap-1 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[10px] font-semibold text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Cold Packed</span>
+                </div>
               </div>
+
+              {/* Bottom Platter Caption */}
+              <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 text-xs">
+                <div>
+                  <div className="text-[10px] text-neutral-400 font-medium">
+                    {viewCooked ? 'Culinary Inspiration' : 'Butcher Spec'}
+                  </div>
+                  <div className="font-bold text-white tracking-wide truncate max-w-[190px] sm:max-w-[220px]">
+                    {viewCooked ? currentSlide.cookedTitle : currentSlide.cutTag}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-[10px] text-neutral-400 font-medium">Chilled Temp</div>
+                  <div className="font-bold text-cyan-300">
+                    {currentSlide.tempReading}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive hint */}
+            <div className="mt-2.5 text-[11px] text-neutral-400 flex items-center gap-1.5">
+              <span>Click</span>
+              <span className="px-1.5 py-0.5 rounded bg-white/10 text-white text-[10px] font-semibold border border-white/10">Cooked Dish</span>
+              <span>to preview finished preparation</span>
             </div>
           </div>
         </div>
@@ -376,79 +508,120 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <button
           type="button"
           onClick={handlePrev}
-          aria-label="Previous slide"
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition"
+          aria-label="Previous culinary cut"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg hover:scale-105"
         >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
 
         <button
           type="button"
           onClick={handleNext}
-          aria-label="Next slide"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition"
+          aria-label="Next culinary cut"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg hover:scale-105"
         >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronRight className="w-5 h-5" />
         </button>
+      </section>
 
-        {/* Bottom Pagination Dots */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-          {HERO_SLIDES.map((slide, idx) => (
+      {/* Bento Timeline Selector Strip with Live Progress */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+        {HERO_SLIDES.map((slide, idx) => {
+          const isActive = idx === currentIndex;
+          return (
             <button
               key={slide.id}
-              onClick={() => setCurrentIndex(idx)}
-              aria-label={`Go to slide ${idx + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                idx === currentIndex
-                  ? 'w-6 bg-[#d11243]'
-                  : 'w-2 bg-white/40 hover:bg-white/70'
+              type="button"
+              onClick={() => {
+                setSlideProgress(0);
+                setCurrentIndex(idx);
+              }}
+              className={`relative overflow-hidden text-left p-3 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                isActive
+                  ? 'bg-neutral-900 text-white border-neutral-700 shadow-lg scale-101'
+                  : 'bg-white dark:bg-neutral-900/60 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-800 shadow-2xs'
               }`}
-            />
-          ))}
-        </div>
+            >
+              {/* Active Progress Bar along the top */}
+              {isActive && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-800">
+                  <div
+                    className="h-full bg-[#d11243] transition-all duration-75 ease-linear"
+                    style={{ width: `${slideProgress}%` }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <img
+                  src={slide.rawImage}
+                  alt={slide.title}
+                  className="w-11 h-11 rounded-xl object-cover border border-black/10 dark:border-white/10 shrink-0"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#d11243] truncate">
+                    {slide.categoryName}
+                  </div>
+                  <div className="text-xs font-bold truncate">
+                    {slide.title}
+                  </div>
+                  <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-semibold flex items-center gap-1.5">
+                    <span>₹{slide.price}</span>
+                    <span className="text-[10px] text-emerald-500">In Stock</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Licious-Style 4-Point Trust Ribbon */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/70 text-[#d11243] flex items-center justify-center shrink-0">
+      {/* 4-Point Brand Trust Ribbon with Reusable Box & Cold-Chain Guarantees */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border border-neutral-200/90 dark:border-neutral-800 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/70 text-[#d11243] flex items-center justify-center shrink-0">
             <Clock className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">90-Min Express</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Live chilled courier</div>
+            <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">90-Min Hyperlocal</div>
+            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Live chilled dispatch</div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/70 text-blue-600 flex items-center justify-center shrink-0">
-            <ThermometerSnowflake className="w-4 h-4" />
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border border-neutral-200/90 dark:border-neutral-800 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-950/70 text-cyan-600 flex items-center justify-center shrink-0">
+            <Snowflake className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">0°C to 4°C Maintained</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Never frozen freshness</div>
+            <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">0°C to 4°C Chilled</div>
+            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Never frozen, sealed tight</div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-3.5 border border-neutral-200/90 dark:border-neutral-800 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">150+ Safety Checks</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Chemical & antibiotic-free</div>
+            <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">150+ Safety Audits</div>
+            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">Antibiotic & formalin free</div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/70 text-amber-600 flex items-center justify-center shrink-0">
+        <button
+          type="button"
+          onClick={onNavigateToReturns}
+          className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-2xl p-3.5 border border-neutral-200/90 dark:border-neutral-800 flex items-center gap-3 shadow-2xs text-left cursor-pointer transition"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/70 text-amber-600 flex items-center justify-center shrink-0">
             <Package className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Insulated Chill Box</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Free food-grade pack</div>
+            <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">ThermalVault™ Box</div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">₹0 Deposit • Free Return</div>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );
