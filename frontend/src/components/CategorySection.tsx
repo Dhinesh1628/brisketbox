@@ -106,10 +106,10 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                 className="flex flex-col items-center flex-1 min-w-[85px] sm:min-w-[100px] cursor-pointer group text-center select-none transition-transform focus:outline-none"
               >
                 {/* Circular Platter Plate Container */}
-                <div className="relative">
+                <div className="relative pt-2.5">
                   {/* Floating Badge (e.g. "NEW", "POPULAR") */}
                   {cat.badge && (
-                    <span className={`absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-xs pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-10 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md border-2 border-white dark:border-slate-900 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
                       {cat.badge}
                     </span>
                   )}
