@@ -611,8 +611,14 @@ class Database {
   }
 
   save() {
-    if (isProd || !DATA_FILE || process.env.NODE_ENV === 'test') {
-      return; // Never write JSON documents in production or test runs
+    if (
+      isProd ||
+      !DATA_FILE ||
+      process.env.NODE_ENV === 'test' ||
+      process.env.CI ||
+      process.argv.some(arg => typeof arg === 'string' && (arg.includes('test') || arg.includes('check')))
+    ) {
+      return; // Never write JSON documents in production, CI, or test runs
     }
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');

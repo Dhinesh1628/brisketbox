@@ -2,13 +2,15 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import jwt from 'jsonwebtoken';
 
-const binaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
+const localBinaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
+const systemBinary = process.env.MONGOMS_SYSTEM_BINARY || (fs.existsSync(localBinaryPath) ? localBinaryPath : undefined);
 const JWT_SECRET = 'test_jwt_secret_audit_hardening_key_32bytes_long!';
 const WEBHOOK_SECRET = 'test_webhook_secret_key_12345';
 const PORT_A = 7081;
@@ -65,7 +67,7 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
     console.log('[Test Setup] Starting MongoMemoryReplSet...');
     replSet = await MongoMemoryReplSet.create({
       replSet: { count: 1, storageEngine: 'wiredTiger' },
-      binary: { systemBinary: binaryPath }
+      binary: systemBinary ? { systemBinary } : {}
     });
     mongoUri = replSet.getUri();
     console.log('[Test Setup] ReplSet running at:', mongoUri);

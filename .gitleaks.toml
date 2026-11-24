@@ -1,0 +1,26 @@
+# Gitleaks Configuration for BrisketBox CI
+title = "BrisketBox Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for explicit mock/test fixtures and fake placeholder credentials"
+regexes = [
+  '''(?i)test_jwt_secret''',
+  '''(?i)ci_test_fake_jwt_secret''',
+  '''(?i)ci_fake_''',
+  '''(?i)rzp_test_placeholder''',
+  '''(?i)rzp_test_ci''',
+  '''(?i)test_secret_placeholder''',
+  '''(?i)test_webhook_secret''',
+  '''(?i)fake_test_''',
+  '''(?i)mock_secret''',
+  '''(?i)mockRazorpayBootstrap''',
+  '''(?i)dummy_token'''
+]
+paths = [
+  '''backend/tests/helpers/mockRazorpayBootstrap\.js''',
+  '''backend/tests/.*\.test\.js''',
+  '''\.gitleaks\.toml'''
+]

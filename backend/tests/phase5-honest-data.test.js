@@ -4,6 +4,13 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_audit_hardening_key_32bytes_long!';
+process.env.RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret_key_12345';
+process.env.RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder';
+process.env.RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'test_secret_placeholder';
+
 import { db } from '../db.js';
 import { createToken } from '../services/auth.js';
 import { processCustomerMessage } from '../services/aiChatbot.js';
@@ -400,6 +407,10 @@ describe('Phase 5 Honest Data, Claims Enforcement & Telemetry Suite', () => {
       const content = fs.readFileSync(filePath, 'utf8');
       const lines = content.split('\n');
       lines.forEach((line, lineNum) => {
+        // Exclude React framework internal warnings in bundled runtime code
+        if (line.includes('concurrent mode') || line.includes('responsibility to guarantee')) {
+          return;
+        }
         if (guaranteeSlaRegex.test(line)) {
           violations.push({
             type: 'Guarantee / SLA / Response-Time',

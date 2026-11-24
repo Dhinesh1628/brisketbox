@@ -29,8 +29,7 @@
   },
   "config": {
     "mongodbMemoryServer": {
-      "disablePostinstall": "1",
-      "systemBinary": "C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe"
+      "disablePostinstall": "1"
     }
   }
 }

@@ -4,6 +4,7 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import crypto from 'crypto';
+import fs from 'fs';
 import jwt from 'jsonwebtoken';
 
 process.env.NODE_ENV = 'test';
@@ -12,10 +13,11 @@ process.env.RAZORPAY_WEBHOOK_SECRET = 'test_webhook_secret_key_12345';
 process.env.RAZORPAY_KEY_ID = 'rzp_test_placeholder';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret_placeholder';
 
-const binaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
+const localBinaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
+const systemBinary = process.env.MONGOMS_SYSTEM_BINARY || (fs.existsSync(localBinaryPath) ? localBinaryPath : undefined);
 const replSet = await MongoMemoryReplSet.create({
   replSet: { count: 1, storageEngine: 'wiredTiger' },
-  binary: { systemBinary: binaryPath }
+  binary: systemBinary ? { systemBinary } : {}
 });
 const mongoUri = replSet.getUri();
 process.env.MONGODB_URI = mongoUri;
