@@ -10,6 +10,7 @@ import { CatalogPage } from './pages/CatalogPage';
 import { CartDrawer } from './components/CartDrawer';
 import { FloatingBottomCartBar } from './components/FloatingBottomCartBar';
 import { SEOHead } from './components/SEOHead';
+import { DEFAULT_HONEST_PRODUCTS } from './data/honestProducts';
 import type { Order, DeliveryAddress } from './types';
 
 // Lazy-load portal and admin dashboards - customers must NEVER download admin, rider, or partner code on initial visit
@@ -91,6 +92,17 @@ const MainApp: React.FC = () => {
   const [isAiButcherOpen, setIsAiButcherOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [activeProductForSeo, setActiveProductForSeo] = useState<any>(null);
+
+  useEffect(() => {
+    if (route.page === 'product' && route.productId) {
+      const match = DEFAULT_HONEST_PRODUCTS.find(p => p.id === route.productId);
+      if (match) {
+        setActiveProductForSeo(match);
+      }
+    } else if (route.page !== 'product') {
+      setActiveProductForSeo(null);
+    }
+  }, [route.page, route.productId]);
 
   // Customer Delivery Address State (saved in localStorage - null for new visitors)
   const [currentAddress, setCurrentAddress] = useState<DeliveryAddress | null>(() => {
@@ -267,13 +279,13 @@ const MainApp: React.FC = () => {
       ) : route.page === 'catalog' && selectedCategory && selectedCategory !== 'All' ? (
         <SEOHead 
           title={`Fresh ${selectedCategory} Cut Daily | BrisketBox`}
-          description={`Order farm-fresh ${selectedCategory.toLowerCase()} cut daily and delivered chilled with zero preservatives.`}
+          description={`Order fresh ${selectedCategory.toLowerCase()} cuts delivered chilled.`}
           path={`/category/${selectedCategory.toLowerCase()}`}
         />
       ) : route.page === 'tracking' ? (
         <SEOHead 
-          title="Live Cold-Chain Order Tracking | BrisketBox"
-          description="Track your fresh meat delivery in real-time with temperature telemetry and live GPS."
+          title="Order Tracking | BrisketBox"
+          description="Track your fresh meat delivery status and order updates in real-time."
           path="/tracking"
         />
       ) : (

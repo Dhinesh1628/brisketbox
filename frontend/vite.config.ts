@@ -16,51 +16,16 @@ export default defineConfig({
       resolveDependencies(_filename, deps) {
         // Customers must NEVER download or preload admin, rider, or partner code on initial visit
         return deps.filter(dep => {
-          const isPortal = dep.includes('page-admin') ||
-            dep.includes('page-rider') ||
-            dep.includes('page-partner') ||
-            dep.includes('page-customer-dashboard') ||
-            dep.includes('page-tracking') ||
-            dep.includes('page-coolers') ||
-            dep.includes('Modal');
+          const lower = dep.toLowerCase();
+          const isPortal = lower.includes('admin') ||
+            lower.includes('rider') ||
+            lower.includes('butcher') ||
+            lower.includes('partner') ||
+            lower.includes('tracking') ||
+            lower.includes('cooler') ||
+            lower.includes('modal');
           return !isPortal;
         });
-      }
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // Isolate back-office & portal dashboards so customer bundles never load them
-          if (id.includes('/pages/AdminDashboardPage')) {
-            return 'page-admin';
-          }
-          if (id.includes('/pages/RiderDeliveryPage')) {
-            return 'page-rider';
-          }
-          if (id.includes('/pages/ButcherStationPage')) {
-            return 'page-partner';
-          }
-          if (id.includes('/pages/CustomerDashboardPage')) {
-            return 'page-customer-dashboard';
-          }
-          if (id.includes('/pages/OrderTrackingPage')) {
-            return 'page-tracking';
-          }
-          if (id.includes('/pages/CoolerReturnsPage')) {
-            return 'page-coolers';
-          }
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('framer-motion')) {
-              return 'vendor-framer';
-            }
-          }
-        }
       }
     }
   },

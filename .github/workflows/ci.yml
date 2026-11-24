@@ -65,7 +65,7 @@ jobs:
         run: npm run test:backend
 
   frontend:
-    name: Frontend CI (Lint, Typecheck, Build & Audit)
+    name: Frontend CI (Lint, Typecheck, Build, Playwright & Lighthouse)
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -77,7 +77,11 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: |
+            package-lock.json
             frontend/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
 
       - name: Install frontend dependencies
         run: npm --prefix frontend ci
@@ -91,8 +95,17 @@ jobs:
       - name: Typecheck and build frontend (tsc -b && vite build)
         run: npm --prefix frontend run build
 
+      - name: Install Playwright browsers and dependencies
+        run: npx playwright install --with-deps chromium
+
       - name: Verify bundle size budget and code isolation (<= 170 KB gzipped)
         run: node scripts/check-bundle-size.js
+
+      - name: Run Playwright smoke and route tests
+        run: npx playwright test
+
+      - name: Run Lighthouse CI audits
+        run: npx lhci autorun
 
   gitleaks:
     name: Secret Scanning (Gitleaks)

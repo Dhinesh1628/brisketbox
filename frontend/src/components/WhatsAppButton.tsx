@@ -120,8 +120,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
         <div className="flex items-center justify-end">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer"
-            aria-label="Help and WhatsApp"
+            className="group min-h-[44px] flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 fill-white" />
             <span className="font-semibold text-xs tracking-wide">

@@ -64,9 +64,9 @@ GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 # Razorpay Online Payment Gateway
-RAZORPAY_KEY_ID=rzp_test_BrisketBoxDemoKey
-RAZORPAY_KEY_SECRET=BrisketBoxTestSecret2026
-RAZORPAY_WEBHOOK_SECRET=BrisketBoxWebhookSecret2026
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
 
 # Meta WhatsApp Cloud API
 WHATSAPP_TOKEN=your_meta_token_here
@@ -93,10 +93,10 @@ WHATSAPP_VERIFY_TOKEN=brisketbox_whatsapp_verify_2026
 
 ## 4. Default Seed Accounts for Testing
 
-| Role | Username / Identifier | Password | Access Rights |
-|:---|:---|:---|:---|
-| **Customer** | `pooja.sundaram@gmail.com` (or mobile `9876543210`) | `customer123` | Storefront catalog, checkout, cart, active order tracking, cooler box return. |
-| **Admin** | `ops@brisketbox.in` (legacy `ops@sagarfresh.in` supported) | `admin123` | Operations dashboard, cooler fleet management, dispatch orders, deposit refunds. |
+| Role | Username / Identifier | Access Rights |
+|:---|:---|:---|
+| **Customer** | `pooja.sundaram@gmail.com` (or mobile `9876543210`) | Storefront catalog, checkout, cart, active order tracking, cooler box return. |
+| **Admin** | `ops@brisketbox.in` (legacy `ops@sagarfresh.in` supported) | Operations dashboard, cooler fleet management, dispatch orders, deposit refunds. |
 
 ---
 

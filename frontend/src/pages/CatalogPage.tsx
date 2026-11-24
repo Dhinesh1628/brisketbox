@@ -1,3 +1,4 @@
+import { DEFAULT_HONEST_PRODUCTS } from '../data/honestProducts';
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
   Eye, Plus, Minus, Zap, ShieldCheck, Heart, ArrowUpDown, Filter, 
@@ -51,7 +52,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   onProductInspected,
   onProductClosed
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(DEFAULT_HONEST_PRODUCTS);
   const [loading, setLoading] = useState(true);
   const [localCategory, setLocalCategory] = useState('All');
   const selectedCategory = propCategory ?? localCategory;
@@ -381,7 +382,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     >
                       <div className="truncate">{opt.weight}</div>
                       {opt.badge && (
-                        <div className="text-[8px] font-black uppercase text-amber-600 dark:text-amber-400 truncate mt-0.5">
+                        <div className="text-[8px] font-black uppercase text-amber-800 dark:text-amber-300 truncate mt-0.5">
                           {opt.badge}
                         </div>
                       )}
@@ -402,9 +403,6 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               <div className="flex items-center gap-1 mt-0.5">
                 <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-300">
                   {currentOption.discountPercent}% OFF
-                </span>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">
-                  • Save ₹{currentOption.savings}
                 </span>
               </div>
             </div>
@@ -521,7 +519,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
           <button
             onClick={onNavigateToReturns}
-            className="w-full md:w-auto px-3.5 py-2 rounded-xl bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold cursor-pointer shrink-0 transition shadow-xs flex items-center justify-center gap-1.5"
+            className="w-full md:w-auto px-4 py-2 min-h-[44px] rounded-xl bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold cursor-pointer shrink-0 transition shadow-xs flex items-center justify-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
             <span>Eco Box Packaging</span>
@@ -538,7 +536,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <button
               key={chip.term}
               onClick={() => onSetSearchQuery?.(chip.term)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition border ${
+              className={`px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition border ${
                 searchQuery.toLowerCase() === chip.term.toLowerCase()
                   ? 'bg-rose-50 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-400 border-[#d11243]'
                   : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-800 hover:border-gray-400'
@@ -561,7 +559,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             </div>
             <button
               onClick={() => onSetSearchQuery?.('')}
-              className="flex items-center gap-1 text-[#d11243] hover:text-[#b80f3b] font-bold cursor-pointer shrink-0 ml-2"
+              className="min-h-[44px] px-2 flex items-center gap-1 text-[#d11243] hover:text-[#b80f3b] font-bold cursor-pointer shrink-0 ml-2"
             >
               <X className="w-3.5 h-3.5" />
               <span>Clear</span>
@@ -583,7 +581,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               <button
                 key={b.id}
                 onClick={() => setPriceBudget(b.id as any)}
-                className={`px-2.5 sm:px-3 py-1 rounded-xl font-bold text-[11px] sm:text-xs cursor-pointer transition whitespace-nowrap ${
+                className={`px-3 py-2 min-h-[44px] inline-flex items-center rounded-xl font-bold text-[11px] sm:text-xs cursor-pointer transition whitespace-nowrap ${
                   priceBudget === b.id
                     ? 'bg-[#d11243] text-white shadow-xs'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
@@ -643,7 +641,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             {searchQuery && (
               <button
                 onClick={() => onSetSearchQuery?.('')}
-                className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-4 py-2 min-h-[44px] bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Show All Fresh Cuts</span>
@@ -651,7 +649,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             )}
             <button
               onClick={() => setSelectedCategory('All')}
-              className="px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition cursor-pointer"
+              className="px-4 py-2 min-h-[44px] bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition flex items-center cursor-pointer"
             >
               Reset Category
             </button>
@@ -711,7 +709,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>Browse All</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -744,7 +742,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>View More</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -777,13 +775,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   navigator.clipboard?.writeText('BRISKET20');
                   showToast('Coupon code "BRISKET20" copied to clipboard!');
                 }}
-                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 min-h-[44px] flex items-center justify-center rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
               >
                 Copy Code: BRISKET20
               </button>
               <button
                 onClick={handleScrollToCatalog}
-                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-black/40 hover:bg-black/60 text-white font-bold text-xs ring-1 ring-white/20 transition cursor-pointer"
+                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 min-h-[44px] flex items-center justify-center rounded-2xl bg-black/40 hover:bg-black/60 text-white font-bold text-xs ring-1 ring-white/20 transition cursor-pointer"
               >
                 Shop Now →
               </button>
@@ -811,7 +809,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>View Ratings</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -844,7 +842,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>See Selection Details</span>
                 <ArrowRight className="w-3.5 h-3.5" />

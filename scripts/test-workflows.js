@@ -9,7 +9,7 @@ async function runTests() {
   const customerEmailLogin = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'pooja.sundaram@gmail.com', password: 'customer123' })
+    body: JSON.stringify({ email: 'pooja.sundaram@gmail.com', password: process.env.TEST_PASSWORD || "" })
   }).then(r => r.json());
 
   if (!customerEmailLogin.token) {
@@ -23,7 +23,7 @@ async function runTests() {
   const customerPhoneLogin = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: '9876543210', password: 'customer123' })
+    body: JSON.stringify({ email: '9876543210', password: process.env.TEST_PASSWORD || "" })
   }).then(r => r.json());
 
   if (!customerPhoneLogin.token) {
@@ -36,7 +36,7 @@ async function runTests() {
   const adminLogin = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ops@brisketbox.in', password: 'admin123' })
+    body: JSON.stringify({ email: 'ops@brisketbox.in', password: process.env.TEST_PASSWORD || "" })
   }).then(r => r.json());
 
   if (!adminLogin.token || adminLogin.user.role !== 'admin') {

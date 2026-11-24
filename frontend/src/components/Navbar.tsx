@@ -621,7 +621,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     if (user.role !== 'admin') {
-      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an admin account (ops@brisketbox.in / admin123).');
+      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an authorized admin account.');
       onOpenAuth('admin');
       return;
     }
@@ -904,7 +904,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Dark / Light Theme Toggle: ALWAYS VISIBLE ON NAVBAR */}
             <button
               onClick={toggleTheme}
-              className="h-8 sm:h-10 w-8 sm:w-10 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:border-[#d11243] hover:shadow-[0_0_15px_rgba(225,29,67,0.25)] transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:border-[#d11243] hover:shadow-[0_0_15px_rgba(225,29,67,0.25)] transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
               title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle theme"
             >
@@ -1128,7 +1128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="sm:hidden px-3 py-1.5 bg-gray-50/90 dark:bg-slate-900/90 border-b border-gray-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
         <button
           onClick={onOpenLocationModal}
-          className="flex items-center gap-1.5 text-left min-w-0 flex-1 cursor-pointer py-0.5 active:opacity-75 transition-opacity"
+          className="flex items-center gap-1.5 text-left min-w-0 flex-1 min-h-[44px] cursor-pointer py-0.5 active:opacity-75 transition-opacity"
           type="button"
           title="Click to detect or change delivery address"
         >
@@ -1139,7 +1139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-extrabold text-gray-900 dark:text-white text-xs truncate">
               Delivering to {getLocationHeading()}
             </span>
-            <span className="text-gray-400 dark:text-gray-500 text-[10px] truncate max-w-[110px]">
+            <span className="text-gray-600 dark:text-gray-300 text-[10px] truncate max-w-[110px]">
               {getLocationSubtitle()}
             </span>
             <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
@@ -1170,15 +1170,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               }
             }}
             placeholder={isSearchFocused ? 'Search chicken, mutton, or fish...' : searchPlaceholders[placeholderIndex]}
-            className="w-full h-9 pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#d11243]"
+            className="w-full min-h-[44px] pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#d11243]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              aria-label="Clear search input"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>

@@ -142,7 +142,7 @@ const HERO_SLIDES: BannerSlide[] = [
     shortCategory: 'Sea Prawns',
     title: 'Jumbo Sea Prawns (Tail-On)',
     shortTitle: 'Jumbo Sea Prawns',
-    subtitle: 'De-veined Cleaned Catch • Zero Preservatives',
+    subtitle: 'De-veined Cleaned Catch • Ready to Cook',
     description: 'Plump prawns carefully deveined with the tail preserved for maximum caramelization. Pristine snap and sweet ocean finish for garlic butter sautés.',
     price: 599,
     mrp: 679,
@@ -363,7 +363,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                       ? 'bg-emerald-600 text-white'
                       : 'bg-[#d11243] hover:bg-[#b80f3b] text-white hover:shadow-rose-900/40 active:scale-95'
                   }`}
-                  aria-label="Add featured cut to cart"
                 >
                   {addedCutId === currentSlide.id ? (
                     <>
@@ -382,7 +381,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   type="button"
                   onClick={onExploreCuts}
                   className="min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/15 backdrop-blur-md cursor-pointer transition flex items-center justify-center focus-visible:ring-2 focus-visible:ring-white"
-                  aria-label="View all fresh cuts"
                 >
                   View All Cuts
                 </button>
@@ -423,7 +421,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         ? 'bg-[#d11243] text-white'
                         : 'text-neutral-300 hover:text-white'
                     }`}
-                    aria-label="View raw meat cut"
                   >
                     <Snowflake className="w-3.5 h-3.5" />
                     <span>Raw Cut</span>
@@ -437,7 +434,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         ? 'bg-amber-600 text-white'
                         : 'text-neutral-300 hover:text-white'
                     }`}
-                    aria-label="View cooked culinary dish"
                   >
                     <Flame className="w-3.5 h-3.5 text-amber-300" />
                     <span>Cooked Dish</span>
@@ -485,18 +481,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           type="button"
           onClick={handlePrev}
           aria-label="Previous culinary cut"
-          className="absolute left-2 sm:left-3.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
+          className="absolute left-2 sm:left-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
 
         <button
           type="button"
           onClick={handleNext}
           aria-label="Next culinary cut"
-          className="absolute right-2 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
+          className="absolute right-2 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronRight className="w-5 h-5" />
         </button>
 
         {/* DOCKED Bento Timeline Navigator - Seamlessly integrated at bottom of hero card */}

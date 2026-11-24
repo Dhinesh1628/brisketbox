@@ -286,6 +286,7 @@ describe('Phase 5 Honest Data, Claims Enforcement & Telemetry Suite', () => {
       try {
         execSync('npm run build', {
           cwd: path.join(projectRoot, 'frontend'),
+          shell: true,
           stdio: 'pipe'
         });
       } catch (err) {
@@ -559,6 +560,78 @@ describe('Phase 5 Honest Data, Claims Enforcement & Telemetry Suite', () => {
       violations.length,
       0,
       `Chatbot replies contained banned phrases:\n${violations.map(v => ` - [${v.phrase}] on prompt "${v.prompt}"`).join('\n')}`
+    );
+  });
+
+  it('11. Backend product data and model defaults do not contain banned claims', async () => {
+    const projectRoot = path.resolve('.');
+    const claimsPath = path.join(projectRoot, 'docs/CLAIMS_TO_CONFIRM.md');
+    const approvedPath = path.join(projectRoot, 'docs/APPROVED_CLAIMS.md');
+
+    const claimsText = fs.readFileSync(claimsPath, 'utf8');
+    const approvedText = fs.readFileSync(approvedPath, 'utf8');
+
+    const rawBanned = [];
+    const backtickMatches = claimsText.match(/`([^`]+)`/g) || [];
+    for (const match of backtickMatches) {
+      const phrase = match.slice(1, -1).trim();
+      if (phrase.length >= 3 && !phrase.startsWith('/') && !phrase.endsWith('.js') && !phrase.endsWith('.tsx') && !phrase.endsWith('.ts')) {
+        rawBanned.push(phrase);
+      }
+    }
+
+    const approvedSet = new Set();
+    const approvedMatches = approvedText.match(/"([^"]+)"/g) || [];
+    for (const match of approvedMatches) {
+      approvedSet.add(match.slice(1, -1).trim().toLowerCase());
+    }
+
+    const activeBannedPhrases = Array.from(new Set(rawBanned)).filter(
+      phrase => !approvedSet.has(phrase.toLowerCase())
+    );
+
+    // 1. Scan backend/models/Product.js
+    const productModelPath = path.join(projectRoot, 'backend/models/Product.js');
+    assert.ok(fs.existsSync(productModelPath), 'Product model must exist');
+    const productModelText = fs.readFileSync(productModelPath, 'utf8');
+
+    const violations = [];
+    for (const phrase of activeBannedPhrases) {
+      if (productModelText.toLowerCase().includes(phrase.toLowerCase())) {
+        violations.push({ source: 'backend/models/Product.js', phrase });
+      }
+    }
+
+    // 2. Scan backend/data.json
+    const dataJsonPath = path.join(projectRoot, 'backend/data.json');
+    if (fs.existsSync(dataJsonPath)) {
+      const dataJson = JSON.parse(fs.readFileSync(dataJsonPath, 'utf8'));
+      const products = dataJson.products || [];
+      for (const prod of products) {
+        const textToScan = `${prod.name} ${prod.description || ''} ${prod.eta || ''} ${prod.origin || ''} ${prod.chillingMethod || ''} ${prod.catchDate || ''}`;
+        for (const phrase of activeBannedPhrases) {
+          if (textToScan.toLowerCase().includes(phrase.toLowerCase())) {
+            violations.push({ source: `backend/data.json (prod: ${prod.id})`, phrase });
+          }
+        }
+      }
+    }
+
+    // 3. Scan database products
+    const dbProducts = db.get('products') || db.data.products || [];
+    for (const prod of dbProducts) {
+      const textToScan = `${prod.name} ${prod.description || ''} ${prod.eta || ''} ${prod.origin || ''} ${prod.chillingMethod || ''} ${prod.catchDate || ''}`;
+      for (const phrase of activeBannedPhrases) {
+        if (textToScan.toLowerCase().includes(phrase.toLowerCase())) {
+          violations.push({ source: `backend/db.js (prod: ${prod.id})`, phrase });
+        }
+      }
+    }
+
+    assert.strictEqual(
+      violations.length,
+      0,
+      `Backend product data or model defaults contained banned claims:\n${violations.map(v => ` - [${v.phrase}] in ${v.source}`).join('\n')}`
     );
   });
 });

@@ -47,7 +47,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
     {
       code: 'MEAT100',
       title: 'Flat ₹100 OFF',
-      desc: 'On orders above ₹499. Save ₹100 instantly.',
+      desc: 'On orders above ₹499. Get ₹100 off.',
       minOrder: 499,
       badge: 'Bestseller'
     },
@@ -227,7 +227,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                           )}
                           {savings > 0 && (
                             <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                              Save ₹{savings} vs market
+                              Discount: ₹{savings}
                             </div>
                           )}
                         </div>

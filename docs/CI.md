@@ -28,7 +28,7 @@ BrisketBox uses a comprehensive GitHub Actions CI pipeline and local pre-flight 
 
 ### C. Secret Scanning (`gitleaks`)
 * **Gitleaks Action**: Scans git commit history and diffs on every push using `.gitleaks.toml`.
-* **Strict Allowlist**: Permits only explicitly documented fake mock placeholders (e.g. `rzp_test_placeholder`, `ci_fake_jwt_secret`). Any real API keys, private certificates, or unapproved tokens fail the workflow.
+* **Strict Allowlist**: Permits only explicitly documented fake mock placeholders (e.g. `ci_fake_razorpay_key_placeholder`, `ci_fake_jwt_secret`). Any real API keys, private certificates, or unapproved tokens fail the workflow.
 
 ### D. Automated Dependency Maintenance (`dependabot`)
 * **Weekly Automated Updates (`.github/dependabot.yml`)**:

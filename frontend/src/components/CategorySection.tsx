@@ -85,7 +85,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
 
         <button
           onClick={onViewAllSpecs}
-          className="text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
+          className="min-h-[44px] px-2 text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
         >
           <span>View All</span>
           <ArrowRight className="w-3.5 h-3.5" />

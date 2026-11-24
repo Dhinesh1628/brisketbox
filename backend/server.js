@@ -488,7 +488,7 @@ app.post('/api/products', authenticate, requireAdmin, async (req, res) => {
     origin: origin || 'Direct Sourcing',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 25,
-    image: image || '/images/products/prod_1.jpg',
+    image: image || '/images/products/prod_1.webp',
     sealed: true,
     inStock: true
   };
@@ -1116,8 +1116,8 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), requireA
     origin: origin || 'Direct Sourcing',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 30,
-    image: image || '/images/products/prod_1.jpg',
-    imageUrl: image || '/images/products/prod_1.jpg',
+    image: image || '/images/products/prod_1.webp',
+    imageUrl: image || '/images/products/prod_1.webp',
     sealed: true,
     inStock: true
   };

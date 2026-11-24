@@ -18,7 +18,7 @@ Authenticates an existing user with either email or 10-digit mobile number.
 ```json
 {
   "email": "pooja.sundaram@gmail.com",
-  "password": "customer123"
+  "password": "[USER_PASSWORD]"
 }
 ```
 - **Response (200 OK):**
@@ -47,7 +47,7 @@ Creates a new customer account with hashed password credentials.
   "name": "Arjun Rao",
   "email": "arjun@example.com",
   "phone": "+91 98451 22340",
-  "password": "securePassword123",
+  "password": "[NEW_SECURE_PASSWORD]",
   "address": "Flat 301, Brigade Metropolis, Whitefield, Bengaluru - 560048"
 }
 ```

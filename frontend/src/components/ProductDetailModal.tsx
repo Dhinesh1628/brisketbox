@@ -210,6 +210,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="product-modal-title"
+        aria-label={product.name}
         tabIndex={-1}
         className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-gray-900 dark:text-gray-100 z-10 max-h-[92vh] flex flex-col transition-colors focus:outline-none"
       >
@@ -256,7 +257,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedImageIndex(0)}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-h-[44px] py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     selectedImageIndex === 0
                       ? 'bg-white dark:bg-slate-900 text-cyan-700 dark:text-cyan-400 shadow-sm border border-gray-200/80 dark:border-slate-700'
                       : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -268,7 +269,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedImageIndex(1)}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-h-[44px] py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     selectedImageIndex === 1
                       ? 'bg-amber-500 text-white shadow-sm'
                       : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -285,7 +286,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   alt={product.name}
                   className="w-full h-full object-cover transition duration-300" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `/images/products/${product.id}.webp`;
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('placeholder.webp')) {
+                      target.src = '/images/placeholder.webp';
+                    }
                   }}
                 />
 
@@ -316,7 +320,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <div className="absolute bottom-3 left-3 bg-black/80 backdrop-blur-xs text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2">
                     <span>Net: {product.netWeight}</span>
                     {product.grossWeight && (
-                      <span className="text-gray-400">| Gross: {product.grossWeight}</span>
+                      <span className="text-gray-500 dark:text-gray-400">| Gross: {product.grossWeight}</span>
                     )}
                   </div>
                 )}
@@ -339,7 +343,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       alt="" 
                       className="w-full h-full object-cover" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `/images/products/${product.id}.webp`;
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes('placeholder.webp')) {
+                          target.src = '/images/placeholder.webp';
+                        }
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold">
@@ -392,7 +399,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               
               {/* Title & Price Header */}
               <div>
-                <h1 className="text-xl sm:text-2xl font-black text-gray-955 dark:text-white leading-tight">
+                <h1 id="product-modal-title" className="text-xl sm:text-2xl font-black text-gray-955 dark:text-white leading-tight">
                   {product.name}
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
@@ -401,22 +408,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                 <div className="mt-3 flex flex-wrap items-baseline gap-2.5 sm:gap-3">
                   <span className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white">₹{activeWeightOption.price}</span>
-                  <span className="text-sm text-gray-400 line-through">₹{activeWeightOption.mrp}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 line-through">₹{activeWeightOption.mrp}</span>
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">/ {activeWeightOption.weight}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 text-xs font-black border border-emerald-200 dark:border-emerald-800">
-                    Save ₹{activeWeightOption.savings} ({activeWeightOption.discountPercent}% OFF)
-                  </span>
-                </div>
-
-                {/* Daily Market Rate Notice Banner */}
-                <div className="mt-2.5 flex items-center gap-2 p-2 rounded-xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-600 dark:text-gray-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                  <span className="font-bold text-gray-900 dark:text-white">Daily Market Rate:</span>
-                  <span>Direct pricing updated daily.</span>
+                  {activeWeightOption.discountPercent > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 text-xs font-black border border-emerald-200 dark:border-emerald-800">
+                      {activeWeightOption.discountPercent}% OFF
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Portion, Origin & Chilling Specs Strip */}
+              {/* Portion & Storage Specs Strip */}
               <div className="grid grid-cols-3 gap-2.5 bg-gray-50 dark:bg-slate-800/80 p-3 rounded-xl border border-gray-100 dark:border-slate-700 text-center">
                 <div className="p-1">
                   <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Portion</span>
@@ -424,14 +426,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">{activeWeightOption.serves || product.serves || 'Serves 2-3'}</span>
                 </div>
                 <div className="p-1 border-x border-gray-200 dark:border-slate-700">
-                  <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Quality</span>
-                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block truncate">Daily Fresh</span>
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Cleaned cut</span>
+                  <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Condition</span>
+                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block truncate">Chilled</span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Ready to cook</span>
                 </div>
                 <div className="p-1">
                   <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Storage</span>
-                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block">Chilled</span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Keep Refrigerated</span>
+                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block">Keep Refrigerated</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Cold-chain delivery</span>
                 </div>
               </div>
 
@@ -445,10 +447,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <button 
                     type="button"
                     onClick={() => setShowWeightExplanation(!showWeightExplanation)}
-                    className="text-[11px] font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-0.5"
+                    className="min-h-[44px] inline-flex items-center text-[11px] font-bold text-[#d11243] dark:text-rose-400 hover:underline gap-0.5"
                   >
                     <span>{showWeightExplanation ? 'Hide info' : 'Gross vs Net?'}</span>
-                    <HelpCircle className="w-3 h-3" />
+                    <HelpCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="mt-1 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-3">
@@ -458,7 +460,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
                 {showWeightExplanation && (
                   <p className="mt-2 text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed border-t border-amber-200 dark:border-amber-800/60 pt-2">
-                    In local markets, you pay for raw weight before cleaning. At BrisketBox, we clean and trim off unwanted fat, skin, and waste before packing, so you only pay for meat you can actually cook and enjoy.
+                    Net weight is the edible meat portion remaining after dressing, descaling and trimming.
                   </p>
                 )}
               </div>
@@ -469,9 +471,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <label className="text-xs font-extrabold text-gray-900 dark:text-white tracking-wide uppercase flex items-center gap-1.5">
                     <span>1. Choose Pack Size:</span>
                   </label>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                    Below Local Market Price
-                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -503,12 +502,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                         <div className="mt-1 flex items-baseline gap-1.5">
                           <span className="font-extrabold text-sm text-gray-900 dark:text-white">₹{opt.price}</span>
-                          <span className="text-[10px] text-gray-400 line-through">₹{opt.mrp}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 line-through">₹{opt.mrp}</span>
                         </div>
 
-                        <div className="mt-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
-                          Save ₹{opt.savings} ({opt.discountPercent}% OFF)
-                        </div>
+                        {opt.discountPercent > 0 && (
+                          <div className="mt-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                            {opt.discountPercent}% OFF
+                          </div>
+                        )}
 
                         <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-slate-700/60 text-[10px] text-gray-500 dark:text-gray-400">
                           Net: {opt.netWeight} • {opt.serves}
@@ -571,8 +572,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       </div>
                     )}
                     <div>
-                      <h4 className="text-xs font-bold text-gray-900 dark:text-white">Customer Reviews & Ratings</h4>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      <h2 className="text-xs font-bold text-gray-900 dark:text-white">Customer Reviews & Ratings</h2>
+                      <span className="text-[10px] text-gray-600 dark:text-gray-300">
                         {reviews.length > 0
                           ? `${reviews.length} verified customer review${reviews.length === 1 ? '' : 's'}`
                           : 'No reviews yet. Be the first to review!'}
@@ -583,7 +584,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowReviewForm(!showReviewForm)}
-                    className="px-3.5 py-1.5 rounded-lg bg-gray-900 dark:bg-rose-600 hover:bg-black dark:hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer self-start sm:self-auto shadow-xs"
+                    className="px-3.5 py-1.5 min-h-[44px] min-w-[44px] rounded-lg bg-gray-900 dark:bg-rose-600 hover:bg-black dark:hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer self-start sm:self-auto shadow-xs"
                   >
                     <Star className="w-3.5 h-3.5" />
                     <span>{showReviewForm ? 'Close Rating Form' : 'Rate This Product'}</span>
@@ -732,10 +733,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <span className="text-emerald-700 dark:text-emerald-400 font-bold">
                 Cut: {selectedStyle}
               </span>
-              <span className="text-gray-400">•</span>
-              <span className="text-gray-500 dark:text-gray-400 font-medium">
-                Save ₹{activeWeightOption.savings * quantity} vs market
-              </span>
+              {activeWeightOption.discountPercent > 0 && (
+                <>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                    {activeWeightOption.discountPercent}% OFF
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -745,17 +750,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 transition"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Decrease quantity"
               >
-                <Minus className="w-3.5 h-3.5" />
+                <Minus className="w-4 h-4" />
               </button>
               <span className="w-10 text-center font-black text-sm text-gray-950 dark:text-white">{quantity}</span>
               <button
                 type="button"
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 transition"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Increase quantity"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
               </button>
             </div>
 
@@ -763,7 +770,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex-1 sm:flex-none px-6 py-3 bg-[#d11243] hover:bg-[#b80f3b] text-white font-extrabold text-sm rounded-xl cursor-pointer shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 card-light-hover"
+              className="flex-1 sm:flex-none min-h-[44px] px-6 py-3 bg-[#d11243] hover:bg-[#b80f3b] text-white font-extrabold text-sm rounded-xl cursor-pointer shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 card-light-hover"
             >
               <span>Add to Cart</span>
               <ChevronRight className="w-4 h-4" />

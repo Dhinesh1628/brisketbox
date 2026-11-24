@@ -93,15 +93,6 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
         }
       };
 
-      // Strict requirement: No ratings or reviews unless real reviews exist
-      if (product.reviewsCount && product.reviewsCount > 0 && product.rating && product.rating > 0) {
-        schema.aggregateRating = {
-          '@type': 'AggregateRating',
-          ratingValue: product.rating,
-          reviewCount: product.reviewsCount
-        };
-      }
-
       script.textContent = JSON.stringify(schema);
       document.head.appendChild(script);
     }

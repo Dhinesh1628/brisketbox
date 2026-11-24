@@ -82,7 +82,7 @@ export function getProductVisual(productId: string, fallbackRaw?: string): Produ
     rawImage: fallbackRaw || `/images/products/${productId}.webp`,
     cookedImage: '/images/products/cooked_surmai_tawa_fry.webp',
     cookedDishName: 'Chef Special Preparation',
-    cookedDescription: 'Farm-fresh cut ready for your favorite home-cooked recipe.',
+    cookedDescription: 'Fresh cut ready for your favorite home-cooked recipe.',
     cookingTime: '15 mins',
     flavorProfile: ['Fresh', 'Tender']
   };

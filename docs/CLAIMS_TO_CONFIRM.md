@@ -62,6 +62,13 @@ The following exact phrases are pending confirmation and are banned from all cus
 - `Malnad Organic Grazing Highlands`
 - `Coimbatore Bio-Secured Poultry Farm`
 - `Telangana Farm Verified Batch`
+- `zero preservatives`
+- `farm-fresh`
+- `live GPS`
+- `temperature telemetry`
+- `Today in 90 mins`
+- `Save ₹`
+- `vs market`
 
 ---
 

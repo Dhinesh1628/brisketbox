@@ -1,86 +1,144 @@
-import fs from 'fs';
-import path from 'path';
-import zlib from 'zlib';
+import { spawn } from 'node:child_process';
+import { chromium } from 'playwright';
+import zlib from 'node:zlib';
+import http from 'node:http';
 
-const DIST_DIR = path.resolve('frontend/dist');
-const INDEX_HTML = path.join(DIST_DIR, 'index.html');
 const BUDGET_KB = 170;
 const BUDGET_BYTES = BUDGET_KB * 1024;
+const BASE_URL = 'http://127.0.0.1:4173';
+const ROUTES = ['/', '/catalog', '/product/prod_1'];
 
-console.log('='.repeat(60));
-console.log('  BRISKETBOX HOMEPAGE BUNDLE SIZE & ISOLATION CHECK');
-console.log('='.repeat(60));
-
-if (!fs.existsSync(INDEX_HTML)) {
-  console.error(`❌ Build output not found at ${INDEX_HTML}. Run "npm --prefix frontend run build" first.`);
-  process.exit(1);
+function checkPortOpen(url) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      resolve(true);
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
 }
 
-const html = fs.readFileSync(INDEX_HTML, 'utf8');
+async function ensureServer() {
+  const isOpen = await checkPortOpen(BASE_URL);
+  if (isOpen) return null;
 
-// Find all entry scripts and modulepreloads in index.html
-const scriptMatches = [...html.matchAll(/src="([^"]+\.js)"/g)].map(m => m[1]);
-const preloadMatches = [...html.matchAll(/<link\s+rel="modulepreload"[^>]+href="([^"]+\.js)"/g)].map(m => m[1]);
-const allInitialJs = Array.from(new Set([...scriptMatches, ...preloadMatches]));
+  console.log('[Bundle Check] Launching preview server on port 4173...');
+  const server = spawn('npm', ['--prefix', 'frontend', 'run', 'preview', '--', '--port', '4173', '--host', '127.0.0.1'], {
+    shell: true,
+    stdio: 'ignore'
+  });
 
-console.log('\n📦 Initial Homepage JavaScript Resources:');
-
-let totalRawBytes = 0;
-let totalGzipBytes = 0;
-let forbiddenChunks = [];
-
-for (const relUrl of allInitialJs) {
-  // Normalize path from /assets/xxx.js to frontend/dist/assets/xxx.js
-  const cleanPath = relUrl.replace(/^\//, '');
-  const filePath = path.join(DIST_DIR, cleanPath);
-
-  if (!fs.existsSync(filePath)) {
-    console.warn(`  ⚠️ Referenced file not found: ${filePath}`);
-    continue;
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    if (await checkPortOpen(BASE_URL)) {
+      console.log('[Bundle Check] Preview server is ready.');
+      return server;
+    }
   }
+  throw new Error('Timeout waiting for preview server to start.');
+}
 
-  const content = fs.readFileSync(filePath);
-  const rawSize = content.length;
-  const gzipped = zlib.gzipSync(content);
-  const gzipSize = gzipped.length;
+async function main() {
+  console.log('='.repeat(65));
+  console.log('  PLAYWRIGHT RUNTIME DOWNLOAD & PORTAL ISOLATION CHECK');
+  console.log(`  Target: ${BASE_URL} | Budget: <= ${BUDGET_KB} KB gzipped per route`);
+  console.log('='.repeat(65));
 
-  totalRawBytes += rawSize;
-  totalGzipBytes += gzipSize;
+  const serverProc = await ensureServer();
+  let browser;
+  let anyFailed = false;
 
-  const fileName = path.basename(filePath);
-  console.log(`  - ${fileName.padEnd(40)} raw: ${(rawSize / 1024).toFixed(2).padStart(8)} KB | gzip: ${(gzipSize / 1024).toFixed(2).padStart(8)} KB`);
+  try {
+    browser = await chromium.launch({ headless: true });
 
-  // Verify portal isolation: admin, rider, partner, customer dashboard must never be loaded on homepage
-  if (
-    fileName.includes('page-admin') ||
-    fileName.includes('page-rider') ||
-    fileName.includes('page-partner') ||
-    fileName.includes('page-customer-dashboard')
-  ) {
-    forbiddenChunks.push(fileName);
+    for (const route of ROUTES) {
+      console.log(`\n🔍 Checking route: ${route}`);
+      const page = await browser.newPage();
+      const downloadedFiles = [];
+
+      page.on('response', async (res) => {
+        const url = res.url();
+        if (url.endsWith('.js') || url.includes('.js?')) {
+          const fileName = url.split('/').pop().split('?')[0];
+          try {
+            const buf = await res.body();
+            const rawSize = buf.length;
+            const gzipSize = zlib.gzipSync(buf).length;
+            downloadedFiles.push({ fileName, url, rawSize, gzipSize });
+          } catch {
+            // In case of abort or navigation cancel
+          }
+        }
+      });
+
+      await page.goto(`${BASE_URL}${route}`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(500);
+
+      const totalGzipBytes = downloadedFiles.reduce((acc, f) => acc + f.gzipSize, 0);
+      const totalGzipKb = totalGzipBytes / 1024;
+      const totalRawKb = downloadedFiles.reduce((acc, f) => acc + f.rawSize, 0) / 1024;
+
+      console.log(`  Downloaded JS Files (${downloadedFiles.length}):`);
+      for (const f of downloadedFiles) {
+        console.log(`    - ${f.fileName.padEnd(38)} raw: ${(f.rawSize / 1024).toFixed(2).padStart(7)} KB | gzip: ${(f.gzipSize / 1024).toFixed(2).padStart(6)} KB`);
+      }
+
+      console.log(`  Total Raw:  ${totalRawKb.toFixed(2)} KB`);
+      console.log(`  Total Gzip: ${totalGzipKb.toFixed(2)} KB (Budget: ${BUDGET_KB} KB)`);
+
+      // Check forbidden portal chunks
+      const portalViolations = downloadedFiles.filter(f => {
+        const lower = f.fileName.toLowerCase();
+        return lower.includes('admin') ||
+               lower.includes('rider') ||
+               lower.includes('partner') ||
+               lower.includes('butcher');
+      });
+
+      if (portalViolations.length > 0) {
+        console.error(`  ❌ PORTAL ISOLATION VIOLATION on ${route}:`);
+        portalViolations.forEach(v => console.error(`     - Downloaded internal portal chunk: ${v.fileName}`));
+        anyFailed = true;
+      }
+
+      if (totalGzipBytes > BUDGET_BYTES) {
+        console.error(`  ❌ BUDGET EXCEEDED on ${route}: ${totalGzipKb.toFixed(2)} KB > ${BUDGET_KB} KB`);
+        anyFailed = true;
+      }
+
+      if (portalViolations.length === 0 && totalGzipBytes <= BUDGET_BYTES) {
+        console.log(`  ✅ PASSED: ${route} (${totalGzipKb.toFixed(2)} KB gzipped, zero portal chunks)`);
+      }
+
+      await page.close();
+    }
+
+    if (anyFailed) {
+      console.error('\n❌ Playwright bundle and portal isolation check FAILED.');
+    } else {
+      console.log('\n✅ ALL ROUTES PASSED: Portal isolation & <= 170 KB gzipped budget verified.');
+    }
+  } finally {
+    if (browser) await browser.close();
+    if (serverProc) {
+      try {
+        if (process.platform === 'win32') {
+          execSync(`taskkill /pid ${serverProc.pid} /T /F`, { stdio: 'ignore' });
+        } else {
+          serverProc.kill('SIGTERM');
+        }
+      } catch {}
+    }
+    // Give OS socket a moment to release
+    await new Promise(r => setTimeout(r, 500));
   }
+  process.exit(anyFailed ? 1 : 0);
 }
 
-const totalGzipKb = totalGzipBytes / 1024;
-const totalRawKb = totalRawBytes / 1024;
-
-console.log('\n📊 Summary:');
-console.log(`  Total Homepage Raw Size:   ${totalRawKb.toFixed(2)} KB`);
-console.log(`  Total Homepage Gzip Size:  ${totalGzipKb.toFixed(2)} KB`);
-console.log(`  Performance Budget:        ${BUDGET_KB}.00 KB gzipped`);
-console.log(`  Headroom / Remaining:      ${(BUDGET_KB - totalGzipKb).toFixed(2)} KB`);
-
-if (forbiddenChunks.length > 0) {
-  console.error(`\n❌ SECURITY & PERFORMANCE VIOLATION: Customer homepage is downloading internal portal chunks:`);
-  forbiddenChunks.forEach(c => console.error(`   - ${c}`));
-  console.error('Customers must NEVER download admin, rider, or partner code.');
+main().catch(err => {
+  console.error('[Bundle Check Error]:', err);
   process.exit(1);
-}
-
-if (totalGzipBytes > BUDGET_BYTES) {
-  console.error(`\n❌ BUNDLE BUDGET EXCEEDED: ${totalGzipKb.toFixed(2)} KB exceeds budget of ${BUDGET_KB} KB gzipped by ${(totalGzipKb - BUDGET_KB).toFixed(2)} KB`);
-  process.exit(1);
-}
-
-console.log(`\n✅ PASSED: Homepage JS is ${totalGzipKb.toFixed(2)} KB gzipped (<= ${BUDGET_KB} KB budget). Portal isolation verified.`);
-console.log('='.repeat(60));
+});

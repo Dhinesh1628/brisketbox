@@ -5,14 +5,12 @@ title = "BrisketBox Gitleaks Config"
 useDefault = true
 
 [[allowlists]]
-description = "Allowlist for explicit mock/test fixtures and fake placeholder credentials"
+description = "Allowlist strictly for explicit mock/test fixtures and fake placeholder test values in tests"
 regexTarget = "line"
 paths = [
   '''(^|/)backend/tests/''',
-  '''(^|/)scripts/''',
-  '''(^|/)\.github/''',
-  '''(^|/)docs/''',
   '''\.test\.(js|ts)$''',
+  '''\.spec\.(js|ts)$''',
   '''\.gitleaks\.toml$'''
 ]
 stopWords = [
@@ -20,31 +18,21 @@ stopWords = [
   "ci_test_fake_jwt_secret",
   "ci_fake_razorpay",
   "ci_fake_webhook",
-  "rzp_test",
   "test_secret",
   "test_webhook",
   "fake_test",
   "mock_secret",
   "mockRazorpayBootstrap",
-  "dummy_token",
-  "Password#2026",
-  "StrongPass#2026",
-  "GenuinePassword#2026",
-  "Brisket#Admin2026!"
+  "dummy_token"
 ]
 regexes = [
   '''(?i)test_jwt_secret''',
   '''(?i)ci_test_fake_jwt_secret''',
   '''(?i)ci_fake_''',
-  '''(?i)rzp_test''',
   '''(?i)test_secret''',
   '''(?i)test_webhook_secret''',
   '''(?i)fake_test_''',
   '''(?i)mock_secret''',
   '''(?i)mockRazorpayBootstrap''',
-  '''(?i)dummy_token''',
-  '''(?i)Password#2026''',
-  '''(?i)StrongPass#2026''',
-  '''(?i)GenuinePassword#2026''',
-  '''(?i)Brisket#Admin2026!'''
+  '''(?i)dummy_token'''
 ]
