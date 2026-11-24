@@ -187,7 +187,8 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to initialize payment');
+      const msg = err.details ? `${err.error || 'Failed to initialize payment'} (${err.details})` : (err.error || 'Failed to initialize payment');
+      throw new Error(msg);
     }
     return res.json();
   },

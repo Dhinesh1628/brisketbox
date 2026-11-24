@@ -346,7 +346,11 @@ router.post('/create-order', async (req, res) => {
             description: 'Razorpay order creation failed; store credit released.'
           });
         }
-        return res.status(502).json({ error: 'Failed to initialize payment gateway. Please try again.' });
+        const gatewayMessage = rzpErr?.error?.description || rzpErr?.error?.message || rzpErr?.message || '';
+        return res.status(502).json({ 
+          error: 'Failed to initialize payment gateway. Please try again.',
+          ...(gatewayMessage ? { details: gatewayMessage } : {})
+        });
       }
     }
 
