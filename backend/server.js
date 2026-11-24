@@ -1472,11 +1472,11 @@ const handleOrderHandover = async (req, res) => {
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
-        // ATOMIC CLAIM: Only one request can transition orderStatus from OUT_FOR_DELIVERY / ARRIVED to DELIVERED
+        // ATOMIC CLAIM: Only one request can transition orderStatus to DELIVERED
         const claimed = await Order.findOneAndUpdate(
           {
             _id: order._id,
-            orderStatus: { $in: ['OUT_FOR_DELIVERY', 'ARRIVED'] }
+            orderStatus: { $in: ['CONFIRMED', 'PREPARING', 'QUALITY_CHECK', 'PACKED', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'ARRIVED'] }
           },
           {
             $set: {
