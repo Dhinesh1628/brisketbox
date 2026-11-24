@@ -106,6 +106,15 @@ jobs:
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        id: gitleaks
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: Report and Print Gitleaks Findings
+        if: steps.gitleaks.outcome != 'success'
+        run: |
+          echo "=== GITLEAKS FINDINGS ==="
+          find . -name "*.sarif" -exec cat {} + 2>/dev/null || true
+          exit 1
