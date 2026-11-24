@@ -41,7 +41,7 @@ jobs:
         run: npm --prefix frontend ci
 
       - name: Cache MongoDB Memory Server binary
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/mongodb-binaries
           key: ${{ runner.os }}-mongodb-binaries-${{ hashFiles('backend/package-lock.json') }}
