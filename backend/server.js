@@ -234,7 +234,7 @@ if (fs.existsSync(clientDist)) {
 // 7. Mount specialized sub-routers
 app.use('/api/payments', paymentsRouter);
 app.use('/api/whatsapp', whatsappWebhookRouter);
-app.use('/api/analytics', analyticsRouter);
+app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
 
 // Cold-chain telemetry route for IoT gateway
 app.post('/api/iot/coldchain-ping', (req, res) => {
