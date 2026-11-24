@@ -220,7 +220,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       setIsCashDepositModalOpen(false);
       setDepositAmountInput('');
       playOrderChime();
-      showNotification(`✓ Cash Deposited: ₹${res.depositedAmount} (Receipt: ${res.receiptNo})`);
+      showNotification(`✓ Cash Deposit Request Submitted: ₹${res.depositedAmount} (Receipt: ${res.receiptNo})`);
     } catch (err: any) {
       alert(err.message || 'Failed to deposit cash');
     }
@@ -275,7 +275,13 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await api.getRiderOrders().catch(() => api.getOrders());
+      const [data, me] = await Promise.all([
+        api.getRiderOrders().catch(() => api.getOrders()),
+        api.getCurrentUser().catch(() => null)
+      ]);
+      if (me && typeof me.cashInHand === 'number') {
+        setCashInHand(me.cashInHand);
+      }
       if (Array.isArray(data)) {
         if (data.length > orders.length && orders.length > 0) {
           playOrderChime();
