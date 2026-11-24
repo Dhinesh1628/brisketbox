@@ -22,7 +22,7 @@ export const FloatingBottomCartBar: React.FC<FloatingBottomCartBarProps> = ({
       <button
         onClick={onViewCart}
         type="button"
-        className="w-full bg-[#d11243] hover:bg-[#b80f3b] text-white px-5 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(209,18,67,0.38)] flex items-center justify-between gap-4 cursor-pointer transition active:scale-[0.98] border border-rose-400/30"
+        className="w-full bg-[#d11243] hover:bg-[#b80f3b] text-white px-5 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(209,18,67,0.38)] flex items-center justify-between gap-4 cursor-pointer transition active:scale-[0.98] border border-white/20"
       >
         {/* Left: Items Count & Subtotal */}
         <div className="flex items-center gap-3">
@@ -33,7 +33,7 @@ export const FloatingBottomCartBar: React.FC<FloatingBottomCartBarProps> = ({
             <div className="text-xs font-black tracking-wide">
               {totalItems} {totalItems === 1 ? 'ITEM' : 'ITEMS'} &nbsp;|&nbsp; ₹{subtotal}
             </div>
-            <div className="text-[10px] text-rose-100 font-medium leading-none mt-0.5">
+            <div className="text-xs text-white/90 font-medium leading-none mt-0.5">
               Delivered fresh in chilled packaging
             </div>
           </div>

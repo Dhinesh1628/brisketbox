@@ -160,7 +160,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const scheduledSlots = [
     { label: 'Morning Fresh Lot', time: '07:00 AM - 09:30 AM' },
     { label: 'Lunch Prep', time: '11:30 AM - 02:00 PM' },
-    { label: 'Evening Cook (Popular)', time: '05:30 PM - 08:00 PM' },
+    { label: 'Evening Cook', time: '05:30 PM - 08:00 PM' },
     { label: 'Late Dinner Slot', time: '08:00 PM - 10:00 PM' }
   ];
 

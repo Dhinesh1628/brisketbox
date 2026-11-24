@@ -219,7 +219,8 @@ describe('Live Security Hotfix & Access Control Suite', () => {
       'POST /api/whatsapp/webhook/whatsapp',
       'POST /api/whatsapp/chatbot/chat',
       'POST /api/contact',
-      'POST /api/iot/coldchain-ping'
+      'POST /api/iot/coldchain-ping',
+      'GET /api/coupons/active'
     ]);
 
     it('fails if any route other than the explicit public list works without login', async () => {

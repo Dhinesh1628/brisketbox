@@ -23,6 +23,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
     couponDiscount,
     applyCoupon,
     removeCoupon,
+    activeCoupons,
     total 
   } = useCart();
 
@@ -30,7 +31,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  
 
   useEffect(() => {
     if (isCartOpen) {
@@ -43,36 +43,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
   const freeThreshold = 499;
   const diffToFree = Math.max(0, freeThreshold - subtotal);
 
-  const availableCoupons = [
-    {
-      code: 'MEAT100',
-      title: 'Flat ₹100 OFF',
-      desc: 'On orders above ₹499. Get ₹100 off.',
-      minOrder: 499,
-      badge: 'Bestseller'
-    },
-    {
-      code: 'FREEDEL',
-      title: 'FREE Delivery',
-      desc: 'Waives ₹40 courier delivery fee on your box.',
-      minOrder: 0,
-      badge: 'Zero Delivery Fee'
-    },
-    {
-      code: 'FIRST20',
-      title: '20% OFF (Up to ₹120)',
-      desc: 'Welcome special on your first fresh meat order.',
-      minOrder: 399,
-      badge: 'New User'
-    },
-    {
-      code: 'FRESH50',
-      title: 'Flat ₹50 OFF',
-      desc: 'On orders above ₹249 on chicken and fish cuts.',
-      minOrder: 249,
-      badge: 'Quick Saver'
-    }
-  ];
+  // Loaded dynamically from server active coupons endpoint
+  const availableCoupons = (activeCoupons || []).map((c) => ({
+    code: c.code,
+    title: c.type === 'percentage' ? `${c.discountPercent}% OFF` : `Flat ₹${c.discount} OFF`,
+    desc: c.description || (c.minOrderValue ? `On orders above ₹${c.minOrderValue}` : 'Active promotion'),
+    minOrder: c.minOrderValue || 0,
+    badge: c.minOrderValue ? `Min ₹${c.minOrderValue}` : 'Active Offer'
+  }));
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = (codeToApply || inputCoupon).trim();
@@ -117,40 +95,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black text-gray-950 dark:text-white">My Cart</h2>
-                <span className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 text-[#d11243] dark:text-rose-400 text-[11px] font-bold border border-rose-100 dark:border-rose-900/60">
+                <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-bold border border-neutral-200 dark:border-neutral-700">
                   {items.length} {items.length === 1 ? 'item' : 'items'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
                 <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
                 <span>Express Chilled Delivery</span>
               </div>
             </div>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Swiggy Instamart Real-Time Free Delivery Progress Bar */}
-          <div className="px-4 py-3 bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-emerald-50/90 dark:from-slate-850 dark:to-slate-800 border-b border-rose-100/70 dark:border-slate-700/80 text-xs shrink-0">
+          {/* Real-Time Free Delivery Progress Bar */}
+          <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 text-xs shrink-0">
             {diffToFree > 0 ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-800 dark:text-gray-200 font-bold flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-[#d11243] shrink-0" />
-                    <span>Add items worth <strong className="text-[#d11243] dark:text-rose-400 font-black">₹{diffToFree}</strong> more to get <strong>FREE Delivery!</strong></span>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-800 dark:text-neutral-200 font-bold flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400 shrink-0" />
+                    <span>Add items worth <strong className="text-neutral-950 dark:text-white font-black">₹{diffToFree}</strong> more to get <strong>FREE Delivery!</strong></span>
                   </span>
-                  <span className="text-[10px] font-black text-gray-500 dark:text-gray-400">
+                  <span className="text-xs font-black text-neutral-500 dark:text-neutral-400">
                     {Math.min(100, Math.round((subtotal / freeThreshold) * 100))}%
                   </span>
                 </div>
-                <div className="w-full h-2 bg-gray-200/90 dark:bg-slate-700 rounded-full overflow-hidden p-0.5">
+                <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden p-0.5">
                   <div 
-                    className="h-full bg-gradient-to-r from-[#d11243] via-amber-500 to-emerald-500 rounded-full transition-all duration-500 shadow-2xs"
+                    className="h-full bg-neutral-900 dark:bg-neutral-100 rounded-full transition-all duration-500 shadow-2xs"
                     style={{ width: `${Math.min(100, Math.round((subtotal / freeThreshold) * 100))}%` }}
                   />
                 </div>
@@ -172,7 +150,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
           <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
             {items.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-gray-400 dark:text-gray-500 text-xs">
-                <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center text-[#d11243] dark:text-rose-400 mb-3">
+                <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 mb-3">
                   <Zap className="w-8 h-8" />
                 </div>
                 <p className="font-bold text-gray-900 dark:text-white text-sm">Your Cart is Empty</p>
@@ -211,22 +189,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
 
                         <div className="flex-1 min-w-0 space-y-1">
                           <h4 className="text-xs font-extrabold text-gray-950 dark:text-white truncate leading-snug">{item.product.name}</h4>
-                          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-                            <span className="font-bold text-gray-900 dark:text-gray-200">₹{itemPrice}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/70 text-[#d11243] dark:text-rose-400 font-extrabold text-[10px]">
+                          <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                            <span className="font-bold text-neutral-900 dark:text-neutral-100">₹{itemPrice}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold text-xs border border-neutral-200 dark:border-neutral-700">
                               {packWeight}
                             </span>
                             {itemMrp && itemMrp > itemPrice && (
-                              <span className="text-[10px] text-gray-400 line-through">₹{itemMrp}</span>
+                              <span className="text-xs text-neutral-600 dark:text-neutral-400 line-through">₹{itemMrp}</span>
                             )}
                           </div>
                           {item.selectedCutStyle && (
-                            <div className="inline-block px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-[10px] font-semibold">
+                            <div className="inline-block px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-semibold">
                               Cut: {item.selectedCutStyle}
                             </div>
                           )}
                           {savings > 0 && (
-                            <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                               Discount: ₹{savings}
                             </div>
                           )}
@@ -268,95 +246,97 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   })}
                 </div>
 
-                {/* Swiggy Style 1-Click Coupon Cards (No typing codes) */}
+                {/* 1-Click Server Coupons */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-extrabold text-xs text-gray-900 dark:text-white">
-                      <Tag className="w-3.5 h-3.5 text-[#d11243]" />
+                      <Tag className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
                       <span>Offers & Coupons</span>
                     </div>
                     {couponCode && (
                       <button
                         type="button"
                         onClick={handleRemoveCoupon}
-                        className="text-[11px] font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                        className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:underline cursor-pointer"
                       >
                         Remove ({couponCode})
                       </button>
                     )}
                   </div>
 
-                  {/* 1-Click Coupon Cards List */}
-                  <div className="space-y-2">
-                    {availableCoupons.map((c) => {
-                      const isApplied = couponCode === c.code;
-                      return (
-                        <div
-                          key={c.code}
-                          className={`p-2.5 rounded-xl border transition flex items-center justify-between gap-2.5 ${
-                            isApplied
-                              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/80 shadow-2xs'
-                              : 'bg-gray-50/80 dark:bg-slate-800/80 border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-black text-xs text-gray-950 dark:text-white font-mono tracking-wide">
-                                {c.code}
-                              </span>
-                              <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/60 text-[#d11243] dark:text-rose-400 font-extrabold text-[9px]">
-                                {c.title}
-                              </span>
+                  {/* Server Coupons List */}
+                  {availableCoupons.length > 0 && (
+                    <div className="space-y-2">
+                      {availableCoupons.map((c) => {
+                        const isApplied = couponCode === c.code;
+                        return (
+                          <div
+                            key={c.code}
+                            className={`p-2.5 rounded-xl border transition flex items-center justify-between gap-2.5 ${
+                              isApplied
+                                ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/80 shadow-2xs'
+                                : 'bg-gray-50/80 dark:bg-slate-800/80 border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-black text-xs text-gray-950 dark:text-white font-mono tracking-wide">
+                                  {c.code}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-xs border border-neutral-200 dark:border-neutral-700">
+                                  {c.title}
+                                </span>
+                              </div>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 truncate">
+                                {c.desc}
+                              </p>
                             </div>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                              {c.desc}
-                            </p>
-                          </div>
 
-                          {isApplied ? (
-                            <div className="flex items-center gap-1 text-[11px] font-black text-emerald-700 dark:text-emerald-400 shrink-0">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Applied</span>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleApplyCoupon(c.code)}
-                              className="px-3 py-1 rounded-lg text-xs font-black uppercase cursor-pointer transition shrink-0 bg-white dark:bg-slate-900 border border-[#d11243] text-[#d11243] hover:bg-[#d11243] hover:text-white shadow-2xs active:scale-95"
-                            >
-                              Apply
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {isApplied ? (
+                              <div className="flex items-center gap-1 text-xs font-black text-emerald-700 dark:text-emerald-400 shrink-0">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Applied</span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleApplyCoupon(c.code)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase cursor-pointer transition shrink-0 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 active:scale-95"
+                              >
+                                Apply
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Manual Code Input Option */}
                   <div className="pt-1">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <Tag className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+                        <Tag className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" />
                         <input
                           type="text"
                           value={inputCoupon}
                           onChange={(e) => setInputCoupon(e.target.value)}
                           placeholder="Or enter coupon code"
-                          className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-[#d11243] uppercase font-bold text-gray-900 dark:text-white"
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-500 uppercase font-bold text-gray-900 dark:text-white"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleApplyCoupon()}
-                        className="px-3.5 py-1.5 bg-gray-900 dark:bg-rose-600 hover:bg-black dark:hover:bg-rose-700 text-white text-xs font-bold rounded-lg cursor-pointer transition shrink-0"
+                        className="px-3.5 py-2 bg-neutral-900 hover:bg-black dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 text-xs font-bold rounded-lg cursor-pointer transition shrink-0"
                       >
                         Apply
                       </button>
                     </div>
 
                     {couponFeedback && (
-                      <p className={`text-[11px] mt-1 font-semibold ${
-                        couponFeedback.type === 'success' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      <p className={`text-xs mt-1 font-semibold ${
+                        couponFeedback.type === 'success' ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-700 dark:text-neutral-300'
                       }`}>
                         {couponFeedback.text}
                       </p>
@@ -406,21 +386,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                     setIsCartOpen(false);
                     onCheckout();
                   }}
-                  className="py-3 px-6 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg transition active:scale-[0.98]"
+                  className="py-3 px-6 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-sm min-h-[44px] flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg transition active:scale-[0.98]"
                 >
                   <span>Continue</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-0.5 border-t border-gray-100 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs text-neutral-500 pt-0.5 border-t border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Chilled Safe Delivery</span>
                 </div>
                 <button
                   onClick={clearCart}
-                  className="hover:text-red-600 dark:hover:text-red-400 cursor-pointer text-gray-400 font-semibold text-[10px]"
+                  className="hover:text-neutral-900 dark:hover:text-white cursor-pointer text-neutral-500 font-semibold text-xs"
                 >
                   Clear Cart
                 </button>

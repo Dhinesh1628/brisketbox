@@ -167,6 +167,21 @@ export const api = {
     if (!res.ok) throw new Error('Failed to delete product');
   },
 
+  // Active Promotions
+  async getActiveCoupons(): Promise<Array<{
+    code: string;
+    description: string;
+    type: string;
+    discount: number;
+    discountPercent: number;
+    minOrderValue: number;
+    maxDiscount: number;
+  }>> {
+    const res = await fetch(`${API_BASE}/coupons/active`);
+    if (!res.ok) return [];
+    return res.json().catch(() => []);
+  },
+
   // Payments & Razorpay
   async createPaymentOrder(orderData: {
     items: { productId: string; quantity: number; selectedCutStyle?: string }[];

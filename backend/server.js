@@ -43,6 +43,7 @@ import { assignFleetRiderForOrder } from './dispatch.js';
 import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
 import analyticsRouter from './routes/analytics.js';
+import couponsRouter from './routes/coupons.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
 import crypto from 'crypto';
 import { calculateOrderPricing } from './services/pricingService.js';
@@ -235,6 +236,7 @@ if (fs.existsSync(clientDist)) {
 app.use('/api/payments', paymentsRouter);
 app.use('/api/whatsapp', whatsappWebhookRouter);
 app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
+app.use('/api/coupons', couponsRouter);
 
 // Cold-chain telemetry route for IoT gateway
 app.post('/api/iot/coldchain-ping', (req, res) => {

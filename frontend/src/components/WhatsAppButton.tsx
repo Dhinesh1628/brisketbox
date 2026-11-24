@@ -8,19 +8,24 @@ interface WhatsAppButtonProps {
   onOpenChatbot?: () => void;
   onCloseChatbot?: () => void;
   onNavigateTab?: (tab: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin') => void;
+  isCheckoutOpen?: boolean;
 }
 
 export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   isChatbotOpen: controlledIsOpen,
   onOpenChatbot,
   onCloseChatbot,
-  onNavigateTab
+  onNavigateTab,
+  isCheckoutOpen = false
 }) => {
-  const { totalItems } = useCart();
+  const { isCartOpen, totalItems } = useCart();
   const [internalChatbotOpen, setInternalChatbotOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '';
   const phoneNumber = supportPhone ? supportPhone.replace(/[^0-9]/g, '') : '';
+
+  // Rule 11: Hidden while cart or checkout is open
+  if (isCartOpen || isCheckoutOpen) return null;
 
   const isChatbotOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalChatbotOpen;
 
@@ -56,17 +61,17 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
         
         {/* Quick WhatsApp Action Menu */}
         {isMenuOpen && (
-          <div className="mb-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden text-gray-800 dark:text-gray-100 animate-in fade-in slide-in-from-bottom-3 duration-200">
-            <div className="bg-[#128C7E] text-white p-3.5 flex items-center justify-between">
+          <div className="mb-2 w-80 bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden text-neutral-800 dark:text-neutral-100 animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <div className="bg-neutral-800 dark:bg-neutral-950 text-white p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-0.5 shadow-xs">
                   <img src="/images/logo.webp" alt="BrisketBox" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h4 className="font-bold text-xs leading-tight">BrisketBox Concierge Support</h4>
-                  <div className="flex items-center gap-1 text-[10px] text-emerald-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Direct Concierge</span>
+                  <div className="flex items-center gap-1 text-xs text-neutral-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Support Online</span>
                   </div>
                 </div>
               </div>
@@ -78,37 +83,36 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
               </button>
             </div>
 
-            <div className="p-3 space-y-2 bg-gray-50 dark:bg-slate-800/80 text-xs">
+            <div className="p-3 space-y-2 bg-neutral-50 dark:bg-neutral-900/80 text-xs">
               <button
                 onClick={() => openChatbot()}
-                className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
+                className="w-full text-left p-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500 rounded-xl flex items-center justify-between group shadow-2xs transition cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <UtensilsCrossed className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <UtensilsCrossed className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                   <div>
-                    <div className="font-bold text-gray-900 dark:text-white text-[11px] flex items-center gap-1">
+                    <div className="font-bold text-neutral-900 dark:text-white text-xs flex items-center gap-1">
                       <span>Master Butcher Concierge</span>
-                      <Sparkles className="w-3 h-3 text-amber-400" />
                     </div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400">Recipes, prep advice & instant answers</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">Recipes, prep advice & instant answers</div>
                   </div>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-emerald-500" />
+                <ChevronRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200" />
               </button>
 
               {phoneNumber && (
                 <button
                   onClick={() => handleOpenWhatsAppDirect("Hello BrisketBox! I have a question about fresh cuts and orders.")}
-                  className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#128C7E] dark:hover:border-[#128C7E] rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
+                  className="w-full text-left p-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500 rounded-xl flex items-center justify-between group shadow-2xs transition cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#128C7E]" />
+                    <MessageCircle className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                     <div>
-                      <div className="font-bold text-gray-900 dark:text-white text-[11px]">Direct WhatsApp ({supportPhone})</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400">Order assistance & questions</div>
+                      <div className="font-bold text-neutral-900 dark:text-white text-xs">Direct Support ({supportPhone})</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">Order assistance & questions</div>
                     </div>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#128C7E]" />
+                  <ExternalLink className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200" />
                 </button>
               )}
 
@@ -116,13 +120,14 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
           </div>
         )}
 
-        {/* SINGLE FLOATING BUTTON */}
+        {/* SINGLE FLOATING BUTTON (Rule 11: Neutral white with grey border and dark icon) */}
         <div className="flex items-center justify-end">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="group min-h-[44px] flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            data-testid="chat-support-button"
+            className="group min-h-[44px] flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 px-4 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
-            <MessageCircle className="w-4 h-4 fill-white" />
+            <MessageCircle className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />
             <span className="font-semibold text-xs tracking-wide">
               Chat & Support
             </span>
