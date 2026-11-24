@@ -80,14 +80,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
         className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full w-full md:w-auto flex pl-0 md:pl-10">
         <div 
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
           aria-label="Shopping Cart"
           tabIndex={-1}
-          className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl flex flex-col text-gray-800 dark:text-gray-100 h-full focus:outline-none"
+          className="w-full md:w-screen md:max-w-md bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl flex flex-col text-gray-800 dark:text-gray-100 h-full focus:outline-none overflow-x-hidden"
         >
           
           {/* Header */}
@@ -139,7 +139,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>You unlocked FREE Delivery! (Saved ₹40)</span>
                 </p>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-300 dark:border-emerald-700">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-300 dark:border-emerald-700 shrink-0">
                   FREE
                 </span>
               </div>

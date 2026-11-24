@@ -9,6 +9,7 @@ interface WhatsAppButtonProps {
   onCloseChatbot?: () => void;
   onNavigateTab?: (tab: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin') => void;
   isCheckoutOpen?: boolean;
+  isProductPage?: boolean;
 }
 
 export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
@@ -16,7 +17,8 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   onOpenChatbot,
   onCloseChatbot,
   onNavigateTab,
-  isCheckoutOpen = false
+  isCheckoutOpen = false,
+  isProductPage = false
 }) => {
   const { isCartOpen, totalItems } = useCart();
   const [internalChatbotOpen, setInternalChatbotOpen] = useState(false);
@@ -55,9 +57,11 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
     }
   };
 
+  const isElevated = totalItems > 0 || isProductPage;
+
   return (
     <>
-      <div className={`fixed ${totalItems > 0 ? 'bottom-20 sm:bottom-5' : 'bottom-4 sm:bottom-5'} right-3 sm:right-6 z-40 flex flex-col items-end gap-2 transition-all duration-300 pointer-events-auto`}>
+      <div className={`fixed ${isElevated ? 'bottom-20 sm:bottom-5' : 'bottom-4 sm:bottom-5'} right-3 sm:right-6 z-40 flex flex-col items-end gap-2 transition-all duration-300 pointer-events-auto`}>
         
         {/* Quick WhatsApp Action Menu */}
         {isMenuOpen && (

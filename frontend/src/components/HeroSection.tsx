@@ -461,11 +461,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     {addedCutId === currentSlide.id ? (
                       <>
                         <Check className="w-4 h-4 stroke-[3]" />
-                        <span>Added to Chill Box</span>
+                        <span>Added to Cart</span>
                       </>
                     ) : (
                       <>
-                        <span>Add to Chill Box</span>
+                        <span>Add to Cart</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

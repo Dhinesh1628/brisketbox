@@ -8,6 +8,8 @@ This document catalogs every marketing, legal, technical, and operational claim 
 
 The following exact phrases are pending confirmation and are banned from all customer-facing UI, printed documents, meta tags, and the WhatsApp chatbot until verified:
 
+- `24/7 Live`
+- `24/7`
 - `[Pending Verification`
 - `GSTIN: 29AAECS4912J1Z8`
 - `29AAECS4912J1Z8`

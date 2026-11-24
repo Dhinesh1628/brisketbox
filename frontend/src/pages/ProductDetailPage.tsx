@@ -115,7 +115,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-6xl mx-auto" data-testid="product-detail-page">
+    <div className="space-y-6 pb-32 sm:pb-20 max-w-6xl mx-auto" data-testid="product-detail-page">
       {/* Breadcrumb Navigation */}
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
         <button onClick={onNavigateHome} className="hover:text-neutral-950 dark:hover:text-white cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center px-2">
@@ -203,38 +203,38 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </p>
           </div>
 
-          {/* Pack Size / Weight Selection (Rule 8: Primary red selected pack size outline) */}
-          {weightOptions.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
-                Select Pack Size / Weight
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {weightOptions.map((opt) => {
-                  const isSelected = selectedWeight === opt.weight;
-                  return (
-                    <button
-                      key={opt.weight}
-                      type="button"
-                      onClick={() => setSelectedWeight(opt.weight)}
-                      className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                        isSelected
-                          ? 'border-[#d11243] ring-1 ring-[#d11243] bg-neutral-100/60 dark:bg-neutral-800/60 shadow-2xs'
-                          : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:border-neutral-300'
-                      }`}
-                    >
-                      <div className="text-xs font-bold text-neutral-900 dark:text-white">
-                        {opt.weight}
-                      </div>
-                      <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                        ₹{opt.price} • {opt.serves}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      {/* Pack Size / Weight Selection (Rule 8: Primary red selected pack size outline) */}
+      {weightOptions.length > 0 && (
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
+            Select Pack Size / Weight
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 max-w-[210px] sm:max-w-none gap-2.5">
+            {weightOptions.map((opt) => {
+              const isSelected = selectedWeight === opt.weight;
+              return (
+                <button
+                  key={opt.weight}
+                  type="button"
+                  onClick={() => setSelectedWeight(opt.weight)}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    isSelected
+                      ? 'border-[#d11243] ring-1 ring-[#d11243] bg-neutral-100/60 dark:bg-neutral-800/60 shadow-2xs'
+                      : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:border-neutral-300'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-neutral-900 dark:text-white">
+                    {opt.weight}
+                  </div>
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                    ₹{opt.price} • {opt.serves}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
           {/* Specifications Matrix */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
@@ -314,6 +314,83 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Mobile Sticky Bottom Bar (Item 4) */}
+      <div 
+        data-testid="mobile-product-sticky-bar"
+        className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 p-3 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] flex items-center justify-between gap-3"
+      >
+        <div className="flex flex-col">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-base font-black text-neutral-900 dark:text-white">
+              ₹{currentPrice}
+            </span>
+            {currentMrp > currentPrice && (
+              <span className="text-xs text-neutral-500 line-through">
+                ₹{currentMrp}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+            <span className="font-bold text-neutral-800 dark:text-neutral-200">{activeWeightOption.weight}</span>
+            <span>•</span>
+            <span>{activeWeightOption.serves}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {inCartQty > 0 ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
+                  className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="px-2.5 text-sm font-black text-neutral-900 dark:text-white">
+                  {inCartQty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
+                  className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenCart}
+                className="px-4 py-2.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold text-xs min-h-[44px] cursor-pointer"
+              >
+                Cart
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="btn-buy-primary px-5 py-2.5 rounded-xl text-xs font-bold min-h-[44px] flex items-center justify-center gap-1.5 shadow-md cursor-pointer active:scale-95"
+            >
+              {justAdded ? (
+                <>
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Added</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

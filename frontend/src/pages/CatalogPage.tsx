@@ -38,6 +38,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc'>('featured');
   const [localSearch, setLocalSearch] = useState<string>(propSearchQuery);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
   const { items, addItem, updateQuantity } = useCart();
   const { playPopSound } = useSound();
@@ -170,8 +171,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </div>
 
-        {/* Filters Toolbar */}
-        <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Desktop Filters Toolbar */}
+        <div className="hidden md:flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-neutral-100 dark:border-neutral-800">
           
           {/* Category Pills */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -256,7 +257,203 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             )}
           </div>
         </div>
+
+        {/* Mobile Filter Trigger Bar (Item 3) */}
+        <div className="flex md:hidden items-center justify-between gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 text-xs">
+          <button
+            type="button"
+            onClick={() => setIsMobileFilterOpen(true)}
+            data-testid="mobile-filters-trigger"
+            className="flex-1 min-h-[44px] flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold text-xs shadow-2xs cursor-pointer active:scale-98"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filters & Sort</span>
+            {selectedCategory !== 'All' && (
+              <span className="px-2 py-0.5 rounded-full bg-neutral-700 dark:bg-neutral-300 text-white dark:text-neutral-900 text-[10px] font-black">
+                {selectedCategory}
+              </span>
+            )}
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3 inline mr-1" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Mobile Filter Bottom Sheet (Item 3) */}
+      {isMobileFilterOpen && (
+        <div className="md:hidden fixed inset-0 z-50 overflow-hidden" data-testid="mobile-filters-bottom-sheet">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileFilterOpen(false)}
+          />
+
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl border-t border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col text-neutral-800 dark:text-neutral-100 overflow-hidden">
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between sticky top-0 bg-white dark:bg-neutral-900 z-10 shrink-0">
+              <div>
+                <h3 className="text-base font-black text-neutral-950 dark:text-white">Filter & Sort Cuts</h3>
+                <p className="text-xs text-neutral-500">
+                  {filteredProducts.length} cuts match criteria
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:underline min-h-[44px] px-2 cursor-pointer"
+                  >
+                    Reset All
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="min-h-[44px] min-w-[44px] rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+                  aria-label="Close filters"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+              {/* Category */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
+                  Category
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`min-h-[44px] p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer text-left ${
+                        selectedCategory === cat
+                          ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 border-neutral-900 dark:border-neutral-100 shadow-2xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cut Style */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
+                  Cut Style
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CUT_STYLES.map((cut) => (
+                    <button
+                      key={cut}
+                      type="button"
+                      onClick={() => setSelectedCutStyle(cut)}
+                      className={`min-h-[44px] p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer text-left truncate ${
+                        selectedCutStyle === cut
+                          ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 border-neutral-900 dark:border-neutral-100 shadow-2xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {cut === 'All' ? 'All Cuts' : cut}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Budget */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
+                  Price Budget
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRICE_FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setPriceBudget(f.value)}
+                      className={`min-h-[44px] p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer text-left ${
+                        priceBudget === f.value
+                          ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 border-neutral-900 dark:border-neutral-100 shadow-2xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort By */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 block">
+                  Sort By
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { label: 'Featured Cuts', value: 'featured' },
+                    { label: 'Price: Low to High', value: 'price-asc' },
+                    { label: 'Price: High to Low', value: 'price-desc' }
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setSortBy(s.value as any)}
+                      className={`min-h-[44px] p-2.5 rounded-xl border text-xs font-bold transition cursor-pointer text-left ${
+                        sortBy === s.value
+                          ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 border-neutral-900 dark:border-neutral-100 shadow-2xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* In-Stock Toggle */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={inStockOnly}
+                  onClick={() => setInStockOnly(!inStockOnly)}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer select-none transition ${
+                    inStockOnly
+                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 border-neutral-900 dark:border-neutral-100'
+                      : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700'
+                  }`}
+                >
+                  <span>In-Stock Cuts Only</span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${inStockOnly ? 'bg-emerald-400 dark:bg-emerald-600' : 'bg-neutral-400'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Sticky Bottom Apply Action */}
+            <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="w-full btn-buy-primary py-3 rounded-xl text-sm font-bold min-h-[44px] cursor-pointer shadow-md"
+              >
+                Apply Filters ({sortedProducts.length} Cuts)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Results Header */}
       <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 px-1">

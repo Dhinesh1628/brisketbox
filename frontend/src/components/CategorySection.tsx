@@ -69,7 +69,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onViewAllSpecs
 }) => {
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 max-w-5xl mx-auto">
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>

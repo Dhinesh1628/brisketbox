@@ -515,7 +515,6 @@ const MainApp: React.FC = () => {
                     className="min-h-[44px] flex items-center py-2 px-1 text-emerald-800 dark:text-emerald-300 font-bold hover:text-emerald-900 dark:hover:text-emerald-200 cursor-pointer gap-1.5 focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     <span>Contact Support & Concierge</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 font-extrabold border border-emerald-300 dark:border-emerald-700">24/7 Live</span>
                   </button>
                 </li>
                 <li>
@@ -659,6 +658,7 @@ const MainApp: React.FC = () => {
             onCloseChatbot={handleCloseAiButcher}
             onNavigateTab={handleTabChange}
             isCheckoutOpen={isCheckoutOpen}
+            isProductPage={route.page === 'product'}
           />
         )}
       </Suspense>

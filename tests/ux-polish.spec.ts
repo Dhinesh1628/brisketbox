@@ -93,41 +93,47 @@ test.describe('UX Polish & 3-Colour System Integrity', () => {
     expect(tinyTextElements).toEqual([]);
   });
 
-  test('5. Chat & Support button does not overlap any Add/Buy button and is hidden when cart is open', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle' });
+  test('5. Chat & Support button does not overlap buttons or cards on every page and is hidden when cart is open', async ({ page }) => {
+    const pagesToTest = ['/', '/catalog', '/product/prod_1'];
 
-    const chatButton = page.locator('[data-testid="chat-support-button"]').first();
-    await expect(chatButton).toBeVisible();
+    for (const p of pagesToTest) {
+      await page.goto(p, { waitUntil: 'networkidle' });
 
-    const chatBox = await chatButton.boundingBox();
-    expect(chatBox).not.toBeNull();
+      const chatButton = page.locator('[data-testid="chat-support-button"]').first();
+      await expect(chatButton).toBeVisible();
 
-    // Check all visible buy/add buttons
-    const buyButtons = page.locator('.btn-buy-primary, button:has-text("Add")');
-    const count = await buyButtons.count();
+      const chatBox = await chatButton.boundingBox();
+      expect(chatBox).not.toBeNull();
 
-    for (let i = 0; i < count; i++) {
-      const btn = buyButtons.nth(i);
-      if (await btn.isVisible()) {
-        const btnBox = await btn.boundingBox();
-        if (btnBox && chatBox) {
-          // Check rectangle intersection
-          const overlaps = !(
-            btnBox.x + btnBox.width <= chatBox.x ||
-            chatBox.x + chatBox.width <= btnBox.x ||
-            btnBox.y + btnBox.height <= chatBox.y ||
-            chatBox.y + chatBox.height <= btnBox.y
-          );
-          expect(overlaps).toBe(false);
+      // Check all visible buy/add buttons, pack options, and category platters
+      const interactiveButtons = page.locator('.btn-buy-primary, button:has-text("Add"), button:has-text("800g"), button:has-text("500g"), button:has-text("1kg"), section[aria-label="Browse Categories"] button');
+      const count = await interactiveButtons.count();
+
+      for (let i = 0; i < count; i++) {
+        const btn = interactiveButtons.nth(i);
+        if (await btn.isVisible()) {
+          const btnBox = await btn.boundingBox();
+          if (btnBox && chatBox) {
+            // Check rectangle intersection
+            const overlaps = !(
+              btnBox.x + btnBox.width <= chatBox.x ||
+              chatBox.x + chatBox.width <= btnBox.x ||
+              btnBox.y + btnBox.height <= chatBox.y ||
+              chatBox.y + chatBox.height <= btnBox.y
+            );
+            expect(overlaps, `Chat button overlapped with interactive element ${i} on ${p}`).toBe(false);
+          }
         }
       }
     }
 
-    // Open cart drawer and ensure chat button is hidden
+    // Open cart drawer on / and ensure chat button is hidden
+    await page.goto('/', { waitUntil: 'networkidle' });
     const cartIcon = page.locator('button[aria-label="View Shopping Cart"]').first();
     if (await cartIcon.isVisible()) {
       await cartIcon.click();
       await page.waitForTimeout(300);
+      const chatButton = page.locator('[data-testid="chat-support-button"]').first();
       await expect(chatButton).toBeHidden();
     }
   });
@@ -159,6 +165,88 @@ test.describe('UX Polish & 3-Colour System Integrity', () => {
       const contrastViolations = results.violations.filter(v => v.id === 'color-contrast');
       expect(contrastViolations, `Axe color-contrast violations on ${route}: ${JSON.stringify(contrastViolations, null, 2)}`).toEqual([]);
     }
+  });
+
+  test('8. Mobile cart drawer at 390px does not clip or overflow viewport', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Applies to mobile viewports');
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    // Add an item to cart first so drawer has full content
+    const addBtn = page.locator('.btn-buy-primary, button:has-text("Add")').first();
+    if (await addBtn.isVisible()) {
+      await addBtn.click();
+      await page.waitForTimeout(300);
+    }
+
+    // Open cart drawer
+    const cartIcon = page.locator('button[aria-label="View Shopping Cart"]').first();
+    await cartIcon.click();
+    await page.waitForTimeout(400);
+
+    const drawer = page.locator('div[role="dialog"][aria-label="Shopping Cart"]').first();
+    await expect(drawer).toBeVisible();
+
+    // Verify that no element inside the cart drawer extends past 390px viewport
+    const viewportWidth = 390;
+    const overflowingElements = await page.evaluate((vpWidth) => {
+      const dialog = document.querySelector('div[role="dialog"][aria-label="Shopping Cart"]');
+      if (!dialog) return ['Cart dialog not found'];
+      const elements = dialog.querySelectorAll('*');
+      const overflows = [];
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.right > vpWidth + 1.5) {
+          overflows.push({
+            tag: el.tagName.toLowerCase(),
+            className: el.className ? String(el.className).slice(0, 50) : '',
+            text: (el.textContent || '').trim().slice(0, 30),
+            right: rect.right,
+            overflowBy: (rect.right - vpWidth).toFixed(1)
+          });
+        }
+      }
+      return overflows;
+    }, viewportWidth);
+
+    expect(overflowingElements, `Elements overflowing mobile cart drawer: ${JSON.stringify(overflowingElements, null, 2)}`).toEqual([]);
+  });
+
+  test('9. Mobile catalog puts filters in bottom sheet and displays first product on screen 1', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Applies to mobile viewports');
+    await page.goto('/catalog', { waitUntil: 'networkidle' });
+
+    // Filters trigger button is visible
+    const trigger = page.locator('[data-testid="mobile-filters-trigger"]');
+    await expect(trigger).toBeVisible();
+
+    // First product card is visible on screen 1 (< 844px)
+    const firstCard = page.locator('[data-testid^="catalog-card-"]').first();
+    await expect(firstCard).toBeVisible();
+    const cardBox = await firstCard.boundingBox();
+    expect(cardBox).not.toBeNull();
+    expect(cardBox!.y).toBeLessThan(844);
+
+    // Open bottom sheet
+    await trigger.click();
+    const sheet = page.locator('[data-testid="mobile-filters-bottom-sheet"]');
+    await expect(sheet).toBeVisible();
+
+    // Close bottom sheet
+    const closeBtn = sheet.locator('button[aria-label="Close filters"]');
+    await closeBtn.click();
+    await expect(sheet).toBeHidden();
+  });
+
+  test('10. Mobile product page has sticky bottom bar with pack, price, and Add to Cart', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Applies to mobile viewports');
+    await page.goto('/product/prod_1', { waitUntil: 'networkidle' });
+
+    const stickyBar = page.locator('[data-testid="mobile-product-sticky-bar"]');
+    await expect(stickyBar).toBeVisible();
+
+    // Contains price, pack, and Add to Cart
+    await expect(stickyBar.locator('button:has-text("Add to Cart")')).toBeVisible();
+    await expect(stickyBar.locator('text=₹').first()).toBeVisible();
   });
 
 });

@@ -292,7 +292,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
               </div>
               <div className="text-[11px] text-emerald-100/90 leading-tight flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>{loading ? 'Consulting cuts & recipes...' : 'Active 24/7 • Cold-Chain Concierge'}</span>
+                <span>{loading ? 'Consulting cuts & recipes...' : 'Cold-Chain Concierge'}</span>
               </div>
             </div>
           </div>
