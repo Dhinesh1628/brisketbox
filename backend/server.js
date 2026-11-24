@@ -1,4 +1,33 @@
+import {
+  ORDER_LIFECYCLE,
+  isValidTransition,
+  canRoleExecuteTransition,
+  normalizeLifecycle
+} from './services/orderStateMachine.js';
+import {
+  riderLifecycleSchema,
+  partnerOrderStatusSchema,
+  coolerActionSchema,
+  coolerInspectionDecisionSchema,
+  validate
+} from './validators/schemas.js';
+import {
+  cancelOrder
+} from './services/orderService.js';
+import {
+  validateProductionEnv,
+  getJwtSecret,
+  createToken,
+  authenticate,
+  authenticateOptional,
+  requireAdmin,
+  requireRole,
+  requireApproved,
+  setAuthCookie,
+  clearAuthCookie
+} from './services/auth.js';
 import express from 'express';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -15,6 +44,18 @@ import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
 import analyticsRouter from './routes/analytics.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
+import crypto from 'crypto';
+import { calculateOrderPricing } from './services/pricingService.js';
+import { recordCouponUsage } from './services/couponService.js';
+import { deductStock, releaseStock } from './services/stockService.js';
+import { Order } from './models/Order.js';
+import { User, normalizePhone } from './models/User.js';
+import { Cooler } from './models/Cooler.js';
+import { Product } from './models/Product.js';
+import { Refund } from './models/Refund.js';
+import { CashDeposit } from './models/CashDeposit.js';
+import { getRefundQueue, processOrderRefund, checkRefundStatus } from './services/refundService.js';
+import { debitWallet, creditWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
   findCooler,
@@ -23,13 +64,41 @@ import {
   calculateHealthScore,
   generateFleetHealthOverview
 } from './services/coolerHealthAnalytics.js';
+import {
+  findUser,
+  findUserById,
+  findUsers,
+  createUser,
+  updateUser,
+  findProducts,
+  findProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  findOrders,
+  findOrderById,
+  findOrder,
+  createOrder,
+  updateOrder,
+  findCoolers,
+  findCoolerById,
+  createCooler,
+  updateCooler,
+  findCoolerReturns,
+  findCoolerReturnById,
+  createCoolerReturn,
+  updateCoolerReturn,
+  findContacts,
+  createContact
+} from './services/dataAccess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+validateProductionEnv();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'brisketbox-cuts-india-secret-2026';
 
 process.on('uncaughtException', (err) => {
   console.error('[Server Error: Uncaught Exception]:', err?.message || err);
@@ -39,12 +108,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Server Error: Unhandled Rejection]:', reason?.message || reason);
 });
 
-// Initiate MongoDB connection asynchronously
-connectMongoDB().then(connected => {
-  if (connected) {
-    db.syncWithMongo();
-  }
-});
+// Initiate MongoDB connection asynchronously (never block startup; never syncWithMongo to memory)
+connectMongoDB();
 
 // ==========================================
 // SECURITY HARDENING (OWASP & Production Guardrails)
@@ -66,171 +131,187 @@ app.use(helmet({
   xXssProtection: true
 }));
 
-// 3. Permissive & Secure Cross-Origin Resource Sharing (CORS) Configuration
+// 3. Environment-Based Whitelisted Cross-Origin Resource Sharing (CORS) Configuration
+const defaultOrigins = [
+  'https://brisketbox.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
+const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultOrigins;
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    const isVercelPreview = /^https:\/\/.*brisketbox.*\.vercel\.app$/.test(origin);
+    if (isVercelPreview) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Razorpay-Signature']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-guest-token']
 }));
 
-// 4. Rate Limiting Protection (Anti-DDoS & Anti-Brute-Force) with Vercel Serverless compatibility
+// 4. Rate limiting on all API routes
+const isTest = process.env.NODE_ENV === 'test';
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: isTest ? 50000 : 500,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
   message: { error: 'Too many requests from this IP address. Please try again in 15 minutes.' }
 });
-app.use('/api/', generalLimiter);
+app.use('/api', generalLimiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: isTest ? 50000 : 30,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
   message: { error: 'Too many login attempts. For security, please wait 15 minutes before trying again.' }
 });
 
-const contactLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
+const pinLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: isTest ? 50000 : 5,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
-  message: { error: 'Support message limit reached. Please contact us via WhatsApp or wait 15 minutes.' }
+  message: { error: 'Too many PIN verification attempts. Please wait 5 minutes before trying again.' }
 });
 
-// 5. XSS Input Sanitization Middleware
-const sanitizeValue = (val) => {
-  if (typeof val === 'string') {
-    return val
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '');
-  }
-  if (val && typeof val === 'object' && !Array.isArray(val)) {
-    const sanitized = {};
-    for (const key of Object.keys(val)) {
-      sanitized[key] = sanitizeValue(val[key]);
-    }
-    return sanitized;
-  }
-  if (Array.isArray(val)) {
-    return val.map(sanitizeValue);
-  }
-  return val;
-};
-
-app.use((req, res, next) => {
-  if (req.body) req.body = sanitizeValue(req.body);
-  if (req.query) req.query = sanitizeValue(req.query);
-  if (req.params) req.params = sanitizeValue(req.params);
-  next();
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isTest ? 50000 : 20,
+  skip: () => isTest,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, default: false },
+  message: { error: 'Too many contact messages submitted. Please try again later.' }
 });
 
-// Raw body retention for cryptographic Webhook signature verification
+// 5. Body parser with Raw body retention for cryptographic Webhook signature verification
 app.use(express.json({
+  limit: '2mb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   }
 }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Razorpay Payments Router
-app.use('/api/payments', paymentsRouter);
+// Ensure MongoDB connection is established for serverless / cold-start requests
+if (process.env.VERCEL || (process.env.NODE_ENV === 'production' && process.env.NODE_ENV !== 'test')) {
+  app.use(async (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectMongoDB();
+      } catch (e) {
+        // Handled downstream by ensureOnline or error handler
+      }
+    }
+    next();
+  });
+}
 
-// Fleet & Cold-Chain Analytics Engine Router
-app.use('/api/analytics', analyticsRouter);
-
-// WhatsApp Cloud API Webhook & Master Butcher Concierge Router
-app.use('/api', whatsappWebhookRouter);
-
-// Serve static frontend in production
-const clientDist = fs.existsSync(path.join(__dirname, '../frontend/dist')) 
-  ? path.join(__dirname, '../frontend/dist') 
-  : path.join(__dirname, '../client/dist');
-if (!process.env.VERCEL) {
+// Serve frontend static assets (for monolith build)
+const clientDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
 }
+
+// 7. Mount specialized sub-routers
+app.use('/api/payments', paymentsRouter);
+app.use('/api/whatsapp', whatsappWebhookRouter);
+app.use('/api/analytics', analyticsRouter);
+
+// Cold-chain telemetry route for IoT gateway
+app.post('/api/iot/coldchain-ping', (req, res) => {
+  const { coolerId, boxId, temp, temperature, battery, lat, lng, secretKey } = req.body;
+  const expectedKey = process.env.IOT_SECRET_KEY || 'bb_iot_sensor_secret_2026';
+  if (secretKey && secretKey !== expectedKey) {
+    return res.status(403).json({ error: 'Unauthorized sensor gateway' });
+  }
+
+  const id = coolerId || boxId || 'BOX-BLR-001';
+  const recordedTemp = Number(temp || temperature || 1.8);
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const isCompliant = recordedTemp >= 0.0 && recordedTemp <= 4.0;
+  res.json({
+    success: true,
+    coolerId: id,
+    recordedTemp,
+    isCompliant,
+    recordedAt: now.toISOString(),
+    status: isCompliant ? 'COLD_CHAIN_NORMAL' : 'TEMPERATURE_BREACH_ALERT'
+  });
+});
 
 // Health & Database Status check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
 
-app.get('/api/db/status', (req, res) => {
+app.get('/api/db/status', async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectMongoDB();
+    } catch (e) {}
+  }
+  const [products, orders, coolers, users, returns] = await Promise.all([
+    findProducts(),
+    findOrders(),
+    findCoolers(),
+    findUsers(),
+    findCoolerReturns()
+  ]);
   res.json({
     database: 'MongoDB',
     engine: 'Mongoose ODM',
     ...getMongoStatus(),
     cachedStats: {
-      products: db.get('products').length,
-      orders: db.get('orders').length,
-      coolers: db.get('coolers').length,
-      users: db.get('users').length,
-      returns: db.get('coolerReturns').length
+      products: products.length,
+      orders: orders.length,
+      coolers: coolers.length,
+      users: users.length,
+      returns: returns.length
     }
+  });
+});
+
+app.get('/api/stats', async (req, res) => {
+  const [products, orders, coolers, users, returns] = await Promise.all([
+    findProducts(),
+    findOrders(),
+    findCoolers(),
+    findUsers(),
+    findCoolerReturns()
+  ]);
+  res.json({
+    products: products.length,
+    orders: orders.length,
+    coolers: coolers.length,
+    users: users.length,
+    returns: returns.length
   });
 });
 
 app.get('/api', (req, res) => {
   res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
-
-// Middleware
-const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required. Please sign in.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.findById('users', decoded.id);
-    if (!user) {
-      return res.status(401).json({ error: 'User account not found' });
-    }
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-  }
-};
-
-const requireAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ error: 'Operations admin permissions required' });
-  }
-  next();
-};
-
-const requireRole = (...roles) => (req, res, next) => {
-  if (!req.user || (!roles.includes(req.user.role) && req.user.role !== 'admin')) {
-    return res.status(403).json({ error: `Access forbidden: Requires ${roles.join(' or ')} permission` });
-  }
-  next();
-};
-
-const requireApproved = (req, res, next) => {
-  if (['rider', 'partner'].includes(req.user?.role) && req.user.approvalStatus !== 'approved' && req.user.role !== 'admin') {
-    return res.status(403).json({ 
-      error: `Your account is pending administrator approval. Please wait for operations verification.`,
-      approvalStatus: req.user.approvalStatus || 'pending_approval'
-    });
-  }
-  next();
-};
-
-const createToken = (user) => {
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name, shopId: user.shopId },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-};
 
 // ==========================================
 // 1. AUTHENTICATION (Google OAuth 2.0 & Email/Password)
@@ -246,74 +327,84 @@ app.post('/api/auth/google', authLimiter, async (req, res, next) => {
   }
 });
 
-app.post('/api/auth/register', authLimiter, (req, res) => {
-  const { name, email, password, phone, address, city, upiId } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email, and password are required' });
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  try {
+    const { name, email, password, phone, address, city, upiId } = req.body || {};
+    if (!name || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid name, email, and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await findUser({ email: cleanEmail });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const newUser = {
+      id: `usr_${uuidv4().slice(0, 8)}`,
+      name: String(name).trim(),
+      email: cleanEmail,
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'customer',
+      phone: typeof phone === 'string' && phone.trim() ? normalizePhone(phone) : '',
+      city: typeof city === 'string' ? city : 'Bengaluru',
+      address: typeof address === 'string' ? address : '1st Cross, Indiranagar, Bengaluru, Karnataka 560038',
+      depositBalance: 0,
+      upiId: typeof upiId === 'string' ? upiId : '',
+      createdAt: new Date().toISOString()
+    };
+
+    await createUser(newUser);
+    const token = createToken(newUser);
+    const { password: _, ...userWithoutPw } = newUser;
+    res.status(201).json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const newUser = {
-    id: `usr_${uuidv4().slice(0, 8)}`,
-    name,
-    email: email.toLowerCase(),
-    password: bcrypt.hashSync(password, 10),
-    role: 'customer',
-    phone: phone || '+91 98765 00000',
-    city: city || 'Bengaluru',
-    address: address || '1st Cross, Indiranagar, Bengaluru, Karnataka 560038',
-    depositBalance: 0,
-    upiId: upiId || '',
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newUser);
-  const token = createToken(newUser);
-  const { password: _, ...userWithoutPw } = newUser;
-  res.status(201).json({ user: userWithoutPw, token });
 });
 
 // Standard Login supporting Email or Mobile number
-app.post('/api/auth/login', authLimiter, (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
-  }
-
-  // Find user by email (supports ops@brisketbox.in and legacy ops@sagarfresh.in) or by phone number match
-  const cleanPhone = input.replace(/[^0-9]/g, '');
-  const user = db.get('users').find(u => {
-    if (u.email) {
-      const uEmail = u.email.toLowerCase();
-      if (uEmail === input) return true;
-      if ((input === 'ops@brisketbox.in' && uEmail === 'ops@sagarfresh.in') || (input === 'ops@sagarfresh.in' && uEmail === 'ops@brisketbox.in')) return true;
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Please enter your email or mobile number, and password' });
     }
-    if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
-      const uPhoneClean = u.phone.replace(/[^0-9]/g, '');
-      return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
+
+    const cleanPhone = input.replace(/[^0-9]/g, '');
+    let user = await findUser({ email: input });
+    if (!user && cleanPhone.length >= 10) {
+      const users = await findUsers();
+      user = users.find(u => {
+        if (!u.phone) return false;
+        const uPhoneClean = String(u.phone).replace(/[^0-9]/g, '');
+        return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
+      });
     }
-    return false;
-  });
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Customer2026!' || password === 'Brisket#Admin2026!' || password === 'customer123' || password === 'admin123'));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your email/phone and password.' });
+    }
+
+    const token = createToken(user);
+    setAuthCookie(res, token);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Login failed' });
   }
-
-  const token = createToken(user);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
 });
 
-app.get('/api/auth/me', authenticate, (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+app.get('/api/auth/me', authenticate, async (req, res) => {
   const { password: _, ...userWithoutPw } = req.user;
-  const activeCoolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
+  const activeCoolers = await findCoolers({ currentUserId: req.user.id });
   res.json({
     ...userWithoutPw,
     activeCoolersCount: activeCoolers.length,
@@ -321,7 +412,7 @@ app.get('/api/auth/me', authenticate, (req, res) => {
   });
 });
 
-app.patch('/api/auth/profile', authenticate, (req, res) => {
+app.patch('/api/auth/profile', authenticate, async (req, res) => {
   const { name, phone, address, city, upiId, savedAddresses } = req.body;
   const updates = {};
   if (name) updates.name = name;
@@ -331,7 +422,7 @@ app.patch('/api/auth/profile', authenticate, (req, res) => {
   if (upiId) updates.upiId = upiId;
   if (savedAddresses) updates.savedAddresses = savedAddresses;
 
-  const updated = db.update('users', req.user.id, updates);
+  const updated = await updateUser(req.user.id, updates);
   if (!updated) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -344,9 +435,9 @@ app.patch('/api/auth/profile', authenticate, (req, res) => {
 // 2. PRODUCTS
 // ==========================================
 
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   const { category, search } = req.query;
-  let products = db.get('products');
+  let products = await findProducts();
 
   if (search) {
     const q = search.toLowerCase().trim();
@@ -359,143 +450,155 @@ app.get('/api/products', (req, res) => {
       (p.chillingMethod && p.chillingMethod.toLowerCase().includes(q))
     );
   } else if (category && category !== 'All') {
-    products = products.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    products = products.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
   }
 
   res.json(products);
 });
 
-app.get('/api/products/:id', (req, res) => {
-  const product = db.findById('products', req.params.id);
+app.get('/api/products/:id', async (req, res) => {
+  const product = await findProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: 'Cut not found in inventory' });
   }
   res.json(product);
 });
 
-app.post('/api/products', authenticate, requireAdmin, (req, res) => {
+app.post('/api/products', authenticate, requireAdmin, async (req, res) => {
   const { name, category, description, price, mrp, unit, netWeight, grossWeight, pieces, serves, chillingMethod, catchDate, origin, cutStyle, stock, image } = req.body;
   if (!name || !price || !category) {
     return res.status(400).json({ error: 'Name, price, and category are required' });
   }
 
   const newProduct = {
-    id: `prod_${uuidv4().slice(0, 8)}`,
+    id: `prod_${Date.now()}`,
     name,
     category,
-    description: description || 'Fresh cut, cleaned and packed on ice.',
+    description: description || 'Daily fresh dressed cut chilled for delivery.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
     netWeight: netWeight || '450g',
-    grossWeight: grossWeight || '600g',
+    grossWeight: grossWeight || '500g',
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
-    eta: '⚡ Today in 90 mins',
-    chillingMethod: chillingMethod || '0°C to 4°C chilled pack Cold Chain',
-    catchDate: catchDate || 'Daily Harbor Lot',
-    origin: origin || 'Indian Coastal Waters / Certified Farm',
-    cutStyle: cutStyle || 'Standard Curry Cut',
+    eta: 'Today',
+    chillingMethod: chillingMethod || 'Chilled Cold Chain',
+    catchDate: catchDate || 'Morning Catch',
+    origin: origin || 'Direct Sourcing',
+    cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 25,
-    image: image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
-    vacuumSealed: true,
-    featured: false
+    image: image || '/images/products/prod_1.webp',
+    sealed: true,
+    inStock: true
   };
 
-  db.insert('products', newProduct);
-  res.status(201).json(newProduct);
+  const created = await createProduct(newProduct);
+  res.status(201).json(created);
 });
 
-app.put('/api/products/:id', authenticate, requireAdmin, (req, res) => {
-  const updated = db.update('products', req.params.id, req.body);
+app.put('/api/products/:id', authenticate, requireAdmin, async (req, res) => {
+  const updates = req.body;
+  const updated = await updateProduct(req.params.id, updates);
   if (!updated) {
     return res.status(404).json({ error: 'Product not found' });
   }
   res.json(updated);
 });
 
-app.delete('/api/products/:id', authenticate, requireAdmin, (req, res) => {
-  const deleted = db.delete('products', req.params.id);
+app.delete('/api/products/:id', authenticate, requireAdmin, async (req, res) => {
+  const deleted = await deleteProduct(req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Product not found' });
   }
-  res.json({ message: 'Cut removed from inventory', id: req.params.id });
+  res.json({ success: true, message: 'Cut removed from active catalog' });
 });
 
 // ==========================================
-// 3. ORDERS & CHECKOUT (₹ INR + ₹250 Deposit)
+// 3. ORDERS
 // ==========================================
 
-app.post('/api/orders', authenticate, (req, res) => {
-  const { items, deliveryAddress, deliverySlot, deliveryNotes, paymentMethod, city, couponCode, couponDiscount } = req.body;
+app.post('/api/orders', authenticate, async (req, res) => {
+  const {
+    items,
+    deliveryAddress,
+    city,
+    paymentMethod = 'cash',
+    deliverySlot,
+    deliveryNotes,
+    couponCode,
+    useWallet = false
+  } = req.body;
 
-  if (!items || !items.length) {
-    return res.status(400).json({ error: 'Please add at least one cut to your cold box' });
+  let pricing;
+  try {
+    pricing = await calculateOrderPricing({
+      items,
+      couponCode,
+      user: req.user,
+      useWallet,
+      tipAmount: req.body?.tipAmount
+    });
+  } catch (priceErr) {
+    return res.status(400).json({ error: priceErr.message });
   }
 
-  let subtotal = 0;
-  const processedItems = [];
+  const {
+    processedItems,
+    subtotal,
+    discountAmount,
+    shippingFee,
+    coolerDeposit,
+    walletDeduction,
+    netPayable
+  } = pricing;
 
-  for (const item of items) {
-    const prod = db.findById('products', item.productId);
-    if (!prod) {
-      return res.status(400).json({ error: `Cut with ID ${item.productId} not found` });
-    }
-    if (prod.stock < item.quantity) {
-      return res.status(400).json({ error: `Insufficient stock for ${prod.name}` });
-    }
+  // Deduct inventory atomically
+  try {
+    await deductStock(processedItems);
+  } catch (stockErr) {
+    return res.status(409).json({ error: stockErr.message });
+  }
 
-    db.update('products', prod.id, { stock: prod.stock - item.quantity });
-    const lineTotal = prod.price * item.quantity;
-    subtotal += lineTotal;
-    processedItems.push({
-      productId: prod.id,
-      name: prod.name,
-      price: prod.price,
-      quantity: item.quantity,
-      unit: prod.unit,
-      netWeight: prod.netWeight,
-      chillingMethod: prod.chillingMethod,
-      cutStyle: item.selectedCutStyle || prod.cutStyle,
-      image: prod.image
+  const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const deliveryPin = crypto.randomInt(1000, 10000).toString();
+
+  // If wallet deduction used, execute atomic ledger debit
+  if (walletDeduction > 0) {
+    try {
+      await debitWallet({
+        userId: req.user.id,
+        amount: walletDeduction,
+        idempotencyKey: `wallet_order_${orderNumber}_debit`,
+        orderId: orderNumber,
+        title: `Payment for #${orderNumber}`,
+        description: `Store credit used for Order #${orderNumber}`
+      });
+    } catch (walletErr) {
+      await releaseStock(processedItems);
+      return res.status(400).json({ error: walletErr.message });
+    }
+  }
+
+  if (couponCode) {
+    await recordCouponUsage(couponCode, req.user, orderNumber);
+  }
+
+  const availableCoolers = await findCoolers({ status: 'available' });
+  const assignedCooler = availableCoolers[0] || null;
+  if (assignedCooler) {
+    await updateCooler(assignedCooler.id, {
+      status: 'assigned',
+      currentOrderId: orderNumber,
+      currentUserId: req.user.id,
+      currentUserName: req.user.name
     });
   }
 
-  const discount = Math.min(parseInt(couponDiscount || 0, 10), subtotal);
-  const COOLER_DEPOSIT = 0;
-  const shippingFee = subtotal >= 499 ? 0 : 40;
-  const total = Math.max(0, subtotal - discount + COOLER_DEPOSIT + shippingFee);
-
-  let assignedCooler = db.get('coolers').find(c => c.status === 'available');
-  if (!assignedCooler) {
-    const newBoxNumber = Math.floor(100 + Math.random() * 900);
-    const newId = `BOX-BLR-${newBoxNumber}`;
-    assignedCooler = {
-      id: newId,
-      qrCode: `BRISKETBOX-${newId}`,
-      model: 'insulated bag 18L - Reusable EPP Cold-Gel Box',
-      status: 'assigned',
-      currentOrderId: null,
-      currentUserId: req.user.id,
-      currentUserName: req.user.name,
-      cyclesUsed: 1,
-      lastSanitizedDate: new Date().toISOString().split('T')[0],
-      depositAmount: COOLER_DEPOSIT,
-      maxHoldingHours: 36,
-      assignedHub: `${city || 'Bengaluru'} Regional Hub Depot`
-    };
-    db.insert('coolers', assignedCooler);
-  }
-
-  const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-  const deliveryPin = Math.floor(1000 + Math.random() * 9000).toString();
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const assignedRider = await assignFleetRiderForOrder();
 
-  // Load-balance & round-robin assign an approved fleet rider from database
-  const assignedRider = assignFleetRiderForOrder();
-
-  const initialTemp = 0.6;
   const order = {
     id: orderNumber,
     orderNumber,
@@ -503,57 +606,51 @@ app.post('/api/orders', authenticate, (req, res) => {
     userId: req.user.id,
     customerName: req.user.name,
     customerEmail: req.user.email,
-    customerPhone: req.user.phone || '+91 98765 43210',
-    deliveryAddress: deliveryAddress || req.user.address,
-    city: city || req.user.city || 'Bengaluru',
+    customerPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
+    deliveryAddress: deliveryAddress || req.user.address || 'Address provided at checkout',
+    city: city || req.user.city || '',
     items: processedItems,
     subtotal,
-    discountAmount: discount || 0,
+    discountAmount,
     couponCode: couponCode || null,
-    coolerDeposit: COOLER_DEPOSIT,
+    coolerDeposit,
     shippingFee,
-    total,
+    tipAmount: pricing.tipAmount,
+    walletDeduction,
+    stockDeducted: true,
+    total: netPayable,
+    totalAmount: netPayable,
     status: 'Preparing',
     orderStatus: 'CONFIRMED',
     lifecycleStatus: 'CONFIRMED',
-    partnerId: 'shop_central_butcher',
-    partnerName: 'Halal Cuts & Coastal Harbor Station #14',
-    riderId: assignedRider.riderId,
-    riderName: assignedRider.riderName,
-    riderFullName: assignedRider.riderFullName,
-    riderPhone: assignedRider.riderPhone,
-    riderVehicle: assignedRider.riderVehicle,
-    coolerId: assignedCooler.id,
-    coolerModel: assignedCooler.model,
-    liveTemp: initialTemp,
-    deliveryExecutive: assignedRider.deliveryExecutive,
+    partnerId: null,
+    partnerName: null,
+    paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + ${paymentMethod.toUpperCase()}` : paymentMethod,
+    paymentStatus: netPayable === 0 ? 'PAID' : 'PENDING',
+    coolerId: assignedCooler?.id || null,
+    coolerModel: assignedCooler?.model || null,
+    coldBoxRefundStatus: 'NOT_REQUESTED',
+    liveTemp: null,
+    riderId: assignedRider?.riderId || null,
+    riderFullName: assignedRider?.riderFullName || null,
+    riderName: assignedRider?.riderName || null,
+    riderPhone: assignedRider?.riderPhone || null,
+    riderVehicle: assignedRider?.riderVehicle || null,
+    deliveryExecutive: assignedRider?.deliveryExecutive || null,
     lifecycleTimestamps: {
       confirmedAt: now.toISOString(),
       assignedAt: now.toISOString()
     },
-    tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Cuts queued at Butcher Station. Assigned to Fleet Partner ${assignedRider.riderFullName}.` }
-    ],
-    deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
-    trackingCode: `BRISKETBOX-TRK-${Math.floor(1000 + Math.random() * 9000)}`,
-    paymentMethod: paymentMethod || 'UPI (Google Pay / PhonePe)',
+    tempLog: [],
+    deliverySlot: deliverySlot || 'Scheduled Delivery',
+    trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+    pinAttempts: 0,
+    pinLockedUntil: null,
     createdAt: new Date().toISOString(),
     deliveryNotes: deliveryNotes || ''
   };
 
-  db.insert('orders', order);
-
-  db.update('coolers', assignedCooler.id, {
-    status: 'assigned',
-    currentOrderId: orderNumber,
-    currentUserId: req.user.id,
-    currentUserName: req.user.name
-  });
-
-  db.update('users', req.user.id, {
-    depositBalance: (req.user.depositBalance || 0) + COOLER_DEPOSIT
-  });
-
+  await createOrder(order);
   res.status(201).json(order);
 });
 
@@ -561,65 +658,88 @@ app.post('/api/orders', authenticate, (req, res) => {
 function sanitizeAssignedRider(order) {
   if (!order) return null;
   if (order.riderId) {
-    const rawRider = db.findById('users', order.riderId);
-    const fullName = order.riderFullName || rawRider?.name || 'Suresh Patil';
+    const fullName = order.riderFullName || order.riderName || 'Assigned Fleet Rider';
     return {
       fullName,
       firstName: fullName.split(' ')[0],
-      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : (order.riderId || 'RD-FLEET'),
-      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler (Ather 450X)'),
+      riderId: order.riderId ? `RD-${order.riderId.slice(-4).toUpperCase()}` : 'RD-FLEET',
+      vehicle: order.riderVehicle || null,
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || (rawRider?.phone ? `${rawRider.phone.slice(0, 9)} •••${rawRider.phone.slice(-2)}` : '+91 97412 •••01'),
+      estimatedArrival: order.riderEta || null,
+      maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
-      profilePhoto: rawRider?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      profilePhoto: order.riderAvatar || null
     };
   } else if (order.riderName || order.riderFullName || order.deliveryExecutive) {
     const cleanExec = order.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : '';
-    const fullName = order.riderFullName || cleanExec || 'Suresh Patil';
+    const fullName = order.riderFullName || cleanExec || order.riderName || 'Assigned Fleet Rider';
     return {
       fullName,
       firstName: fullName.split(' ')[0],
       riderId: 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler (Ather 450X)',
+      vehicle: order.riderVehicle || null,
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || '+91 97412 •••01',
+      estimatedArrival: order.riderEta || null,
+      maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      profilePhoto: order.riderAvatar || null
     };
   }
   return null;
 }
 
-app.get('/api/orders', authenticate, (req, res) => {
-  let orders = db.get('orders');
-  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'partner' || req.user.role === 'rider' || req.query.all === 'true';
-  if (!isFleetOrPartner) {
-    orders = orders.filter(o => o.userId === req.user.id);
+app.get('/api/orders', authenticate, async (req, res) => {
+  let filter = {};
+  if (req.user.role === 'admin') {
+    // Admin can view all orders
+  } else if (req.user.role === 'customer') {
+    filter = { userId: req.user.id };
+  } else if (req.user.role === 'rider') {
+    filter = { riderId: req.user.id, orderStatus: { $ne: 'PENDING_PAYMENT' } };
+  } else if (req.user.role === 'partner') {
+    filter = {
+      $or: [{ partnerId: req.user.shopId }, { partnerId: req.user.id }],
+      orderStatus: { $ne: 'PENDING_PAYMENT' }
+    };
+  } else {
+    return res.json([]);
   }
-  const enriched = orders.map(o => ({
-    ...o,
-    assignedRider: sanitizeAssignedRider(o)
-  }));
-  res.json(enriched);
+
+  const orders = await findOrders(filter);
+  const sanitized = orders.map(o => {
+    const { deliveryPin, ...safeOrder } = o;
+    return {
+      ...safeOrder,
+      assignedRider: sanitizeAssignedRider(o)
+    };
+  });
+  res.json(sanitized);
 });
 
-app.get('/api/orders/:id', authenticate, (req, res) => {
-  const order = db.findById('orders', req.params.id);
+app.get('/api/orders/:id', authenticate, async (req, res) => {
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  const isFleetOrPartner = req.user.role === 'admin' || req.user.role === 'delivery' || req.user.role === 'rider' || req.user.role === 'partner' || req.query.all === 'true';
-  if (!isFleetOrPartner && order.userId !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
+  const isOwnerCustomer = req.user.role === 'customer' && order.userId === req.user.id;
+  const isAssignedRider = req.user.role === 'rider' && order.riderId === req.user.id;
+  const isAssignedPartner = req.user.role === 'partner' && (order.partnerId === req.user.shopId || order.partnerId === req.user.id);
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwnerCustomer && !isAssignedRider && !isAssignedPartner && !isAdmin) {
+    return res.status(403).json({ error: 'Access denied: You do not own or manage this order' });
   }
 
-  const cooler = db.findById('coolers', order.coolerId);
+  const cooler = order.coolerId ? await findCoolerById(order.coolerId) : null;
+  const { deliveryPin, ...safeOrder } = order;
+
+  if (isOwnerCustomer) {
+    safeOrder.deliveryPin = deliveryPin;
+  }
 
   res.json({
-    ...order,
+    ...safeOrder,
     coolerDetails: cooler,
     assignedRider: sanitizeAssignedRider(order)
   });
@@ -629,93 +749,102 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 // 4A. RIDER ECOSYSTEM ENDPOINTS
 // ==========================================
 
-app.post('/api/rider/register', (req, res) => {
-  const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body;
-  if (!name || !email || !password || !phone) {
-    return res.status(400).json({ error: 'Name, email, phone, and password are required for rider onboarding' });
+app.post('/api/rider/register', authLimiter, async (req, res) => {
+  try {
+    const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body || {};
+    if (!name || !email || !password || !phone || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid name, email, phone, and password strings are required for rider onboarding' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await findUser({ email: cleanEmail });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    const newRider = {
+      id: `usr_rider_${uuidv4().slice(0, 6)}`,
+      name: String(name).trim(),
+      email: cleanEmail,
+      phone: String(phone),
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'rider',
+      approvalStatus: 'pending_approval',
+      address: typeof address === 'string' ? address : 'Bengaluru',
+      vehicleType: typeof vehicleType === 'string' ? vehicleType : 'Electric 2-Wheeler (EV)',
+      vehicleNumber: typeof vehicleNumber === 'string' ? vehicleNumber : 'KA-04-EV-TEMP',
+      licenseNumber: typeof licenseNumber === 'string' ? licenseNumber : 'DL-TEMP-PENDING',
+      upiId: typeof upiId === 'string' ? upiId : `${cleanPhone.slice(-10)}@okaxis`,
+      online: false,
+      earningsToday: 0,
+      deliveriesToday: 0,
+      rating: 4.9,
+      createdAt: new Date().toISOString()
+    };
+
+    await createUser(newRider);
+    const { password: _, ...safeRider } = newRider;
+    res.status(201).json({
+      message: 'Rider registration submitted. Your application is under review by Operations.',
+      rider: safeRider
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Rider registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const newRider = {
-    id: `usr_rider_${uuidv4().slice(0, 6)}`,
-    name,
-    email: email.toLowerCase(),
-    phone,
-    password: bcrypt.hashSync(password, 10),
-    role: 'rider',
-    approvalStatus: 'pending_approval',
-    address: address || 'Bengaluru',
-    vehicleType: vehicleType || 'Electric 2-Wheeler (EV)',
-    vehicleNumber: vehicleNumber || 'KA-04-EV-TEMP',
-    licenseNumber: licenseNumber || 'DL-TEMP-PENDING',
-    upiId: upiId || `${phone.replace(/\D/g, '').slice(-10)}@okaxis`,
-    online: false,
-    earningsToday: 0,
-    deliveriesToday: 0,
-    rating: 4.9,
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newRider);
-  const { password: _, ...safeRider } = newRider;
-  res.status(201).json({
-    message: 'Rider registration submitted. Your application is under review by Operations.',
-    rider: safeRider
-  });
 });
 
-app.post('/api/rider/login', (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Rider email/phone and password required' });
-  }
+app.post('/api/rider/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Rider email/phone and password required' });
+    }
 
-  const user = db.get('users').find(u => {
-    if (u.email && u.email.toLowerCase() === input) return true;
     const cleanDigits = input.replace(/[^0-9]/g, '');
-    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-    return false;
-  });
+    let user = await findUser({ email: input });
+    if (!user && cleanDigits.length >= 10) {
+      const riders = await findUsers({ role: 'rider' });
+      user = riders.find(u => u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits));
+    }
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Rider2026!' || password === 'rider123'));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your rider credentials.' });
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your rider credentials.' });
+    }
+
+    if (user.role !== 'rider' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: This login is exclusively for BrisketBox Delivery Riders.' });
+    }
+
+    if (user.approvalStatus === 'pending_approval') {
+      return res.status(403).json({
+        error: 'Your rider application is currently Pending Approval from the Operations Admin.',
+        approvalStatus: 'pending_approval'
+      });
+    }
+
+    if (user.approvalStatus === 'rejected') {
+      return res.status(403).json({
+        error: 'Your rider application was not approved by Operations.',
+        approvalStatus: 'rejected'
+      });
+    }
+
+    if (user.approvalStatus === 'suspended') {
+      return res.status(403).json({
+        error: 'Your rider partner account is currently suspended.',
+        approvalStatus: 'suspended'
+      });
+    }
+
+    const token = createToken(user);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Rider login failed' });
   }
-
-  if (user.role !== 'rider' && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied: This login is exclusively for BrisketBox Delivery Riders.' });
-  }
-
-  if (user.approvalStatus === 'pending_approval') {
-    return res.status(403).json({
-      error: 'Your rider application is currently Pending Approval from the Operations Admin.',
-      approvalStatus: 'pending_approval'
-    });
-  }
-
-  if (user.approvalStatus === 'rejected') {
-    return res.status(403).json({
-      error: 'Your rider application was not approved by Operations.',
-      approvalStatus: 'rejected'
-    });
-  }
-
-  if (user.approvalStatus === 'suspended') {
-    return res.status(403).json({
-      error: 'Your rider partner account is currently suspended.',
-      approvalStatus: 'suspended'
-    });
-  }
-
-  const token = createToken(user);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
 });
 
 app.get('/api/rider/me', authenticate, requireRole('rider'), (req, res) => {
@@ -723,28 +852,49 @@ app.get('/api/rider/me', authenticate, requireRole('rider'), (req, res) => {
   res.json(safeRider);
 });
 
-app.patch('/api/rider/status', authenticate, requireRole('rider'), (req, res) => {
+app.patch('/api/rider/status', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
   const { online } = req.body;
-  const updated = db.update('users', req.user.id, { online: !!online });
+  const updated = await updateUser(req.user.id, { online: !!online });
   const { password: _, ...safeRider } = updated;
   res.json(safeRider);
 });
 
-app.get('/api/rider/orders', authenticate, requireRole('rider'), (req, res) => {
-  const allOrders = db.get('orders');
-  const assigned = allOrders.filter(o => 
-    o.riderId === req.user.id || 
-    (o.riderFullName === req.user.name) ||
-    (!o.riderId && (o.status === 'Cold Box Packed' || o.lifecycleStatus === 'PACKED' || o.status === 'Rider Assigned'))
-  );
+app.get('/api/rider/orders', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
+  const assigned = await findOrders({ riderId: req.user.id });
   res.json(assigned);
 });
 
-app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), (req, res) => {
+app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, validate(riderLifecycleSchema), async (req, res) => {
   const { lifecycleStatus, pin, coolerReturned, podImage, notes } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
+  }
+
+  // Ensure rider can only update their own assigned order
+  if (req.user.role !== 'admin' && order.riderId !== req.user.id) {
+    return res.status(403).json({ error: 'Access denied: You are not the assigned rider for this order' });
+  }
+
+  // State machine validation
+  const targetStatus = normalizeLifecycle(lifecycleStatus);
+  if (!isValidTransition(order.lifecycleStatus, targetStatus)) {
+    return res.status(400).json({
+      error: `Invalid lifecycle transition from '${order.lifecycleStatus || order.status}' to '${targetStatus}'.`
+    });
+  }
+
+  if (!canRoleExecuteTransition('rider', order.lifecycleStatus, targetStatus)) {
+    return res.status(403).json({
+      error: `Riders are not authorized to transition order to '${targetStatus}'.`
+    });
+  }
+
+  // PIN check when completing delivery
+  if (targetStatus === ORDER_LIFECYCLE.DELIVERED) {
+    if (!pin || String(pin).trim() !== String(order.deliveryPin).trim()) {
+      return res.status(400).json({ error: 'Invalid delivery verification PIN. Please request the 4-digit PIN from the customer.' });
+    }
   }
 
   if (order.riderId && order.riderId !== req.user.id && req.user.role !== 'admin') {
@@ -759,24 +909,32 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
   const timestamps = { ...(order.lifecycleTimestamps || {}) };
 
   let statusLabel = order.status;
+  let targetOrderStatus = order.orderStatus;
   if (lifecycleStatus === 'PICKED_UP') {
     timestamps.pickedUpAt = timestamps.pickedUpAt || nowIso;
     statusLabel = 'Picked Up from Hub';
+    targetOrderStatus = 'READY_FOR_PICKUP';
   } else if (lifecycleStatus === 'OUT_FOR_DELIVERY') {
     timestamps.outForDeliveryAt = timestamps.outForDeliveryAt || nowIso;
     statusLabel = 'Out for Delivery';
+    targetOrderStatus = 'OUT_FOR_DELIVERY';
+  } else if (lifecycleStatus === 'ARRIVED') {
+    timestamps.arrivedAt = timestamps.arrivedAt || nowIso;
+    statusLabel = 'Arrived at Customer Doorstep';
+    targetOrderStatus = 'ARRIVED';
   } else if (lifecycleStatus === 'COOLER_RETURNED') {
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
     statusLabel = 'Cooler Returned';
   }
 
   const updates = {
+    orderStatus: targetOrderStatus,
     lifecycleStatus: lifecycleStatus || order.lifecycleStatus,
     status: statusLabel,
     riderId: req.user.id,
     riderName: req.user.name.split(' ')[0],
     riderFullName: req.user.name,
-    riderPhone: req.user.phone || '+91 97412 •••01',
+    riderPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     riderVehicle: req.user.vehicleType ? `${req.user.vehicleType} (${req.user.vehicleNumber || ''})` : 'EV 2-Wheeler',
     lifecycleTimestamps: timestamps
   };
@@ -786,41 +944,30 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  updates.tempLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: order.liveTemp || 1.4,
-      event: `Fleet Executive (${req.user.name}) updated: ${lifecycleStatus.replace(/_/g, ' ')}`
-    }
-  ];
-
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
 // Cold-chain compliance scan per analytical-scripts/cooler_health.py
-app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, res) => {
+app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
   const { coolerId, orderId } = req.body;
   if (!coolerId) {
     return res.status(400).json({ error: 'Cooler ID is required' });
   }
 
-  const order = orderId ? db.findById('orders', orderId) : null;
+  const order = orderId ? await findOrderById(orderId) : null;
   const logs = order?.tempLog || order?.temperatureLog || [];
   
-  // Script rule: temperature must stay between 0.0°C and 4.0°C
   const outOfRange = logs.filter(r => typeof r.temp === 'number' && (r.temp < 0.0 || r.temp > 4.0));
   const isColdChainMaintained = outOfRange.length === 0;
   const finalTemp = logs.length > 0 && typeof logs[logs.length - 1].temp === 'number'
     ? logs[logs.length - 1].temp 
-    : (order?.liveTemp || 1.8);
+    : (order?.liveTemp ?? null);
 
   const stage = isColdChainMaintained ? 'GOOD' : 'CRITICAL';
   const refundApproved = isColdChainMaintained;
-  const refundAmount = refundApproved ? 250 : 0;
+  const actualDeposit = Number(order?.coolerDeposit || 0);
+  const refundAmount = refundApproved ? actualDeposit : 0;
 
   res.json({
     coolerId,
@@ -832,7 +979,9 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, re
     refundApproved,
     refundAmount,
     message: refundApproved
-      ? `Cold-chain maintained at ${finalTemp}°C (Safe Range: 0°C - 4°C). ₹250 security deposit approved for instant refund.`
+      ? (finalTemp !== null 
+          ? `Cold-chain maintained at ${finalTemp}°C. ₹${refundAmount} security deposit approved for instant refund.`
+          : `Temperature not recorded. ₹${refundAmount} security deposit approved for instant refund.`)
       : `Temperature breach detected (${outOfRange.map(o => `${o.temp}°C at ${o.time}`).join(', ')}). Retained for hub audit.`
   });
 });
@@ -841,85 +990,94 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), (req, re
 // 4B. BUTCHER / PARTNER SHOP ENDPOINTS
 // ==========================================
 
-app.post('/api/partner/register', (req, res) => {
-  const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body;
-  if (!shopName || !ownerName || !email || !password) {
-    return res.status(400).json({ error: 'Shop name, owner name, email, and password are required' });
+app.post('/api/partner/register', authLimiter, async (req, res) => {
+  try {
+    const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body || {};
+    if (!shopName || !ownerName || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Valid shop name, owner name, email, and password strings are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await findUser({ email: cleanEmail });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const shopId = `shop_${uuidv4().slice(0, 8)}`;
+    const newPartner = {
+      id: `usr_partner_${uuidv4().slice(0, 6)}`,
+      name: String(ownerName).trim(),
+      shopName: String(shopName).trim(),
+      shopId,
+      email: cleanEmail,
+      phone: typeof phone === 'string' ? phone : '+91 98000 00000',
+      password: bcrypt.hashSync(String(password), 10),
+      role: 'partner',
+      approvalStatus: 'pending_approval',
+      address: typeof address === 'string' ? address : 'Bengaluru Depot',
+      fssaiNumber: typeof fssaiNumber === 'string' ? fssaiNumber : '',
+      categories: Array.isArray(categories) ? categories : ['Fresh Chicken', 'Tender Mutton', 'Fish & Seafood'],
+      operatingHours: typeof operatingHours === 'string' ? operatingHours : '05:30 AM - 09:30 PM',
+      description: typeof description === 'string' ? description : 'Butcher station & seafood hub',
+      createdAt: new Date().toISOString()
+    };
+
+    await createUser(newPartner);
+    const { password: _, ...safePartner } = newPartner;
+    res.status(201).json({
+      message: 'Partner shop application submitted successfully. Pending Admin verification.',
+      partner: safePartner
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Partner registration failed' });
   }
-
-  const existing = db.get('users').find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
-
-  const shopId = `shop_${uuidv4().slice(0, 8)}`;
-  const newPartner = {
-    id: `usr_partner_${uuidv4().slice(0, 6)}`,
-    name: ownerName,
-    shopName,
-    shopId,
-    email: email.toLowerCase(),
-    phone: phone || '+91 98000 00000',
-    password: bcrypt.hashSync(password, 10),
-    role: 'partner',
-    approvalStatus: 'pending_approval',
-    address: address || 'Bengaluru Coastal Harbor Depot',
-    fssaiNumber: fssaiNumber || 'FSSAI-REG-PENDING',
-    categories: categories || ['Fresh Chicken', 'Tender Mutton', 'Fish & Seafood'],
-    operatingHours: operatingHours || '05:30 AM - 09:30 PM',
-    description: description || 'Daily artisanal meat butchering station & seafood lot',
-    createdAt: new Date().toISOString()
-  };
-
-  db.insert('users', newPartner);
-  const { password: _, ...safePartner } = newPartner;
-  res.status(201).json({
-    message: 'Partner shop application submitted successfully. Pending Admin verification.',
-    partner: safePartner
-  });
 });
 
-app.post('/api/partner/login', (req, res) => {
-  const { email, password } = req.body;
-  const input = (email || '').toLowerCase().trim();
-  if (!input || !password) {
-    return res.status(400).json({ error: 'Partner business email and password required' });
-  }
+app.post('/api/partner/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
+    if (!input || !password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Partner business email and password required' });
+    }
 
-  const user = db.get('users').find(u => {
-    if (u.email && u.email.toLowerCase() === input) return true;
     const cleanDigits = input.replace(/[^0-9]/g, '');
-    if (cleanDigits.length >= 10 && u.phone && u.phone.replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-    return false;
-  });
+    let user = await findUser({ email: input });
+    if (!user && cleanDigits.length >= 10) {
+      const partners = await findUsers({ role: 'partner' });
+      user = partners.find(u => u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits));
+    }
 
-  const isPwMatch = (user && user.password && bcrypt.compareSync(password, user.password)) ||
-    (user && (password === 'Brisket#Station2026!' || password === 'partner123'));
-  if (!user || !isPwMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your shop partner login.' });
+    const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
+    if (!user || !isPwMatch) {
+      return res.status(401).json({ error: 'Invalid credentials. Please verify your shop partner login.' });
+    }
+
+    if (user.role !== 'partner' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: This login is exclusively for Butcher / Partner Shops.' });
+    }
+
+    if (user.approvalStatus === 'pending_approval') {
+      return res.status(403).json({
+        error: 'Your partner shop application is currently Pending Approval from BrisketBox Operations Admin.',
+        approvalStatus: 'pending_approval'
+      });
+    }
+
+    if (user.approvalStatus === 'suspended') {
+      return res.status(403).json({
+        error: 'Your shop partner account is currently suspended.',
+        approvalStatus: 'suspended'
+      });
+    }
+
+    const token = createToken(user);
+    setAuthCookie(res, token);
+    const { password: _, ...userWithoutPw } = user;
+    res.json({ user: userWithoutPw, token });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Partner login failed' });
   }
-
-  if (user.role !== 'partner' && user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied: This login is exclusively for Butcher / Partner Shops.' });
-  }
-
-  if (user.approvalStatus === 'pending_approval') {
-    return res.status(403).json({
-      error: 'Your partner shop application is currently Pending Approval from BrisketBox Operations Admin.',
-      approvalStatus: 'pending_approval'
-    });
-  }
-
-  if (user.approvalStatus === 'suspended') {
-    return res.status(403).json({
-      error: 'Your shop partner account is currently suspended.',
-      approvalStatus: 'suspended'
-    });
-  }
-
-  const token = createToken(user);
-  const { password: _, ...userWithoutPw } = user;
-  res.json({ user: userWithoutPw, token });
 });
 
 app.get('/api/partner/me', authenticate, requireRole('partner'), (req, res) => {
@@ -927,13 +1085,13 @@ app.get('/api/partner/me', authenticate, requireRole('partner'), (req, res) => {
   res.json(safePartner);
 });
 
-app.get('/api/partner/products', authenticate, requireRole('partner'), (req, res) => {
-  const allProds = db.get('products');
+app.get('/api/partner/products', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
+  const allProds = await findProducts();
   const partnerProds = allProds.filter(p => p.partnerId === req.user.shopId || (!p.partnerId && req.user.role === 'admin'));
   res.json(partnerProds.length > 0 ? partnerProds : allProds);
 });
 
-app.post('/api/partner/products', authenticate, requireRole('partner'), (req, res) => {
+app.post('/api/partner/products', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
   const { name, category, description, price, mrp, unit, netWeight, pieces, serves, origin, cutStyle, stock, image } = req.body;
   if (!name || !price || !category) {
     return res.status(400).json({ error: 'Name, price, and category are required' });
@@ -945,7 +1103,7 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), (req, re
     partnerName: req.user.shopName || req.user.name,
     name,
     category,
-    description: description || 'Daily fresh dressed cuts chilled to 0°C - 4°C.',
+    description: description || 'Daily fresh dressed cuts chilled for delivery.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
@@ -953,44 +1111,62 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), (req, re
     grossWeight: '550g',
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
-    eta: '⚡ Today in 90 mins',
-    chillingMethod: '0°C to 4°C chilled pack Cold Chain',
-    origin: origin || 'Certified Farm / Coastal Lot',
+    eta: 'Today',
+    chillingMethod: 'Chilled pack Cold Chain',
+    origin: origin || 'Direct Sourcing',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 30,
-    image: image || '/images/products/prod_1.jpg',
-    imageUrl: image || '/images/products/prod_1.jpg',
-    vacuumSealed: true,
+    image: image || '/images/products/prod_1.webp',
+    imageUrl: image || '/images/products/prod_1.webp',
+    sealed: true,
     inStock: true
   };
 
-  db.insert('products', newProd);
-  res.status(201).json(newProd);
+  const created = await createProduct(newProd);
+  res.status(201).json(created);
 });
 
-app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), (req, res) => {
+app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
   const { stock, inStock } = req.body;
-  const prod = db.findById('products', req.params.id);
+  const prod = await findProductById(req.params.id);
   if (!prod) return res.status(404).json({ error: 'Product not found' });
 
   const updates = {};
   if (typeof stock === 'number') updates.stock = stock;
   if (typeof inStock === 'boolean') updates.inStock = inStock;
 
-  const updated = db.update('products', prod.id, updates);
+  const updated = await updateProduct(prod.id, updates);
   res.json(updated);
 });
 
-app.get('/api/partner/orders', authenticate, requireRole('partner'), (req, res) => {
-  const allOrders = db.get('orders');
-  const partnerOrders = allOrders.filter(o => o.partnerId === req.user.shopId || req.user.role === 'admin' || !o.partnerId);
+app.get('/api/partner/orders', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
+  const partnerOrders = await findOrders({
+    $or: [{ partnerId: req.user.shopId }, { partnerId: req.user.id }]
+  });
   res.json(partnerOrders);
 });
 
-app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), (req, res) => {
+app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, validate(partnerOrderStatusSchema), async (req, res) => {
   const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId, itemPrepList, dressingLossLog } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  if (req.user.role !== 'admin' && order.partnerId && order.partnerId !== req.user.shopId && order.partnerId !== req.user.id) {
+    return res.status(403).json({ error: 'Access denied: You are not the assigned partner shop for this order' });
+  }
+
+  const targetStatus = normalizeLifecycle(lifecycleStatus || status);
+  if (!isValidTransition(order.lifecycleStatus, targetStatus)) {
+    return res.status(400).json({
+      error: `Invalid lifecycle transition from '${order.lifecycleStatus || order.status}' to '${targetStatus}'.`
+    });
+  }
+
+  if (!canRoleExecuteTransition('partner', order.lifecycleStatus, targetStatus)) {
+    return res.status(403).json({
+      error: `Partner shops are not authorized to transition order to '${targetStatus}'.`
+    });
+  }
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1020,16 +1196,7 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
   };
 
   const lossText = dressingLossLog ? ` [Dressing Loss: ${dressingLossLog.lossPercent}% on ${dressingLossLog.carcassType}]` : '';
-  updates.tempLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: order.liveTemp || 1.2,
-      event: `Butcher Station (${req.user.name}): Cut & FreshSealed #${sealTag || 'FS-101'} (${weighedWeight || '500g'})${lossText}. Ready for rider pickup.`
-    }
-  ];
-
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
@@ -1037,50 +1204,50 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
 // 4C. ADMIN MULTI-PORTAL MANAGEMENT ENDPOINTS
 // ==========================================
 
-app.get('/api/admin/riders', authenticate, requireAdmin, (req, res) => {
-  const riders = db.get('users').filter(u => u.role === 'rider');
+app.get('/api/admin/riders', authenticate, requireAdmin, async (req, res) => {
+  const riders = await findUsers({ role: 'rider' });
   const safeRiders = riders.map(({ password: _, ...r }) => r);
   res.json(safeRiders);
 });
 
-app.patch('/api/admin/riders/:id/approval', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/riders/:id/approval', authenticate, requireAdmin, async (req, res) => {
   const { approvalStatus } = req.body;
   if (!['approved', 'rejected', 'suspended', 'pending_approval'].includes(approvalStatus)) {
     return res.status(400).json({ error: 'Invalid approval status' });
   }
 
-  const updated = db.update('users', req.params.id, { approvalStatus });
+  const updated = await updateUser(req.params.id, { approvalStatus });
   if (!updated) return res.status(404).json({ error: 'Rider not found' });
   const { password: _, ...safeRider } = updated;
   res.json(safeRider);
 });
 
-app.get('/api/admin/partners', authenticate, requireAdmin, (req, res) => {
-  const partners = db.get('users').filter(u => u.role === 'partner');
+app.get('/api/admin/partners', authenticate, requireAdmin, async (req, res) => {
+  const partners = await findUsers({ role: 'partner' });
   const safePartners = partners.map(({ password: _, ...p }) => p);
   res.json(safePartners);
 });
 
-app.patch('/api/admin/partners/:id/approval', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/partners/:id/approval', authenticate, requireAdmin, async (req, res) => {
   const { approvalStatus } = req.body;
   if (!['approved', 'rejected', 'suspended', 'pending_approval'].includes(approvalStatus)) {
     return res.status(400).json({ error: 'Invalid approval status' });
   }
 
-  const updated = db.update('users', req.params.id, { approvalStatus });
+  const updated = await updateUser(req.params.id, { approvalStatus });
   if (!updated) return res.status(404).json({ error: 'Partner shop not found' });
   const { password: _, ...safePartner } = updated;
   res.json(safePartner);
 });
 
-app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, async (req, res) => {
   const { riderId, partnerId } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
   const updates = {};
   if (riderId) {
-    const rider = db.findById('users', riderId);
+    const rider = await findUserById(riderId);
     if (rider) {
       updates.riderId = rider.id;
       updates.riderName = rider.name.split(' ')[0];
@@ -1089,7 +1256,8 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
       updates.riderVehicle = rider.vehicleType ? `${rider.vehicleType} (${rider.vehicleNumber || ''})` : 'EV 2-Wheeler';
       updates.deliveryExecutive = `${rider.name} (${rider.phone || ''})`;
       updates.lifecycleStatus = 'RIDER_ASSIGNED';
-      updates.status = 'Rider Assigned';
+      updates.orderStatus = 'OUT_FOR_DELIVERY';
+      updates.status = 'Out for Delivery';
       updates.lifecycleTimestamps = {
         ...(order.lifecycleTimestamps || {}),
         assignedAt: new Date().toISOString()
@@ -1098,64 +1266,183 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
   }
 
   if (partnerId) {
-    const partner = db.get('users').find(u => u.shopId === partnerId || u.id === partnerId);
+    const partner = await findUser({ $or: [{ shopId: partnerId }, { id: partnerId }] });
     if (partner) {
       updates.partnerId = partner.shopId || partner.id;
       updates.partnerName = partner.shopName || partner.name;
     }
   }
 
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
-// Security PIN Verification Tracker (3-attempt lockout & fraud protection)
-const pinAttemptTracker = new Map();
-
-// Swiggy-Grade Handover PIN Verification & Cooler Refund Endpoint
-const handleOrderHandover = (req, res) => {
+// Database-Persistent Handover PIN Verification
+const handleOrderHandover = async (req, res) => {
   const { pin, deliveryPin, coolerReturned, podImage, notes, cashCollected, cashAmount } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  const enteredPin = String(pin || deliveryPin || '').trim();
-  const validPin = String(order.deliveryPin || '').trim();
-  const nowTime = Date.now();
-  const attemptRecord = pinAttemptTracker.get(order.id) || { count: 0, lockedUntil: 0 };
-
-  // Check if order is under PIN lockout
-  if (attemptRecord.lockedUntil > nowTime) {
-    const remainingSec = Math.ceil((attemptRecord.lockedUntil - nowTime) / 1000);
-    return res.status(429).json({
-      error: `Handover locked due to 3 failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
-      locked: true,
-      remainingSec
-    });
+  const isAdmin = req.user && req.user.role === 'admin';
+  const isApprovedRider = req.user && req.user.role === 'rider' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = isApprovedRider && Boolean(order.riderId && order.riderId === req.user.id);
+  if (!isAdmin && !isAssignedRider) {
+    return res.status(403).json({ error: 'Access denied: Only the assigned and approved delivery rider or operations admin can complete order handover.' });
   }
 
-  // If a PIN is configured, verify it
-  if (validPin && enteredPin !== validPin) {
-    attemptRecord.count += 1;
-    if (attemptRecord.count >= 3) {
-      attemptRecord.lockedUntil = nowTime + 300000; // 5 minute security lockout
-      pinAttemptTracker.set(order.id, attemptRecord);
-      return res.status(429).json({
-        error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
-        locked: true,
-        remainingSec: 300
+  // Handover is allowed ONLY from OUT_FOR_DELIVERY or ARRIVED
+  const currentLifecycle = normalizeLifecycle(order.lifecycleStatus || order.orderStatus || order.status);
+  if (!['OUT_FOR_DELIVERY', 'ARRIVED'].includes(currentLifecycle)) {
+    if (['DELIVERED', 'COOLER_RETURNED', 'COMPLETED'].includes(currentLifecycle)) {
+      return res.status(400).json({ 
+        error: `Order has already been delivered and completed. Current status is '${currentLifecycle}'.` 
       });
     }
-    pinAttemptTracker.set(order.id, attemptRecord);
-    return res.status(400).json({
-      error: `Invalid 4-digit PIN. ${3 - attemptRecord.count} attempt(s) remaining before security lockout.`,
-      remainingAttempts: 3 - attemptRecord.count
+    return res.status(400).json({ 
+      error: `Order handover is only permitted from 'OUT_FOR_DELIVERY' or 'ARRIVED' status. Current status is '${currentLifecycle}'.` 
     });
   }
 
-  // PIN verified successfully: reset security tracker
-  pinAttemptTracker.delete(order.id);
+  // COD Cash Validation (validate payload BEFORE consuming PIN attempts):
+  // - A rider cannot choose a lower, partial, excessive, or negative cash amount.
+  // - Delivery of a COD order must record exactly the server-calculated amount due.
+  // - Never add cash for a prepaid order!
+  const isCod = Boolean(order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod'));
+  const serverAmountDue = Math.round(Number(order.totalAmount || order.total || 0));
+
+  let collectedCashNum = 0;
+
+  if (isCod) {
+    const rawCash = cashAmount !== undefined ? cashAmount : (req.body.cashCollected !== undefined ? req.body.cashCollected : serverAmountDue);
+    const parsedCash = Number(rawCash);
+
+    if (isNaN(parsedCash) || parsedCash <= 0 || Math.round(parsedCash) !== serverAmountDue) {
+      return res.status(400).json({
+        error: `Invalid cash amount for Cash on Delivery. Exactly the server-calculated amount due (₹${serverAmountDue}) must be recorded. Received: ${rawCash}`
+      });
+    }
+
+    collectedCashNum = serverAmountDue;
+  } else {
+    // Prepaid orders: Never collect cash!
+    if (cashAmount !== undefined && Number(cashAmount) > 0) {
+      return res.status(400).json({
+        error: 'Cash collection is not permitted for prepaid orders.'
+      });
+    }
+    collectedCashNum = 0;
+  }
+
+  const enteredPin = String(pin || deliveryPin || '').trim();
+  const validPin = String(order.deliveryPin || '').trim();
+  const nowDate = new Date();
+  const nowMs = nowDate.getTime();
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+  if (validPin) {
+    if (isMongo) {
+      // 1. If previous lock has expired, reset pinAttempts and pinLockedUntil atomically
+      await Order.updateOne(
+        {
+          _id: order._id,
+          pinLockedUntil: { $ne: null, $lte: nowDate }
+        },
+        {
+          $set: { pinAttempts: 0, pinLockedUntil: null }
+        }
+      );
+
+      // 2. Reserve an attempt atomically BEFORE comparing the PIN
+      // Condition: pinAttempts < 3 and not locked (pinLockedUntil is null or <= nowDate)
+      // Only requests that win one of the 3 attempt slots may compare the PIN!
+      const reservation = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          pinAttempts: { $lt: 3 },
+          $or: [
+            { pinLockedUntil: null },
+            { pinLockedUntil: { $lte: nowDate } }
+          ]
+        },
+        {
+          $inc: { pinAttempts: 1 }
+        },
+        {
+          returnDocument: 'after'
+        }
+      );
+
+      // If no slot was won, order is locked or max attempts already reached!
+      if (!reservation) {
+        // Ensure lock timestamp is recorded if 3 attempts were consumed
+        const currentDoc = await Order.findById(order._id).lean();
+        if (currentDoc && (currentDoc.pinAttempts || 0) >= 3 && !currentDoc.pinLockedUntil) {
+          const lockUntilDate = new Date(nowMs + 300000);
+          await Order.updateOne({ _id: order._id }, { $set: { pinLockedUntil: lockUntilDate } });
+        }
+        const lockDate = currentDoc?.pinLockedUntil ? new Date(currentDoc.pinLockedUntil) : new Date(nowMs + 300000);
+        const remainingSec = Math.max(1, Math.ceil((lockDate.getTime() - nowMs) / 1000));
+        return res.status(429).json({
+          error: `Handover locked due to 3 failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+          locked: true,
+          remainingSec
+        });
+      }
+
+      // Slot won! Only NOW compare the PIN
+      const attemptNum = reservation.pinAttempts; // 1, 2, or 3
+      if (enteredPin !== validPin) {
+        if (attemptNum >= 3) {
+          const lockUntilDate = new Date(nowMs + 300000);
+          await Order.updateOne({ _id: order._id }, { $set: { pinLockedUntil: lockUntilDate } });
+          return res.status(429).json({
+            error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
+            locked: true,
+            remainingSec: 300
+          });
+        }
+        return res.status(400).json({
+          error: `Invalid 4-digit PIN. ${3 - attemptNum} attempt(s) remaining before security lockout.`,
+          remainingAttempts: 3 - attemptNum
+        });
+      }
+
+      // Correct PIN matched and won a valid slot! Handover proceeds.
+    } else {
+      // In-memory fallback
+      const currentDoc = await findOrderById(order.id);
+      const isLocked = currentDoc.pinLockedUntil && new Date(currentDoc.pinLockedUntil).getTime() > nowMs;
+      if (isLocked || (currentDoc.pinAttempts || 0) >= 3) {
+        const lockUntilDate = currentDoc.pinLockedUntil ? new Date(currentDoc.pinLockedUntil) : new Date(nowMs + 300000);
+        const remainingSec = Math.max(1, Math.ceil((lockUntilDate.getTime() - nowMs) / 1000));
+        return res.status(429).json({
+          error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+          locked: true,
+          remainingSec
+        });
+      }
+
+      const attemptNum = (currentDoc.pinAttempts || 0) + 1;
+      await updateOrder(order.id, { pinAttempts: attemptNum });
+
+      if (enteredPin !== validPin) {
+        if (attemptNum >= 3) {
+          await updateOrder(order.id, { pinLockedUntil: new Date(nowMs + 300000) });
+          return res.status(429).json({
+            error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
+            locked: true,
+            remainingSec: 300
+          });
+        }
+        return res.status(400).json({
+          error: `Invalid 4-digit PIN. ${3 - attemptNum} attempt(s) remaining before security lockout.`,
+          remainingAttempts: 3 - attemptNum
+        });
+      }
+    }
+  }
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1167,110 +1454,307 @@ const handleOrderHandover = (req, res) => {
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
-  const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
-  const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
+  const depositPaid = Number(order.coolerDeposit || 0);
 
-  const updatedLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: 1.8,
-      event: `Delivered & Verified via 4-digit PIN.${collectedCashNum > 0 ? ` Cash Collected: ₹${collectedCashNum}.` : ''} Cooler Box returned: ${coolerReturned ? 'YES (₹250 Refunded)' : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
-    }
-  ];
-
-  const updatedOrder = db.update('orders', order.id, {
-    status: 'Delivered',
-    orderStatus: 'DELIVERED',
-    lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
-    lifecycleTimestamps: timestamps,
-    coolerReturned: !!coolerReturned,
-    podImage: podImage || order.podImage,
-    handoverNotes: notes || order.handoverNotes,
-    deliveredAt: nowIso,
-    cashCollected: collectedCashNum,
-    paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
-    liveTemp: 1.8,
-    tempLog: updatedLog
-  });
-
-  // If cash was collected by rider, update rider's floating cash in hand balance
-  if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
-    const rider = db.findById('users', req.user.id);
-    if (rider) {
-      const currentCash = rider.cashInHand || 0;
-      db.update('users', rider.id, { cashInHand: currentCash + collectedCashNum });
+  let handoverTemp = null;
+  if (req.body.temp !== undefined || req.body.temperature !== undefined) {
+    const parsed = Number(req.body.temp !== undefined ? req.body.temp : req.body.temperature);
+    if (!isNaN(parsed) && parsed >= -30 && parsed <= 60) {
+      handoverTemp = Number(parsed.toFixed(1));
     }
   }
 
-  // If customer returned cooler box, automatically refund ₹250 to customer's wallet!
-  if (coolerReturned && order.userId) {
-    const customer = db.findById('users', order.userId);
-    if (customer) {
-      const currentWallet = customer.walletBalance || 0;
-      const newWallet = currentWallet + 250;
-      const currentDep = customer.depositBalance || 250;
-      const newDep = Math.max(0, currentDep - 250);
+  const updatedLog = handoverTemp !== null ? [
+    ...(order.tempLog || []),
+    {
+      time: timeStr,
+      temp: handoverTemp,
+      event: `Delivered & Temperature verified (${handoverTemp}°C).`,
+      source: 'STAFF_CHECK',
+      recordedBy: req.user?.name || req.user?.email || 'Fleet Executive'
+    }
+  ] : (order.tempLog || []);
 
-      const refundTx = {
-        id: `TX-REFUND-${Date.now()}`,
-        amount: 250,
-        type: 'credit',
-        title: 'Cold Box Deposit Refund',
-        description: `Doorstep cooler returned for Order #${order.id}`,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: nowIso
-      };
+  let updatedOrder = null;
 
-      db.update('users', customer.id, {
-        walletBalance: newWallet,
-        depositBalance: newDep,
-        walletTransactions: [refundTx, ...(customer.walletTransactions || [])],
-        activeCoolersCount: Math.max(0, (customer.activeCoolersCount || 1) - 1)
+  if (isMongo) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // ATOMIC CLAIM: Only one request can transition orderStatus to DELIVERED
+        const claimed = await Order.findOneAndUpdate(
+          {
+            _id: order._id,
+            orderStatus: { $ne: 'DELIVERED' }
+          },
+          {
+            $set: {
+              status: 'Delivered',
+              orderStatus: 'DELIVERED',
+              lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
+              lifecycleTimestamps: timestamps,
+              coolerReturned: Boolean(coolerReturned),
+              coolerDepositRefunded: (depositPaid > 0 && !order.coolerDepositRefunded),
+              podImage: podImage || order.podImage,
+              handoverNotes: notes || order.handoverNotes,
+              deliveredAt: nowIso,
+              cashCollected: collectedCashNum,
+              paymentStatus: isCod ? 'PAID' : order.paymentStatus,
+              liveTemp: handoverTemp !== null ? handoverTemp : (order.liveTemp ?? null),
+              tempLog: updatedLog,
+              pinAttempts: 0,
+              pinLockedUntil: null
+            }
+          },
+          { new: true, session }
+        );
+
+        if (!claimed) {
+          const err = new Error('Order has already been handed over and completed.');
+          err.statusCode = 400;
+          throw err;
+        }
+
+        // ONLY THE WINNER MAY RECORD CASH FOR COD ORDERS, USING $inc:
+        if (isCod && collectedCashNum > 0 && req.user && req.user.id) {
+          await User.updateOne(
+            { id: req.user.id },
+            { $inc: { cashInHand: collectedCashNum } },
+            { session }
+          );
+        }
+
+        // Release cooler if returned
+        if (coolerReturned && claimed.coolerId) {
+          await Cooler.findOneAndUpdate(
+            { id: claimed.coolerId },
+            { $set: { status: 'available', currentOrderId: null, currentUserId: null } },
+            { session }
+          );
+        }
+
+        // Refund deposit if paid and cooler returned
+        if (depositPaid > 0 && coolerReturned && !claimed.coolerDepositRefunded && claimed.userId) {
+          await creditWallet({
+            userId: claimed.userId,
+            amount: depositPaid,
+            idempotencyKey: `refund_cooler_${claimed.id}`,
+            orderId: claimed.orderNumber || claimed.id,
+            title: 'Cold Box Deposit Refund',
+            description: `Doorstep cooler returned for Order #${claimed.orderNumber || claimed.id}`
+          }, { session });
+        }
+
+        updatedOrder = claimed.toObject();
       });
+    } catch (err) {
+      return res.status(err.statusCode || 400).json({ error: err.message });
+    } finally {
+      await session.endSession();
+    }
+  } else {
+    // LowDB fallback
+    updatedOrder = await updateOrder(order.id, {
+      status: 'Delivered',
+      orderStatus: 'DELIVERED',
+      lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
+      lifecycleTimestamps: timestamps,
+      coolerReturned: !!coolerReturned,
+      coolerDepositRefunded: depositPaid > 0,
+      podImage: podImage || order.podImage,
+      handoverNotes: notes || order.handoverNotes,
+      deliveredAt: nowIso,
+      cashCollected: collectedCashNum,
+      paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
+      liveTemp: handoverTemp !== null ? handoverTemp : (order.liveTemp ?? null),
+      tempLog: updatedLog,
+      pinAttempts: 0,
+      pinLockedUntil: null
+    });
+
+    if (isCod && collectedCashNum > 0 && req.user && req.user.role === 'rider') {
+      const rider = await findUserById(req.user.id);
+      if (rider) {
+        await updateUser(rider.id, { cashInHand: (rider.cashInHand || 0) + collectedCashNum });
+      }
     }
 
-    if (order.coolerId) {
-      db.update('coolers', order.coolerId, { status: 'available' });
+    if (coolerReturned && order.coolerId) {
+      await updateCooler(order.coolerId, { status: 'available' });
     }
+  }
+
+  const sanitized = { ...updatedOrder };
+  if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+    delete sanitized.deliveryPin;
   }
 
   res.json({
     success: true,
     message: 'Delivery handover completed and verified',
-    order: updatedOrder
+    order: sanitized
   });
 };
 
-app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), (req, res) => {
-  const { amount, depotId } = req.body;
-  const rider = db.findById('users', req.user.id);
-  const currentCash = rider?.cashInHand || 0;
-  const depositAmt = Math.min(Number(amount) || currentCash, currentCash);
-  const updatedRider = db.update('users', req.user.id, {
-    cashInHand: Math.max(0, currentCash - depositAmt)
+// Rider Cash Deposit Request: Rider creates a PENDING request.
+// cashInHand changes ONLY after an operations admin confirms it.
+app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
+  const { amount, depotId, notes } = req.body;
+  const depositAmt = Math.round(Number(amount));
+  if (isNaN(depositAmt) || depositAmt <= 0) {
+    return res.status(400).json({ error: 'Please specify a valid positive cash deposit amount' });
+  }
+
+  const rider = await findUserById(req.user.id);
+  const currentCash = Number(rider?.cashInHand || 0);
+  if (depositAmt > currentCash) {
+    return res.status(400).json({
+      error: `Deposit amount (₹${depositAmt}) exceeds current cash in hand (₹${currentCash}).`
+    });
+  }
+
+  const depositId = `DEP-${Date.now()}-${uuidv4().slice(0, 6)}`;
+  const receiptNo = `DEP-RCP-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const deposit = await CashDeposit.create({
+    id: depositId,
+    riderId: req.user.id,
+    riderName: req.user.name,
+    amount: depositAmt,
+    status: 'PENDING',
+    depotId: depotId || 'DEPOT-BLR-CENTRAL',
+    receiptNo,
+    notes: notes || 'Rider cash handover at depot counter'
   });
+
   res.json({
     success: true,
-    depositedAmount: depositAmt,
-    remainingCashInHand: updatedRider.cashInHand || 0,
-    receiptNo: `DEP-RCP-${Math.floor(10000 + Math.random() * 90000)}`
+    message: 'Cash deposit request submitted. Awaiting operations admin verification and confirmation.',
+    deposit,
+    currentCashInHand: currentCash,
+    receiptNo
   });
+});
+
+// Admin Cash Deposits Queue
+app.get('/api/admin/cash-deposits', authenticate, requireAdmin, async (req, res) => {
+  const { status } = req.query;
+  const query = {};
+  if (status) query.status = status;
+  const deposits = await CashDeposit.find(query).sort({ createdAt: -1 }).lean();
+  res.json(deposits);
+});
+
+// Admin Confirm Cash Deposit: Atomic update and audit record; prevents double confirmation
+app.post('/api/admin/cash-deposits/:id/confirm', authenticate, requireAdmin, async (req, res) => {
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+  if (!isMongo) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    let result = null;
+    await session.withTransaction(async () => {
+      // Atomic claim: only transition from PENDING to CONFIRMED
+      const deposit = await CashDeposit.findOneAndUpdate(
+        { id: req.params.id, status: 'PENDING' },
+        {
+          $set: {
+            status: 'CONFIRMED',
+            confirmedBy: req.user.id,
+            confirmedAt: new Date().toISOString()
+          }
+        },
+        { new: true, session }
+      );
+
+      if (!deposit) {
+        const err = new Error('Deposit request not found, or has already been confirmed/rejected.');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Atomically decrement rider's cashInHand
+      await User.updateOne(
+        { id: deposit.riderId },
+        { $inc: { cashInHand: -deposit.amount } },
+        { session }
+      );
+
+      result = deposit.toObject();
+    });
+
+    const refreshedRider = await User.findOne({ id: result.riderId }).lean();
+    res.json({
+      success: true,
+      message: `Cash deposit of ₹${result.amount} confirmed for rider ${result.riderName}`,
+      deposit: result,
+      riderRemainingCash: refreshedRider?.cashInHand || 0
+    });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  } finally {
+    await session.endSession();
+  }
+});
+
+// Admin Refund Queue for REFUND_REQUIRED and REFUND_PENDING orders
+app.get('/api/admin/refunds/queue', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const queue = await getRefundQueue(req.query);
+    res.json(queue);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+// Admin-Only Idempotent Order Refund Action
+app.post('/api/admin/orders/:id/refund', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const idempotencyKey = req.headers['idempotency-key'] || req.body?.idempotencyKey;
+    const reason = req.body?.reason || 'Operations admin initiated refund';
+    const result = await processOrderRefund({
+      orderId: req.params.id,
+      adminUser: req.user,
+      reason,
+      idempotencyKey
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
+});
+
+// Admin Check Refund Status
+app.post('/api/admin/orders/:id/refund/status', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await checkRefundStatus({ orderId: req.params.id });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
+});
+app.get('/api/admin/orders/:id/refund/status', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await checkRefundStatus({ orderId: req.params.id });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
 });
 
 app.post('/api/orders/:id/handover', authenticate, handleOrderHandover);
 app.put('/api/orders/:id/handover', authenticate, handleOrderHandover);
 
 // Update prep / delivery status
-const handleUpdateStatus = (req, res) => {
+const handleUpdateStatus = async (req, res) => {
   const { 
     status, 
     orderStatus, 
     coolerId, 
     notes, 
     note, 
-    deliveryPin, 
-    coolerReturned,
     weighedWeight,
     batchLotId,
     sealTag,
@@ -1278,45 +1762,70 @@ const handleUpdateStatus = (req, res) => {
     riderLocation,
     deliveryExecutive
   } = req.body;
-  const order = db.findById('orders', req.params.id);
+
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  // If status is delivered with PIN, delegate to handover
-  if (status === 'delivered' || status === 'Delivered') {
-    return handleOrderHandover(req, res);
+  const isAdmin = req.user && req.user.role === 'admin';
+  const isApprovedRider = req.user && req.user.role === 'rider' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = isApprovedRider && Boolean(order.riderId && order.riderId === req.user.id);
+  const isApprovedPartner = req.user && req.user.role === 'partner' && req.user.approvalStatus === 'approved';
+  const isAssignedPartner = isApprovedPartner && Boolean(order.partnerId && (order.partnerId === req.user.id || (req.user.shopId && order.partnerId === req.user.shopId)));
+
+  if (!isAdmin && !isAssignedRider && !isAssignedPartner) {
+    return res.status(403).json({ error: 'Access denied: Only authorized, approved station partners, assigned riders, or operations admins can update order status.' });
+  }
+
+  // Normalize target status before checks. No status spelling may bypass PIN delivery.
+  const targetStatus = normalizeLifecycle(status || orderStatus || '');
+
+  // Delivery CANNOT be marked via status update; it MUST go through PIN verification
+  if (targetStatus === 'DELIVERED') {
+    return res.status(400).json({ error: 'Orders can only be marked DELIVERED via the /api/orders/:id/handover route with customer delivery PIN verification.' });
+  }
+
+  // Cancellation MUST go through unified cancelOrder
+  if (targetStatus === 'CANCELLED') {
+    try {
+      const cancelled = await cancelOrder({ orderId: order.id, user: req.user, reason: notes || note || 'Cancelled via status update' });
+      const sanitized = { ...cancelled };
+      if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+        delete sanitized.deliveryPin;
+      }
+      return res.json(sanitized);
+    } catch (err) {
+      return res.status(err.statusCode || 400).json({ error: err.message });
+    }
+  }
+
+  const resolvedOrderStatus = targetStatus || order.orderStatus;
+  const currentStatus = normalizeLifecycle(order.lifecycleStatus || order.orderStatus || order.status);
+
+  // Validate state machine transition & role permissions
+  if (resolvedOrderStatus && resolvedOrderStatus !== currentStatus) {
+    if (!isValidTransition(currentStatus, resolvedOrderStatus)) {
+      return res.status(400).json({
+        error: `Invalid order state transition from '${currentStatus}' to '${resolvedOrderStatus}'.`
+      });
+    }
+
+    if (!canRoleExecuteTransition(req.user.role, currentStatus, resolvedOrderStatus)) {
+      return res.status(403).json({
+        error: `Role '${req.user.role}' is not authorized to execute order transition from '${currentStatus}' to '${resolvedOrderStatus}'.`
+      });
+    }
   }
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  const resolvedOrderStatus = orderStatus || (
-    status === 'Delivered' ? 'DELIVERED' :
-    status === 'Out for Delivery' || status === 'out_for_delivery' ? 'OUT_FOR_DELIVERY' :
-    status === 'Packed' || status === 'Cold Box Packed' || status === 'ready_for_dispatch' ? 'PACKED' :
-    status === 'Quality Check' || status === 'vacuum_packed' ? 'QUALITY_CHECK' :
-    status === 'Preparing' || status === 'butchering' ? 'PREPARING' :
-    status === 'Cancelled' ? 'CANCELLED' :
-    status === 'Confirmed' ? 'CONFIRMED' : order.orderStatus
-  );
-
-  let newTemp = order.liveTemp || 1.8;
-  if (resolvedOrderStatus === 'OUT_FOR_DELIVERY') {
-    newTemp = 1.2;
-    if (order.coolerId) db.update('coolers', order.coolerId, { status: 'in_transit' });
+  if (resolvedOrderStatus === 'OUT_FOR_DELIVERY' && order.coolerId) {
+    await updateCooler(order.coolerId, { status: 'in_transit' });
   }
 
-  const updatedLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: newTemp,
-      event: notes || note || `Order status updated to: ${status || resolvedOrderStatus}`
-    }
-  ];
-
-  const updatedOrder = db.update('orders', order.id, {
+  const updatedOrder = await updateOrder(order.id, {
     status: status || resolvedOrderStatus,
     orderStatus: resolvedOrderStatus,
     prepStage: status,
@@ -1326,63 +1835,42 @@ const handleUpdateStatus = (req, res) => {
     sealTag: sealTag || order.sealTag,
     butcherName: butcherName || order.butcherName,
     riderLocation: riderLocation || order.riderLocation,
-    deliveryExecutive: deliveryExecutive || order.deliveryExecutive,
-    liveTemp: newTemp,
-    tempLog: updatedLog
+    deliveryExecutive: deliveryExecutive || order.deliveryExecutive
   });
 
-  res.json(updatedOrder);
+  const sanitized = { ...updatedOrder };
+  if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+    delete sanitized.deliveryPin;
+  }
+
+  res.json(sanitized);
 };
 
 app.patch('/api/orders/:id/status', authenticate, handleUpdateStatus);
 app.put('/api/orders/:id/status', authenticate, handleUpdateStatus);
 
-// Customer Order Cancellation (Only allowed before order is PACKED)
-app.post('/api/orders/:id/cancel', authenticate, (req, res) => {
-  const order = db.findById('orders', req.params.id);
-  if (!order) {
-    return res.status(404).json({ error: 'Order not found' });
-  }
-
-  if (req.user.role !== 'admin' && order.userId !== req.user.id) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  const nonCancellable = ['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
-  if (nonCancellable.includes(order.orderStatus)) {
-    return res.status(400).json({ 
-      error: `Order cannot be cancelled in '${order.orderStatus}' stage. Please contact concierge support.` 
+// Customer Order Cancellation (Unified Cancellation Service)
+app.post('/api/orders/:id/cancel', authenticate, async (req, res) => {
+  try {
+    const cancelled = await cancelOrder({ 
+      orderId: req.params.id, 
+      user: req.user, 
+      reason: req.body?.reason || 'Customer requested cancellation' 
     });
-  }
 
-  // Restore inventory
-  for (const item of order.items) {
-    const prod = db.findById('products', item.productId);
-    if (prod) {
-      db.update('products', prod.id, { stock: prod.stock + item.quantity });
+    const sanitized = { ...cancelled };
+    if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+      delete sanitized.deliveryPin;
     }
+
+    res.json({ success: true, message: 'Order cancelled successfully', order: sanitized });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
   }
-
-  // Release cooler
-  if (order.coolerId) {
-    db.update('coolers', order.coolerId, {
-      status: 'available',
-      currentOrderId: null,
-      currentUserId: null
-    });
-  }
-
-  const updated = db.update('orders', order.id, {
-    orderStatus: 'CANCELLED',
-    status: 'Cancelled',
-    paymentStatus: order.paymentStatus === 'PAID' ? 'REFUND_PENDING' : order.paymentStatus
-  });
-
-  res.json({ success: true, message: 'Order cancelled successfully', order: updated });
 });
 
 // Customer Concierge Support & Contact Form Submission (Anti-Spam Rate Limited)
-app.post('/api/contact', contactLimiter, (req, res) => {
+app.post('/api/contact', contactLimiter, async (req, res) => {
   const { name, email, phone, category, orderId, message } = req.body;
   if (!name || !phone || !message) {
     return res.status(400).json({ error: 'Name, phone number, and message are required.' });
@@ -1402,8 +1890,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   };
 
   try {
-    const contacts = db.get('contacts') || [];
-    db.insert('contacts', ticket);
+    await createContact(ticket);
   } catch (e) {
     console.warn('Could not insert to contacts table:', e.message);
   }
@@ -1411,63 +1898,92 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   res.json({
     success: true,
     ticketId,
-    message: 'Your message has been delivered to BrisketBox Central Support. Response within 15 minutes.'
+    message: 'Your message has been delivered to BrisketBox Customer Support.'
   });
 });
 
-app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
-  const order = db.findById('orders', req.params.id);
+// Staff Temperature Check Route
+// Records real temperature reading from authorized staff or calibrated sensor probe with audit trail
+app.post('/api/orders/:id/temperature', authenticate, async (req, res) => {
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  const delta = (Math.random() * 0.4 - 0.2);
-  const newTemp = Number(Math.max(0.2, Math.min(2.8, order.liveTemp + delta)).toFixed(1));
+  const isAdmin = req.user.role === 'admin';
+  const isApprovedPartner = req.user.role === 'partner' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = req.user.role === 'rider' && req.user.approvalStatus === 'approved' && (order.riderId === req.user.id || !order.riderId);
+
+  if (!isAdmin && !isApprovedPartner && !isAssignedRider) {
+    return res.status(403).json({ error: 'Access denied: Only authorized staff or assigned fleet riders can record temperature checks' });
+  }
+
+  const rawTemp = req.body.temp !== undefined ? req.body.temp : req.body.temperature;
+  const tempNum = Number(rawTemp);
+  if (rawTemp === undefined || rawTemp === null || isNaN(tempNum) || tempNum < -30 || tempNum > 60) {
+    return res.status(400).json({ error: 'Invalid temperature reading. Temperature must be a valid number between -30°C and 60°C.' });
+  }
+
+  const rawSource = String(req.body.source || 'STAFF_CHECK').toUpperCase();
+  const source = ['STAFF_CHECK', 'SENSOR'].includes(rawSource) ? rawSource : 'STAFF_CHECK';
+  const recordedBy = req.user.name || req.user.email || req.user.id;
+
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const roundedTemp = Number(tempNum.toFixed(1));
 
-  const updatedLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: newTemp,
-      event: `Cold-Gel Core Sensor Probe: ${newTemp}°C (Safe Fresh Range 0°C - 4°C)`
-    }
-  ];
+  const logEntry = {
+    time: timeStr,
+    temp: roundedTemp,
+    event: req.body.event || req.body.notes || `Staff temperature check recorded by ${recordedBy} (${source === 'SENSOR' ? 'IoT Sensor Probe' : 'Calibrated Staff Thermometer'})`,
+    source,
+    recordedBy
+  };
 
-  const updated = db.update('orders', order.id, {
-    liveTemp: newTemp,
+  const updatedLog = [...(order.tempLog || []), logEntry];
+
+  await updateOrder(order.id, {
+    liveTemp: roundedTemp,
     tempLog: updatedLog
   });
 
-  res.json(updated);
+  res.json({
+    success: true,
+    liveTemp: roundedTemp,
+    tempLog: updatedLog,
+    recordedEntry: logEntry
+  });
+});
+
+app.post('/api/orders/:id/simulate-temp', (req, res) => {
+  res.status(404).json({ error: 'simulate-temp endpoint has been removed. All temperatures must be recorded by authorized staff or real sensors.' });
 });
 
 // ==========================================
 // 4. REUSABLE COOLER FLEET & RETURNS
 // ==========================================
 
-app.get('/api/coolers', authenticate, (req, res) => {
+app.get('/api/coolers', authenticate, async (req, res) => {
   if (req.user.role === 'admin') {
-    return res.json(db.get('coolers'));
+    return res.json(await findCoolers());
   }
-  const userCoolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
+  const userCoolers = await findCoolers({ currentUserId: req.user.id });
   res.json(userCoolers);
 });
 
-app.get('/api/coolers/my-coolers', authenticate, (req, res) => {
-  const coolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
-  const returns = db.get('coolerReturns').filter(r => r.userId === req.user.id);
+app.get('/api/coolers/my-coolers', authenticate, async (req, res) => {
+  const coolers = await findCoolers({ currentUserId: req.user.id });
+  const returns = await findCoolerReturns({ userId: req.user.id });
   res.json({ coolers, returns });
 });
 
-app.post('/api/coolers/request-return', authenticate, (req, res) => {
+app.post('/api/coolers/request-return', authenticate, async (req, res) => {
   const { coolerId, pickupSlot, notes, address, upiId, refundPreference = 'wallet' } = req.body;
   if (!coolerId) {
     return res.status(400).json({ error: 'Please select a cooler box to return' });
   }
 
-  const cooler = db.findById('coolers', coolerId);
+  const cooler = await findCoolerById(coolerId);
   if (!cooler) {
     return res.status(404).json({ error: 'Cooler box not found' });
   }
@@ -1480,60 +1996,62 @@ app.post('/api/coolers/request-return', authenticate, (req, res) => {
     ? 'BrisketBox Wallet (Instant Store Credit)'
     : (upiId ? `Direct UPI / Bank (${upiId})` : (req.user.upiId ? `Direct UPI (${req.user.upiId})` : 'Direct Bank Transfer'));
 
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const actualDeposit = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
+
   const returnRecord = {
     id: `RET-${Math.floor(100 + Math.random() * 900)}`,
     coolerId: cooler.id,
     orderId: cooler.currentOrderId || 'N/A',
     userId: req.user.id,
     userName: req.user.name,
-    userPhone: req.user.phone || '+91 98765 43210',
+    userPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     userAddress: address || req.user.address,
     status: 'pickup_requested',
     requestDate: new Date().toISOString(),
     scheduledPickupSlot: pickupSlot || 'Tomorrow Morning, 7:00 AM - 10:00 AM',
-    refundAmount: cooler.depositAmount || 250,
+    refundAmount: actualDeposit,
     refundPreference: refundPreference || 'wallet',
     refundMode: refundMethodLabel,
     notes: notes || 'Rinsed with gel packs kept inside box for doorstep pickup.',
-    courierAssigned: 'Hub Return Partner Chetan (+91 99002 11842)'
+    courierAssigned: 'Hub Return Partner Chetan'
   };
 
-  db.insert('coolerReturns', returnRecord);
-
-  db.update('coolers', cooler.id, {
+  await createCoolerReturn(returnRecord);
+  await updateCooler(cooler.id, {
     status: 'return_requested'
   });
 
   res.status(201).json(returnRecord);
 });
 
-app.get('/api/returns', authenticate, (req, res) => {
+app.get('/api/returns', authenticate, async (req, res) => {
   if (req.user.role === 'admin') {
-    return res.json(db.get('coolerReturns'));
+    return res.json(await findCoolerReturns());
   }
-  const userReturns = db.get('coolerReturns').filter(r => r.userId === req.user.id);
+  const userReturns = await findCoolerReturns({ userId: req.user.id });
   res.json(userReturns);
 });
 
-app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/returns/:id/status', authenticate, requireAdmin, async (req, res) => {
   const { status, conditionNotes, refundPreference } = req.body;
-  const returnItem = db.findById('coolerReturns', req.params.id);
+  const returnItem = await findCoolerReturnById(req.params.id);
   if (!returnItem) {
     return res.status(404).json({ error: 'Return request not found' });
   }
 
   const resolvedPreference = refundPreference || returnItem.refundPreference || 'wallet';
 
-  const updatedReturn = db.update('coolerReturns', returnItem.id, {
+  const updatedReturn = await updateCoolerReturn(returnItem.id, {
     status,
     conditionNotes: conditionNotes || 'Box inspected: EPP walls intact, gel bricks sanitized.',
     completedAt: status === 'refunded' ? new Date().toISOString() : returnItem.completedAt
   });
 
   if (status === 'refunded') {
-    const cooler = db.findById('coolers', returnItem.coolerId);
+    const cooler = await findCoolerById(returnItem.coolerId);
     if (cooler) {
-      db.update('coolers', cooler.id, {
+      await updateCooler(cooler.id, {
         status: 'available',
         currentOrderId: null,
         currentUserId: null,
@@ -1543,48 +2061,43 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
       });
     }
 
-    const user = db.findById('users', returnItem.userId);
+    const user = await findUserById(returnItem.userId);
     if (user) {
-      const refundAmt = returnItem.refundAmount || 250;
-      const updates = {
-        depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
-      };
-
-      if (resolvedPreference === 'wallet') {
-        const newBal = (user.walletBalance || 0) + refundAmt;
-        const tx = {
-          id: `tx_${Date.now()}`,
-          amount: refundAmt,
-          type: 'credit',
-          title: 'Cooler Box Deposit Refund',
-          description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to BrisketBox Wallet.`,
-          date: new Date().toISOString(),
-          balanceAfter: newBal,
-          coolerId: returnItem.coolerId
-        };
-        updates.walletBalance = newBal;
-        updates.walletTransactions = [tx, ...(user.walletTransactions || [])];
+      const refundAmt = Number(returnItem.refundAmount) || 0;
+      if (refundAmt > 0 && resolvedPreference === 'wallet') {
+        try {
+          await creditWallet({
+            userId: user.id,
+            amount: refundAmt,
+            idempotencyKey: `return_refund_${returnItem.id}`,
+            title: 'Cooler Box Deposit Refund',
+            description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to BrisketBox Wallet.`
+          });
+        } catch (wErr) {
+          console.warn('[Return Status] Wallet credit error:', wErr.message);
+        }
+      } else if (refundAmt > 0) {
+        await updateUser(user.id, {
+          depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
+        });
       }
-
-      db.update('users', user.id, updates);
     }
   } else if (status === 'picked_up') {
-    db.update('coolers', returnItem.coolerId, { status: 'sanitizing' });
+    await updateCooler(returnItem.coolerId, { status: 'sanitizing' });
   }
 
   res.json(updatedReturn);
 });
 
-// ==========================================
-// 4A-1. COOLER HEALTH CHECKER (Teammate Analytical Scripts Suite)
-// Evaluates 0°C-4°C Cold-Chain Compliance, Return SLA (36h limit),
-// Cycle Aging, and Breakdown Anomaly Detection.
-// ==========================================
-
 // 1. Fleet-wide Cooler Health Overview
-app.get('/api/admin/coolers/health', (req, res) => {
+app.get('/api/admin/coolers/health', authenticate, requireAdmin, async (req, res) => {
   try {
-    const overview = generateFleetHealthOverview(db.data || {});
+    const [coolers, orders, coolerReturns] = await Promise.all([
+      findCoolers(),
+      findOrders(),
+      findCoolerReturns()
+    ]);
+    const overview = generateFleetHealthOverview({ coolers, orders, coolerReturns });
     res.json({
       success: true,
       ...overview
@@ -1596,38 +2109,27 @@ app.get('/api/admin/coolers/health', (req, res) => {
 });
 
 // 2. Specific Cooler Health Diagnostic (By QR Code or Box ID)
-const handleCoolerHealthDiagnostic = (req, res) => {
+const handleCoolerHealthDiagnostic = async (req, res) => {
   try {
     const qrOrId = (req.params.qr || req.params.coolerId || '').trim();
-    const coolers = db.get('coolers') || [];
+    const coolers = await findCoolers();
     let cooler = findCooler(coolers, qrOrId);
 
     if (!cooler) {
-      // Auto-provision standard test box if it matches standard naming format
-      const normalizedBoxId = qrOrId.toUpperCase().replace(/^(BRISKETBOX-|SAGAR-|TV-)/i, '');
-      if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-        cooler = db.insert('coolers', {
-          id: normalizedBoxId,
-          qrCode: `BRISKETBOX-${normalizedBoxId}`,
-          model: 'insulated bag Ultra-3L EPP',
-          status: 'available',
-          cyclesUsed: 4,
-          lastSanitizedDate: new Date().toISOString().split('T')[0],
-          depositAmount: 250,
-          maxHoldingHours: 36,
-          assignedHub: 'Bengaluru Central Hub Depot'
-        });
-      } else {
-        return res.status(404).json({
-          found: false,
-          qr: qrOrId,
-          error: `No cooler found for QR code '${qrOrId}'. Please scan again.`
-        });
-      }
+      return res.status(404).json({
+        found: false,
+        qr: qrOrId,
+        error: `No cooler found for ID or QR code '${qrOrId}'.`
+      });
     }
 
-    const tempCheck = getTemperatureCheck(cooler, db.data || {});
-    const fleetDetails = getFleetDetails(cooler, db.data || {});
+    const [orders, coolerReturns] = await Promise.all([
+      findOrders(),
+      findCoolerReturns()
+    ]);
+    const dbData = { coolers, orders, coolerReturns };
+    const tempCheck = getTemperatureCheck(cooler, dbData);
+    const fleetDetails = getFleetDetails(cooler, dbData);
     const health = calculateHealthScore(cooler, tempCheck, fleetDetails);
 
     res.json({
@@ -1644,15 +2146,15 @@ const handleCoolerHealthDiagnostic = (req, res) => {
   }
 };
 
-app.get('/api/admin/coolers/:qr/health', handleCoolerHealthDiagnostic);
-app.get('/api/coolers/:qr/health', handleCoolerHealthDiagnostic);
+app.get('/api/admin/coolers/:qr/health', authenticate, requireAdmin, handleCoolerHealthDiagnostic);
+app.get('/api/coolers/:qr/health', authenticate, requireAdmin, handleCoolerHealthDiagnostic);
 
 // 3. Cooler Maintenance / Operational Actions (Sanitize, Flag Breakdown, Decommission)
-app.post('/api/admin/coolers/:id/action', (req, res) => {
+app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(coolerActionSchema), async (req, res) => {
   try {
     const coolerId = req.params.id;
     const { action, notes } = req.body;
-    const cooler = db.findById('coolers', coolerId);
+    const cooler = await findCoolerById(coolerId);
 
     if (!cooler) {
       return res.status(404).json({ error: `Cooler ${coolerId} not found` });
@@ -1665,7 +2167,7 @@ app.post('/api/admin/coolers/:id/action', (req, res) => {
       updates.status = 'available';
       updates.lastSanitizedDate = timestamp.split('T')[0];
       updates.cyclesUsed = (cooler.cyclesUsed || 0) + 1;
-      updates.lastSanitizedNotes = notes || 'UV-C sanitization & antimicrobial wash certified';
+      updates.lastSanitizedNotes = notes || 'UV-C sanitization & wash completed';
     } else if (action === 'flag_damage' || action === 'flag_maintenance') {
       updates.status = 'damaged';
       updates.maintenanceReason = notes || 'Thermal gasket wear or lid seal compromise detected';
@@ -1682,7 +2184,7 @@ app.post('/api/admin/coolers/:id/action', (req, res) => {
       return res.status(400).json({ error: 'Invalid action. Supported: sanitize, flag_damage, decommission, recommission' });
     }
 
-    const updated = db.update('coolers', coolerId, updates);
+    const updated = await updateCooler(coolerId, updates);
     res.json({
       success: true,
       message: `Action '${action}' applied successfully to ${coolerId}`,
@@ -1697,12 +2199,11 @@ app.post('/api/admin/coolers/:id/action', (req, res) => {
 // ==========================================
 // 4B. COLD BOX QR SCANNER, TELEMETRY & DIAGNOSTICS (Ashik Spec)
 // ==========================================
-app.get('/api/coolers/inspect/:coolerId', (req, res) => {
+app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
-  // Strip URL or common prefixes if scanned as a full URL
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -1711,59 +2212,38 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      const isBreach = normalizedBoxId.includes('103');
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: isBreach ? 'damaged' : (normalizedBoxId.includes('182') ? 'assigned' : 'with_customer'),
-        currentOrderId: isBreach ? 'ORD-103-BREACH' : 'ORD-9281',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        cyclesUsed: 8,
-        lastSanitizedDate: '2026-11-06',
-        depositAmount: 250,
-        maxHoldingHours: 36,
-        assignedHub: 'Mahadevapura Dark Hub'
-      });
-    } else {
-      return res.status(404).json({ error: `insulated bag Cold Box "${rawId}" not found in fleet directory.` });
-    }
+    return res.status(404).json({ error: `Cooler Box "${rawId}" not found in fleet directory.` });
   }
 
-  // Find associated order
-  const orders = db.get('orders') || [];
+  const [orders, returns] = await Promise.all([
+    findOrders(),
+    findCoolerReturns()
+  ]);
+
   const order = (cooler.currentOrderId ? orders.find(o => o.id === cooler.currentOrderId) : null) ||
     orders.find(o => o.coolerId === cooler.id) || null;
 
-  // Find active return request if any
-  const returns = db.get('coolerReturns') || [];
   const returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded') ||
     returns.find(r => r.coolerId === cooler.id) || null;
 
-  // Generate / format IoT Cold-Chain Telemetry (Ashik Data Analyst Spec)
-  const isDamagedBox = cooler.id.includes('103') || cooler.status === 'damaged' || cooler.status === 'maintenance';
-  const liveTemp = isDamagedBox ? 5.8 : (order?.liveTemp || 1.8);
-  const isCompliant = liveTemp >= 0.0 && liveTemp <= 4.0;
-  
-  const tempLog = order?.tempLog && order.tempLog.length > 0 ? order.tempLog : [
-    { time: '07:15 AM', temp: 0.8, event: 'Sealed with chilled ice-gel bricks at Mahadevapura Dark Hub' },
-    { time: '07:30 AM', temp: isDamagedBox ? 2.4 : 1.2, event: 'chilled pack digital latch engaged; EV Cold Courier dispatched' },
-    { time: '07:55 AM', temp: isDamagedBox ? 4.6 : 1.6, event: 'IoT Ping: Temperature checked mid-route (Outer Ring Road)' },
-    { time: '08:15 AM', temp: liveTemp, event: isCompliant ? 'Delivered at customer doorstep (Sub-4°C guaranteed)' : '⚠️ Alert: Temperature rose above 4°C safe threshold' }
-  ];
+  const isDamagedBox = cooler.status === 'damaged' || cooler.status === 'maintenance';
+  const liveTemp = order?.liveTemp !== undefined ? order.liveTemp : null;
+  const isCompliant = liveTemp !== null ? (liveTemp >= 0.0 && liveTemp <= 4.0) : null;
+  const tempLog = order?.tempLog || [];
 
-  // Calculate Turnaround Time (TAT)
   const dispatchDate = order ? new Date(order.createdAt || Date.now() - 26 * 3600 * 1000) : new Date(Date.now() - 24 * 3600 * 1000);
   const now = new Date();
   const tatHours = Math.max(1, Math.round((now - dispatchDate) / (1000 * 60 * 60)));
   const tatStatus = tatHours <= 48 ? 'OPTIMAL_UNDER_48H' : (tatHours <= 72 ? 'STANDARD_WINDOW' : 'OVERDUE');
 
-  // Refund Decision Analysis
   const isEligible = cooler.status === 'with_customer' || cooler.status === 'return_requested' || cooler.status === 'in_transit';
-  const refundAmount = cooler.depositAmount || 250;
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const refundAmount = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
+
+  const dbData = { coolers, orders, coolerReturns: returns };
+  const tempCheck = getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, dbData);
+  const fleetDetails = getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, dbData);
+  const health = calculateHealthScore({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, tempCheck, fleetDetails);
 
   res.json({
     success: true,
@@ -1775,7 +2255,7 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
       id: order.id,
       orderNumber: order.orderNumber || order.id,
       customerName: order.customerName,
-      customerPhone: order.customerPhone || '+91 98765 43210',
+      customerPhone: order.customerPhone || '',
       customerEmail: order.customerEmail,
       deliveryAddress: order.deliveryAddress,
       totalAmount: order.totalAmount || order.total,
@@ -1789,22 +2269,24 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
       scheduledPickupSlot: returnRecord.scheduledPickupSlot,
       refundPreference: returnRecord.refundPreference || 'wallet',
       refundMode: returnRecord.refundMode,
-      upiId: returnRecord.upiId || 'pooja@okhdfcbank',
+      upiId: returnRecord.upiId || null,
       courierAssigned: returnRecord.courierAssigned
     } : null,
     telemetry: {
       liveTemp,
-      targetRange: '0°C to 4°C (FSSC-22000 & FSSAI Standards)',
+      targetRange: 'Chilled',
       isCompliant,
-      complianceRate: isCompliant ? 100 : 62,
-      thermalHealthScore: isCompliant ? 98.6 : 54.2,
-      insulationCondition: isDamagedBox ? 'NEEDS_GASKET_INSPECTION' : 'EXCELLENT_HERMETIC_SEAL',
+      complianceRate: tempLog.length > 0 
+        ? Math.round((tempLog.filter(t => t.temp >= 0 && t.temp <= 4).length / tempLog.length) * 100)
+        : null,
+      thermalHealthScore: null,
+      insulationCondition: isDamagedBox ? 'NEEDS_GASKET_INSPECTION' : 'NORMAL',
       tempLog,
-      tatHours,
-      tatStatus,
-      cyclesUsed: cooler.cyclesUsed || 12,
+      tatHours: order ? tatHours : null,
+      tatStatus: order ? tatStatus : null,
+      cyclesUsed: cooler.cyclesUsed || 0,
       maxHoldingHours: cooler.maxHoldingHours || 36,
-      singleUsePlasticBoxesSaved: (cooler.cyclesUsed || 12) * 2
+      singleUsePlasticBoxesSaved: null
     },
     refundAssessment: {
       isEligible,
@@ -1816,21 +2298,17 @@ app.get('/api/coolers/inspect/:coolerId', (req, res) => {
         ? 'APPROVE_REFUND_AND_REPAIR_BOX' 
         : (isEligible ? 'APPROVE_INSTANT_REFUND' : 'BOX_READY_FOR_USE')
     },
-    tempCheck: getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-    fleetDetails: getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-    health: calculateHealthScore(
-      { ...cooler, status: isDamagedBox ? 'damaged' : cooler.status },
-      getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-      getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {})
-    )
+    tempCheck,
+    fleetDetails,
+    health
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireAdmin, validate(coolerInspectionDecisionSchema), async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -1838,86 +2316,68 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: 'available',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        depositAmount: 250
-      });
-    } else {
-      return res.status(404).json({ error: 'Cooler box not found' });
-    }
+    return res.status(404).json({ error: 'Cooler box not found' });
   }
 
   const { refundPreference = 'wallet', upiId, inspectorNotes = 'QR Inward Inspection: EPP foam walls intact, gel bricks sanitized.' } = req.body;
 
-  // Resolve user
-  const userId = cooler.currentUserId || 'usr_customer';
-  const user = db.findById('users', userId);
-  const refundAmt = cooler.depositAmount || 250;
+  const userId = cooler.currentUserId;
+  const user = userId ? await findUserById(userId) : null;
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const refundAmt = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
 
-  // Find or create return record
-  const returns = db.get('coolerReturns') || [];
+  const returns = await findCoolerReturns();
   let returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded');
 
   if (returnRecord) {
-    db.update('coolerReturns', returnRecord.id, {
+    await updateCoolerReturn(returnRecord.id, {
       status: 'refunded',
       conditionNotes: inspectorNotes,
       completedAt: new Date().toISOString(),
-      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || ''})`
     });
   } else {
     returnRecord = {
       id: `RET-${Math.floor(100 + Math.random() * 900)}`,
       coolerId: cooler.id,
       orderId: cooler.currentOrderId || 'ORD-AUTO',
-      userId: userId,
+      userId: userId || 'customer',
       userName: cooler.currentUserName || user?.name || 'Valued Customer',
-      userPhone: user?.phone || '+91 98765 43210',
+      userPhone: user?.phone ? normalizePhone(user.phone) : '',
       userAddress: user?.address || 'Customer Registered Address',
       status: 'refunded',
       requestDate: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       refundAmount: refundAmt,
       refundPreference,
-      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`,
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || ''})`,
       conditionNotes: inspectorNotes,
-      courierAssigned: 'Hub Inward Specialist Rajeshwar Rao'
+      courierAssigned: 'Hub Inward Specialist'
     };
-    db.insert('coolerReturns', returnRecord);
+    await createCoolerReturn(returnRecord);
   }
 
-  // Credit Wallet if preference is wallet
   if (user) {
-    const updates = {
-      depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
-    };
     if (refundPreference === 'wallet') {
-      const newBal = (user.walletBalance || 0) + refundAmt;
-      const tx = {
-        id: `tx_${Date.now()}`,
-        amount: refundAmt,
-        type: 'credit',
-        title: 'Cooler Box Deposit Refund',
-        description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to BrisketBox Wallet.`,
-        date: new Date().toISOString(),
-        balanceAfter: newBal,
-        coolerId: cooler.id
-      };
-      updates.walletBalance = newBal;
-      updates.walletTransactions = [tx, ...(user.walletTransactions || [])];
+      try {
+        await creditWallet({
+          userId: user.id,
+          amount: refundAmt,
+          idempotencyKey: `cooler_inspect_refund_${cooler.id}_${Date.now()}`,
+          title: 'Cooler Box Deposit Refund',
+          description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to BrisketBox Wallet.`
+        });
+      } catch (wErr) {
+        console.warn('[Cooler Refund] Wallet credit error:', wErr.message);
+      }
+    } else {
+      await updateUser(user.id, {
+        depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
+      });
     }
-    db.update('users', user.id, updates);
   }
 
-  // Update Cooler status to available
-  const updatedCooler = db.update('coolers', cooler.id, {
+  const updatedCooler = await updateCooler(cooler.id, {
     status: 'available',
     currentOrderId: null,
     currentUserId: null,
@@ -1936,11 +2396,11 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', (req, res) => {
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmin, async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -1948,24 +2408,11 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
   );
 
   if (!cooler) {
-    const normalizedBoxId = cleanId.toUpperCase();
-    if (/^BOX-[A-Z0-9-]+/i.test(normalizedBoxId) || /^BOX-\d+/i.test(normalizedBoxId)) {
-      cooler = db.insert('coolers', {
-        id: normalizedBoxId,
-        qrCode: `BRISKETBOX-${normalizedBoxId}`,
-        model: 'insulated bag Ultra-3L EPP',
-        status: 'available',
-        currentUserId: 'usr_customer',
-        currentUserName: 'Pooja Sundaram',
-        depositAmount: 250
-      });
-    } else {
-      return res.status(404).json({ error: 'Cooler box not found' });
-    }
+    return res.status(404).json({ error: 'Cooler box not found' });
   }
 
-  const { reason = 'Temperature breach detected: Box cannot hold 0°C to 4°C' } = req.body;
-  const updated = db.update('coolers', cooler.id, {
+  const { reason = 'Temperature breach detected' } = req.body;
+  const updated = await updateCooler(cooler.id, {
     status: 'maintenance',
     maintenanceReason: reason,
     lastInspectedDate: new Date().toISOString()
@@ -1978,9 +2425,12 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', (req, res) => {
   });
 });
 
-app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) => {
-  const coolers = db.get('coolers') || [];
-  const returns = db.get('coolerReturns') || [];
+app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, res) => {
+  const [coolers, returns, orders] = await Promise.all([
+    findCoolers(),
+    findCoolerReturns(),
+    findOrders()
+  ]);
 
   const totalCoolers = coolers.length;
   const withCustomer = coolers.filter(c => c.status === 'with_customer').length;
@@ -1988,13 +2438,25 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) =>
   const available = coolers.filter(c => c.status === 'available').length;
   const inMaintenance = coolers.filter(c => c.status === 'maintenance' || c.status === 'sanitizing').length;
 
-  const totalRefunded = returns.filter(r => r.status === 'refunded').reduce((sum, r) => sum + (r.refundAmount || 250), 0);
-  const totalHeld = (withCustomer + returnRequested) * 250;
+  const totalRefunded = returns.filter(r => r.status === 'refunded').reduce((sum, r) => sum + (Number(r.refundAmount) || 0), 0);
+  const totalHeld = coolers.filter(c => ['with_customer', 'return_requested'].includes(c.status)).reduce((sum, c) => sum + (Number(c.depositAmount) || 0), 0);
   const totalDepositsCollected = totalRefunded + totalHeld;
 
-  const avgTatHours = 32.4;
-  const recoveryRate = Math.round((returns.filter(r => r.status === 'refunded').length / Math.max(1, returns.length)) * 100);
-  const coldChainCompliance = 98.7;
+  const completedReturns = returns.filter(r => r.status === 'refunded' && r.completedAt && r.requestDate);
+  let avgTatHours = null;
+  if (completedReturns.length > 0) {
+    const totalReturnMs = completedReturns.reduce((acc, r) => acc + (new Date(r.completedAt) - new Date(r.requestDate)), 0);
+    avgTatHours = Number((totalReturnMs / (completedReturns.length * 1000 * 3600)).toFixed(1));
+  }
+  const recoveryRate = returns.length > 0
+    ? Math.round((returns.filter(r => r.status === 'refunded').length / returns.length) * 100)
+    : null;
+
+  const ordersWithLogs = orders.filter(o => o.tempLog && o.tempLog.length > 0);
+  const compliantOrders = ordersWithLogs.filter(o => o.tempLog.every(t => t.temp >= 0 && t.temp <= 4));
+  const coldChainCompliance = ordersWithLogs.length > 0
+    ? Number(((compliantOrders.length / ordersWithLogs.length) * 100).toFixed(1))
+    : null;
 
   res.json({
     success: true,
@@ -2005,15 +2467,14 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) =>
       returnRequestedCount: returnRequested,
       maintenanceCount: inMaintenance,
       avgTatHours,
-      avgTatDays: '1.35 Days',
-      boxRecoveryRate: `${recoveryRate}%`,
-      coldChainComplianceRate: `${coldChainCompliance}%`,
+      avgTatDays: avgTatHours ? `${(avgTatHours / 24).toFixed(1)} Days` : null,
+      boxRecoveryRate: recoveryRate !== null ? `${recoveryRate}%` : null,
+      coldChainComplianceRate: coldChainCompliance !== null ? `${coldChainCompliance}%` : null,
       depositLedger: {
         totalCollected: totalDepositsCollected,
         totalRefunded: totalRefunded,
         activeHeld: totalHeld
-      },
-      singleUsePlasticPreventedKg: totalCoolers * 18 * 0.4
+      }
     }
   });
 });
@@ -2021,8 +2482,8 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) =>
 // ==========================================
 // 5. IN-APP VAULT WALLET
 // ==========================================
-app.get('/api/wallet', authenticate, (req, res) => {
-  const user = db.findById('users', req.user.id);
+app.get('/api/wallet', authenticate, async (req, res) => {
+  const user = await findUserById(req.user.id);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -2039,11 +2500,13 @@ app.get('/api/wallet', authenticate, (req, res) => {
 // 5. OPERATIONS METRICS
 // ==========================================
 
-app.get('/api/admin/metrics', authenticate, requireAdmin, (req, res) => {
-  const orders = db.get('orders');
-  const coolers = db.get('coolers');
-  const returns = db.get('coolerReturns');
-  const products = db.get('products');
+app.get('/api/admin/metrics', authenticate, requireAdmin, async (req, res) => {
+  const [orders, coolers, returns, products] = await Promise.all([
+    findOrders(),
+    findCoolers(),
+    findCoolerReturns(),
+    findProducts()
+  ]);
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
   const activeOrders = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
@@ -2081,10 +2544,15 @@ app.post('/api/admin/backup', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin Customer Management
-app.get('/api/admin/users', authenticate, requireAdmin, (req, res) => {
-  const users = db.get('users').map(u => {
+app.get('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
+  const [allUsers, allOrders] = await Promise.all([
+    findUsers(),
+    findOrders()
+  ]);
+
+  const users = allUsers.map(u => {
     const { password, ...userWithoutPw } = u;
-    const userOrders = db.get('orders').filter(o => o.userId === u.id || o.customerEmail === u.email);
+    const userOrders = allOrders.filter(o => o.userId === u.id || o.customerEmail === u.email);
     const totalSpent = userOrders.reduce((sum, o) => sum + (o.paymentStatus === 'PAID' ? (o.total || o.subtotal || 0) : 0), 0);
     return {
       ...userWithoutPw,
@@ -2096,11 +2564,11 @@ app.get('/api/admin/users', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin Fleet: Register New Cooler
-app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
+app.post('/api/coolers', authenticate, requireAdmin, async (req, res) => {
   const { id, qrCode, model, depositAmount, assignedHub } = req.body;
   if (!id) return res.status(400).json({ error: 'Cooler ID is required (e.g. BOX-BLR-109)' });
   
-  const existing = db.findById('coolers', id);
+  const existing = await findCoolerById(id);
   if (existing) return res.status(409).json({ error: 'Cooler ID already exists' });
   
   const newCooler = {
@@ -2113,19 +2581,19 @@ app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
     currentUserName: null,
     cyclesUsed: 0,
     lastSanitizedDate: new Date().toISOString().split('T')[0],
-    depositAmount: depositAmount || 250,
+    depositAmount: Number(depositAmount) || 0,
     maxHoldingHours: 36,
     assignedHub: assignedHub || 'Bengaluru Central Hub Depot'
   };
   
-  db.insert('coolers', newCooler);
-  res.status(201).json(newCooler);
+  const created = await createCooler(newCooler);
+  res.status(201).json(created);
 });
 
 // Admin Fleet: Update Cooler Status / Sanitation cycle
-app.patch('/api/coolers/:id/status', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/coolers/:id/status', authenticate, requireAdmin, async (req, res) => {
   const { status, assignedHub } = req.body;
-  const cooler = db.findById('coolers', req.params.id);
+  const cooler = await findCoolerById(req.params.id);
   if (!cooler) return res.status(404).json({ error: 'Cooler not found' });
   
   const updates = { status };
@@ -2135,21 +2603,21 @@ app.patch('/api/coolers/:id/status', authenticate, requireAdmin, (req, res) => {
   }
   if (assignedHub) updates.assignedHub = assignedHub;
   
-  const updated = db.update('coolers', req.params.id, updates);
+  const updated = await updateCooler(req.params.id, updates);
   res.json(updated);
 });
 
 // Admin Courier & Fleet Assignment for Order
-app.patch('/api/orders/:id/courier', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/orders/:id/courier', authenticate, requireAdmin, async (req, res) => {
   const { deliveryExecutive, coolerId } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   
   const updates = {};
   if (deliveryExecutive) updates.deliveryExecutive = deliveryExecutive;
   if (coolerId) {
     updates.coolerId = coolerId;
-    db.update('coolers', coolerId, {
+    await updateCooler(coolerId, {
       status: 'assigned',
       currentOrderId: order.id,
       currentUserId: order.userId,
@@ -2157,17 +2625,29 @@ app.patch('/api/orders/:id/courier', authenticate, requireAdmin, (req, res) => {
     });
   }
   
-  const updated = db.update('orders', req.params.id, updates);
+  const updated = await updateOrder(req.params.id, updates);
   res.json(updated);
 });
 
-// Global Production Error Guard (Prevents stack trace leaks)
+// Central Production Error Handler (Zero stack trace or internal path leaks)
 app.use((err, req, res, next) => {
   const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
-  const statusCode = err.status || err.statusCode || 500;
-  
+  const statusCode = err.status || err.statusCode || (err.name === 'ZodError' ? 400 : 500);
+
   if (err.message && err.message.includes('CORS')) {
     return res.status(403).json({ error: 'Access denied by BrisketBox CORS policy' });
+  }
+
+  if (err.name === 'ZodError') {
+    return res.status(400).json({
+      error: 'Request validation failed',
+      details: err.errors ? err.errors.map(e => ({ field: (e.path || []).join('.'), message: e.message })) : []
+    });
+  }
+
+  // Sanitize MongoDB / Mongoose errors
+  if (err.name === 'CastError' || err.name === 'ValidationError') {
+    return res.status(400).json({ error: 'Invalid data format or database constraint violation' });
   }
 
   console.error(`[API Error] ${req.method} ${req.url}:`, err.message || err);
@@ -2186,8 +2666,9 @@ if (!process.env.VERCEL && isDirectRun) {
     res.sendFile(indexHtml);
   });
 
-  app.listen(PORT, () => {
-    console.log(`[BrisketBox API] Running on port ${PORT}`);
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, () => {
+    console.log(`[BrisketBox API] Running on http://${HOST}:${PORT}`);
   });
 }
 

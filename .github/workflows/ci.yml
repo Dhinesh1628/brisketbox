@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend CI (Syntax, Tests & Audit)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install system dependencies for MongoDB
+        run: sudo apt-get update && sudo apt-get install -y libcurl4
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Install frontend dependencies (for honest-data asset scanning)
+        run: npm --prefix frontend ci
+
+      - name: Cache MongoDB Memory Server binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: ${{ runner.os }}-mongodb-binaries-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-mongodb-binaries-
+
+      - name: Syntax check on all backend files (node --check)
+        run: node scripts/check-backend-syntax.js
+
+      - name: Audit backend dependencies
+        run: npm --prefix backend audit --audit-level=high
+
+      - name: Run all backend tests
+        env:
+          NODE_ENV: test
+          MONGOMS_VERSION: '7.0.14'
+          JWT_SECRET: ci_test_fake_jwt_secret_32bytes_value_12345
+          RAZORPAY_KEY_ID: rzp_test_ci_placeholder_key_id
+          RAZORPAY_KEY_SECRET: ci_fake_razorpay_secret_placeholder
+          RAZORPAY_WEBHOOK_SECRET: ci_fake_webhook_secret_placeholder
+        run: npm run test:backend
+
+  frontend:
+    name: Frontend CI (Lint, Typecheck, Build, Playwright & Lighthouse)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Audit frontend dependencies
+        run: npm --prefix frontend audit --audit-level=high
+
+      - name: Lint frontend (oxlint)
+        run: npm --prefix frontend run lint
+
+      - name: Typecheck and build frontend (tsc -b && vite build)
+        run: npm --prefix frontend run build
+
+      - name: Install Playwright browsers and dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify bundle size budget and code isolation (<= 170 KB gzipped)
+        run: node scripts/check-bundle-size.js
+
+      - name: Run Playwright smoke and route tests
+        run: npx playwright test
+
+      - name: Run Lighthouse CI audits
+        run: npx lhci autorun
+
+  gitleaks:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml

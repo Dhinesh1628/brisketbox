@@ -1,8 +1,11 @@
-# BrisketBox Production Robots.txt
+# BrisketBox Robots.txt
 User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin
+Disallow: /rider
+Disallow: /partner
+Disallow: /butcher
+Disallow: /dashboard
 
-# Sitemap declaration
-Sitemap: https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/sitemap.xml
+Sitemap: https://brisketbox.vercel.app/sitemap.xml

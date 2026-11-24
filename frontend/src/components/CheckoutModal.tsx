@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { 
   X, 
   MapPin, 
@@ -52,6 +53,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   currentAddress,
   onOpenLocationModal
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
   const { items, subtotal, coolerDeposit, shippingFee, couponCode, couponDiscount, total, clearCart } = useCart();
   const { user, refreshUser } = useAuth();
 
@@ -69,7 +72,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [street, setStreet] = useState(
     currentAddress ? [currentAddress.street, currentAddress.area].filter(Boolean).join(', ') : ''
   );
-  const [city, setCity] = useState(currentAddress?.city || selectedCity || 'Bengaluru');
+  const [city, setCity] = useState(currentAddress?.city || selectedCity || '');
   const [state, setState] = useState(currentAddress?.state || 'Karnataka');
   const [pincode, setPincode] = useState(currentAddress?.pincode || '');
 
@@ -204,7 +207,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     const fullAddress = `${flatNo}, ${building}, ${street}, ${city}, ${state} - ${pincode} (${addressType.toUpperCase()})`;
     const computedSlot = slotMode === 'express'
-      ? 'Express Delivery in 90 Mins (Live EV Chilled Courier)'
+      ? 'Express Chilled Delivery (Live Courier)'
       : `${scheduledDay}, ${selectedSlotTime}`;
 
     const instructionsSummary = selectedInstructionPills.join(' • ');
@@ -280,8 +283,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           amount: res.amount,
           currency: res.currency,
           name: 'BrisketBox',
-          description: `Order #${res.orderNumber} - 0°C to 4°C Fresh Cuts`,
-          image: '/images/logo.png',
+          description: `Order #${res.orderNumber} - Fresh Cuts`,
+          image: '/images/logo.webp',
           order_id: res.razorpayOrderId,
           prefill: {
             name: fullName,
@@ -385,27 +388,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       <div onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity" />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl p-5 sm:p-7 text-gray-900 dark:text-gray-100 z-10 max-h-[92vh] overflow-y-auto">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkout-title"
+        tabIndex={-1}
+        className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl p-5 sm:p-7 text-gray-900 dark:text-gray-100 z-10 max-h-[92vh] overflow-y-auto focus:outline-none"
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-gray-950 dark:text-white">Checkout</h2>
+              <h2 id="checkout-title" className="text-lg font-black text-gray-950 dark:text-white">Checkout</h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
                 <Lock className="w-3 h-3 text-emerald-600" />
                 <span>Secure checkout</span>
               </span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Delivering to {city} in about 90 minutes
+              {city ? `Delivering to ${city}` : 'Fast doorstep delivery'}
             </p>
           </div>
           <button 
             onClick={onClose} 
-            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+            aria-label="Close checkout dialog"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -479,7 +490,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Pooja Sundaram"
+                  placeholder="e.g. Your Full Name"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -493,7 +504,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. pooja@example.com"
+                  placeholder="e.g. name@example.com"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -507,7 +518,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 98XXXXXXXX"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -525,7 +536,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Express 90 Mins Card */}
+              {/* Express Delivery Card */}
               <div
                 onClick={() => setSlotMode('express')}
                 className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
@@ -537,14 +548,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-black text-xs text-gray-950 dark:text-white">
                     <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    <span>Express (90 Mins)</span>
+                    <span>Express Delivery</span>
                   </div>
                   <span className="text-[10px] font-extrabold bg-[#d11243] text-white px-1.5 py-0.5 rounded">
                     Recommended
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                  Packed immediately and delivered to your door in under 90 minutes.
+                  Packed immediately and dispatched to your door in cold packaging.
                 </p>
               </div>
 
@@ -666,7 +677,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   required
                   value={flatNo}
                   onChange={(e) => setFlatNo(e.target.value)}
-                  placeholder="e.g. Flat 402, Block B"
+                  placeholder="e.g. Flat 101, Block A"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
@@ -680,7 +691,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   required
                   value={building}
                   onChange={(e) => setBuilding(e.target.value)}
-                  placeholder="e.g. Alpine Eco Apartments"
+                  placeholder="e.g. Sunrise Apartments"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>

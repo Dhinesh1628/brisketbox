@@ -48,8 +48,8 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   
   // Auth Form State (when not authenticated as rider)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('rider@brisketbox.in');
-  const [loginPassword, setLoginPassword] = useState('Brisket#Rider2026!');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
@@ -220,7 +220,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
       setIsCashDepositModalOpen(false);
       setDepositAmountInput('');
       playOrderChime();
-      showNotification(`✓ Cash Deposited: ₹${res.depositedAmount} (Receipt: ${res.receiptNo})`);
+      showNotification(`✓ Cash Deposit Request Submitted: ₹${res.depositedAmount} (Receipt: ${res.receiptNo})`);
     } catch (err: any) {
       alert(err.message || 'Failed to deposit cash');
     }
@@ -275,7 +275,13 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await api.getRiderOrders().catch(() => api.getOrders());
+      const [data, me] = await Promise.all([
+        api.getRiderOrders().catch(() => api.getOrders()),
+        api.getCurrentUser().catch(() => null)
+      ]);
+      if (me && typeof me.cashInHand === 'number') {
+        setCashInHand(me.cashInHand);
+      }
       if (Array.isArray(data)) {
         if (data.length > orders.length && orders.length > 0) {
           playOrderChime();
@@ -446,12 +452,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     }
   };
 
-  const handleFillDemoPin = () => {
-    if (!selectedOrder) return;
-    const pin = (selectedOrder.deliveryPin || '4821').split('');
-    setDeliveryPin(pin);
-    pinInputRefs[3].current?.focus();
-  };
+  
 
   const handleSubmitHandover = async () => {
     if (!selectedOrder) return;
@@ -561,7 +562,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (!user || user.role !== 'rider') {
     return (
-      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -585,76 +586,10 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
             <h1 className="text-xl font-black text-slate-900">Delivery Partner Portal</h1>
-            <p className="text-xs text-slate-500">0°C to 4°C ThermalVault Cold-Chain Express Logistics</p>
+            <p className="text-xs text-slate-500">ThermalVault Cold-Chain Express Logistics</p>
           </div>
 
-          {/* Quick Demo Access Bar */}
-          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2 text-xs">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              Quick 1-Click Demo Profiles:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Suresh Patil</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #1</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">rider@brisketbox.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('mahesh.rider@gmail.com');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Mahesh Kumar</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #2</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">mahesh.rider@gmail.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('ramesh.rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Ramesh Gowda</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #3</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">ramesh.rider@brisketbox.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginEmail('imran.rider@brisketbox.in');
-                  setLoginPassword('Brisket#Rider2026!');
-                }}
-                className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold text-left hover:bg-emerald-900/60 transition cursor-pointer"
-              >
-                <div className="font-extrabold flex items-center justify-between">
-                  <span>Imran Pasha</span>
-                  <span className="text-[9px] px-1 bg-emerald-500 text-black rounded font-black">Fleet #4</span>
-                </div>
-                <div className="text-[10px] text-gray-400 font-mono mt-0.5">imran.rider@brisketbox.in</div>
-              </button>
-            </div>
-          </div>
+          
 
           {/* Tab Switcher */}
           <div className="flex rounded-xl bg-slate-200/80 p-1 border border-slate-300 text-xs font-bold">
@@ -699,7 +634,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="rider@brisketbox.in or +91 97412 88301"
+                  placeholder="rider@brisketbox.in"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -734,7 +669,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   required
                   value={regForm.name}
                   onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
-                  placeholder="Suresh Patil"
+                  placeholder="Full Name"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -797,7 +732,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     value={regForm.vehicleNumber}
                     onChange={(e) => setRegForm({ ...regForm, vehicleNumber: e.target.value })}
                     placeholder="KA-04-EV-9999"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
               </div>
@@ -810,7 +745,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   value={regForm.licenseNumber}
                   onChange={(e) => setRegForm({ ...regForm, licenseNumber: e.target.value })}
                   placeholder="DL-0420240091823"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -822,7 +757,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   value={regForm.upiId}
                   onChange={(e) => setRegForm({ ...regForm, upiId: e.target.value })}
                   placeholder="rider@oksbi or phone@paytm"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-900 font-mono focus:outline-none focus:border-[#d11243]"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
 
@@ -846,7 +781,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   if (user?.approvalStatus === 'pending_approval') {
     return (
-      <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -897,7 +832,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           </div>
 
           <p className="text-[11px] text-gray-500">
-            For urgent dispatch inquiries, contact Central Hub Ops at <strong className="text-slate-700">+91 97412 88301</strong>.
+            For urgent dispatch inquiries, contact Central Hub Operations via operations support.
           </p>
 
           <div className="flex gap-2 w-full pt-2">
@@ -929,7 +864,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   const deliveredOrders = orders.filter((o) => o.orderStatus === 'DELIVERED');
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
       
       {/* Top Rider Partner Header */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 sm:px-6 py-2.5">
@@ -1034,10 +969,10 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
             <div 
               onClick={() => setIsCashDepositModalOpen(true)}
               title="Click to view Cash in Hand & Deposit at Hub"
-              className="p-2 rounded-xl bg-amber-50/70 border border-amber-200 hover:border-amber-300 hover:bg-amber-100/60 transition cursor-pointer shadow-xs"
+              className="p-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 hover:border-amber-400 hover:bg-amber-100/80 transition cursor-pointer shadow-xs"
             >
-              <span className="text-[10px] text-amber-800 block uppercase font-bold">Cash in Hand</span>
-              <span className="text-base font-black text-amber-800 font-mono">₹{cashInHand}</span>
+              <span className="text-[10px] text-amber-900 dark:text-amber-300 block uppercase font-bold">Cash in Hand</span>
+              <span className="text-base font-black text-amber-900 dark:text-amber-300 font-mono">₹{cashInHand}</span>
             </div>
           </div>
         </div>
@@ -1353,7 +1288,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                           placeholder={String(selectedOrder.total)}
                           value={cashCollectedInput}
                           onChange={(e) => setCashCollectedInput(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-amber-800 rounded-lg text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
+                          className="w-full px-2.5 py-1.5 bg-amber-50 border border-amber-300 rounded-lg text-amber-950 font-mono text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
                       <div className="text-right">
@@ -1397,14 +1332,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                     <p className="text-[11px] text-rose-400 font-semibold">{pinError}</p>
                   )}
 
-                  <button
-                    type="button"
-                    disabled={pinLockoutSeconds > 0}
-                    onClick={handleFillDemoPin}
-                    className="text-[10px] text-emerald-600 hover:underline pt-1 cursor-pointer disabled:opacity-40"
-                  >
-                    Auto-Fill Demo PIN ({selectedOrder.deliveryPin || '4291'})
-                  </button>
+                  
                 </div>
 
                 {/* ThermalVault Box Collection */}
@@ -1452,7 +1380,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                         className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700 text-xs font-bold text-sky-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                       >
                         <Thermometer className="w-3.5 h-3.5 text-sky-400" />
-                        <span>{isCheckingCooler ? 'Analyzing Cold Chain Data...' : 'Audit Cold-Chain (0°C - 4°C Rule)'}</span>
+                        <span>{isCheckingCooler ? 'Analyzing Cold Chain Data...' : 'Audit Cold-Chain Box'}</span>
                       </button>
 
                       {coolerCheckResult && (
@@ -1590,7 +1518,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 placeholder={String(cashInHand)}
                 value={depositAmountInput}
                 onChange={(e) => setDepositAmountInput(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-400"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-amber-500 focus:bg-white"
               />
             </div>
 

@@ -1,4 +1,7 @@
+import mongoose from 'mongoose';
 import { db } from './db.js';
+import { User } from './models/User.js';
+import { Order } from './models/Order.js';
 
 let roundRobinPointer = 0;
 
@@ -7,23 +10,43 @@ let roundRobinPointer = 0;
  * Load-balances and round-robins orders across approved fleet riders.
  * Guarantees that sequential orders rotate between different riders.
  */
-export function assignFleetRiderForOrder() {
-  const allUsers = db.get('users') || [];
-  const approvedRiders = allUsers.filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+export async function assignFleetRiderForOrder(session = null) {
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+  let approvedRiders = [];
+  if (isMongo) {
+    const q = User.find({ role: 'rider', approvalStatus: 'approved' });
+    if (session) q.session(session);
+    approvedRiders = await q.lean();
+  } else {
+    const allUsers = db.get('users') || [];
+    approvedRiders = allUsers.filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+  }
 
+  // If no approved rider is available, keep riderId null so order appears in admin dispatch queue
   if (!approvedRiders || approvedRiders.length === 0) {
     return {
-      riderId: 'usr_rider_1',
-      riderFullName: 'Suresh Patil',
-      riderName: 'Suresh',
-      riderPhone: '+91 97412 88301',
-      riderVehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
-      deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)'
+      riderId: null,
+      riderFullName: null,
+      riderName: null,
+      riderPhone: null,
+      riderVehicle: null,
+      deliveryExecutive: null
     };
   }
 
-  // 1. Calculate active active deliveries for each rider
-  const allOrders = db.get('orders') || [];
+  // 1. Calculate active deliveries for each rider
+  let allOrders = [];
+  if (isMongo) {
+    const oq = Order.find({
+      riderId: { $ne: null },
+      orderStatus: { $nin: ['DELIVERED', 'COOLER_RETURNED', 'CANCELLED'] }
+    });
+    if (session) oq.session(session);
+    allOrders = await oq.lean();
+  } else {
+    allOrders = db.get('orders') || [];
+  }
+
   const activeCounts = {};
   for (const r of approvedRiders) {
     activeCounts[r.id] = 0;
@@ -52,8 +75,8 @@ export function assignFleetRiderForOrder() {
     riderId: selected.id,
     riderFullName: selected.name,
     riderName: selected.name.split(' ')[0],
-    riderPhone: selected.phone || '+91 97412 88301',
+    riderPhone: selected.phone || '',
     riderVehicle: vehicleInfo,
-    deliveryExecutive: `${selected.name} (${selected.vehicleType || 'EV Fleet'}, ${selected.phone || '+91 97412 88301'})`
+    deliveryExecutive: `${selected.name}${selected.vehicleType ? ` (${selected.vehicleType})` : ''}${selected.phone ? ` (${selected.phone})` : ''}`
   };
 }

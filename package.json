@@ -12,7 +12,15 @@
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "build": "cd frontend && npm install && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "test": "node scripts/test-workflows.js",
+    "test": "npm run check",
+    "test:backend": "node scripts/run-backend-tests.js",
+    "test:frontend": "npm --prefix frontend run lint && npm --prefix frontend run build && node scripts/check-bundle-size.js && npx playwright test && npx lhci autorun",
+    "check:syntax": "node scripts/check-backend-syntax.js",
+    "check:bundle": "node scripts/check-bundle-size.js",
+    "audit:backend": "npm --prefix backend audit --audit-level=high",
+    "audit:frontend": "npm --prefix frontend audit --audit-level=high",
+    "audit": "npm --prefix backend audit --audit-level=high && npm --prefix frontend audit --audit-level=high",
+    "check": "node scripts/check-backend-syntax.js && npm run audit && npm run test:frontend && npm run test:backend",
     "lint": "cd frontend && npm run lint",
     "user-app:start": "npm --prefix apps/user-app run start",
     "user-app:web": "npm --prefix apps/user-app run web",
@@ -31,9 +39,13 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.11.4",
-    "pptxgenjs": "^4.0.1",
     "puppeteer-core": "^25.16.0",
     "razorpay": "^2.9.8",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.16.1",
+    "@playwright/test": "^1.65.1",
+    "sharp": "^0.35.5"
   }
 }

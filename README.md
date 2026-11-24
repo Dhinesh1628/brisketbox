@@ -135,12 +135,14 @@ Visit **`http://localhost:5173/`** in your browser.
 
 ---
 
-## 🔐 Default Test Accounts
+## 🔐 Test Accounts
 
-| Role | Email / Phone | Password | Capabilities |
-|:---|:---|:---|:---|
-| **Customer** | `pooja.sundaram@gmail.com` (or `9876543210`) | `customer123` | Browsing, ordering, tracking, ₹250 cooler return |
-| **Operations Admin**| `ops@brisketbox.in` (legacy `ops@sagarfresh.in`) | `admin123` | Order pipeline, courier dispatch, box fleet sanitization |
+Test users are provisioned with role-based access control. Accounts are authenticated via local bcrypt hashing or test fixture creation in CI.
+
+| Role | Email / Phone | Capabilities |
+|:---|:---|:---|
+| **Customer** | `pooja.sundaram@gmail.com` (or `9876543210`) | Browsing, ordering, tracking, ₹250 cooler return |
+| **Operations Admin**| `ops@brisketbox.in` (legacy `ops@sagarfresh.in`) | Order pipeline, courier dispatch, box fleet sanitization |
 
 ---
 

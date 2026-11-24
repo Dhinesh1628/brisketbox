@@ -92,12 +92,12 @@ export const AdminDashboardPage: React.FC = () => {
     grossWeight: '600g',
     pieces: '4-6 Steaks',
     serves: 'Serves 3-4',
-    chillingMethod: '0°C to 4°C FreshSeal™ Cold Chain',
-    catchDate: 'Daily Harbor Catch',
-    origin: 'Mangalore Old Port, Karnataka',
+    chillingMethod: 'Chilled Cold Chain',
+    catchDate: 'Daily Catch',
+    origin: '',
     cutStyle: 'Curry Cut Steaks',
     stock: '30',
-    image: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=800&q=80'
+    image: '/images/products/prod_1.webp'
   });
 
   // Register New Cooler Modal
@@ -117,11 +117,12 @@ export const AdminDashboardPage: React.FC = () => {
   const [scannedCoolerId, setScannedCoolerId] = useState<string | undefined>(undefined);
   const [coolerAnalytics, setCoolerAnalytics] = useState<any>(null);
   const [coolerSubView, setCoolerSubView] = useState<'health' | 'inventory'>('health');
+  const [cashDeposits, setCashDeposits] = useState<any[]>([]);
 
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [m, o, c, r, p, u, ca, ridersList, partnersList] = await Promise.all([
+      const [m, o, c, r, p, u, ca, ridersList, partnersList, depositsList] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getOrders().catch(() => []),
         api.getCoolers().catch(() => []),
@@ -130,7 +131,8 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminUsers().catch(() => []),
         api.getCoolerAnalytics().catch(() => null),
         api.getAdminRiders().catch(() => []),
-        api.getAdminPartners().catch(() => [])
+        api.getAdminPartners().catch(() => []),
+        api.getAdminCashDeposits().catch(() => [])
       ]);
       if (m) setMetrics(m);
       setOrders(o || []);
@@ -141,10 +143,22 @@ export const AdminDashboardPage: React.FC = () => {
       if (ca) setCoolerAnalytics(ca);
       if (Array.isArray(ridersList)) setAdminRiders(ridersList);
       if (Array.isArray(partnersList)) setAdminPartners(partnersList);
+      if (Array.isArray(depositsList)) setCashDeposits(depositsList);
     } catch (err) {
       console.error('Failed to load operations data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmCashDeposit = async (depId: string) => {
+    try {
+      const res = await api.confirmCashDeposit(depId);
+      showNotification(`✓ Cash Deposit Confirmed: ₹${res.deposit?.amount || res.amount || ''} (Rider Cash Updated)`);
+      setCashDeposits(prev => prev.map(d => d.id === depId ? { ...d, status: 'CONFIRMED', confirmedAt: new Date().toISOString() } : d));
+      loadAllData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to confirm cash deposit');
     }
   };
 
@@ -449,7 +463,6 @@ export const AdminDashboardPage: React.FC = () => {
           <div>
             <div class="brand">BrisketBox™ Operations</div>
             <p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">Fresh Meat & Seafood Cold-Chain Fulfillment</p>
-            <p style="margin: 2px 0 0; font-size: 11px; color: #94a3b8;">FSSAI Lic: 11224334000189 • GSTIN: 29AABCU9603R1ZM</p>
           </div>
           <div style="text-align: right;">
             <div class="badge">PACKING SLIP & TAX INVOICE</div>
@@ -470,7 +483,7 @@ export const AdminDashboardPage: React.FC = () => {
             <strong style="font-size: 12px; text-transform: uppercase; color: #64748b;">Cold Chain Dispatch Asset:</strong>
             <div style="font-size: 13px; font-weight: bold; margin-top: 4px;">ThermalVault™ Tag: ${order.coolerId}</div>
             <div style="font-size: 12px; color: #475569;">Assigned Partner: ${order.deliveryExecutive || 'Depot Dispatch Fleet'}</div>
-            <div style="font-size: 12px; color: #16a34a; font-weight: bold;">Chamber Readout: 1.4°C (Bio-Safe 0-4°C)</div>
+            <div style="font-size: 12px; color: #16a34a; font-weight: bold;">Chamber Readout: ${order.liveTemp != null ? order.liveTemp + '°C' : 'Chilled'}</div>
             <div style="font-size: 11px; color: #16a34a; margin-top: 4px;">Packaging: Insulated Box (Free / ₹0 Deposit)</div>
           </div>
         </div>
@@ -509,8 +522,8 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         <div class="cert">
-          <strong>0°C - 4°C FreshSeal™ Cold Chain Verified:</strong>
-          This order was vacuum-sealed and packed inside an insulated EPP box with certified non-toxic food-grade gel bricks. Meat temperature guaranteed under 4°C throughout delivery SLA.
+          <strong>Packaging Verified:</strong>
+          This order was packed inside an insulated cold box with chilled gel bricks for fresh delivery.
         </div>
 
         <div class="no-print" style="margin-top: 30px; text-align: center;">
@@ -890,12 +903,12 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="font-extrabold text-xs text-gray-900 dark:text-white">Cold Chain Fleet Health</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold">
-                  100% SLA Safe
+                  On Schedule
                 </span>
               </div>
-              <div className="text-3xl font-black text-emerald-600 font-mono">0.8°C - 2.4°C</div>
+              <div className="text-3xl font-black text-emerald-600 font-mono">Chilled</div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                All ThermalVault™ active packages within mandatory FSSAI chilled threshold.
+                All active packages within cold chain standard.
               </p>
             </div>
 
@@ -1414,6 +1427,79 @@ export const AdminDashboardPage: React.FC = () => {
               </table>
             </div>
           </div>
+
+          {/* Section: Rider Cash on Delivery & Hub Deposits */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-2xs text-xs space-y-3 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-gray-950 dark:text-white text-sm">
+                  Rider COD Cash-in-Hand & Hub Deposits ({cashDeposits.filter(d => d.status === 'PENDING').length} Pending)
+                </h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Confirm physical cash handovers from delivery riders at the depot. Rider cash-in-hand updates only upon confirmation.
+                </p>
+              </div>
+            </div>
+
+            {cashDeposits.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 bg-gray-50 dark:bg-slate-800/40 rounded-xl">
+                No cash deposits requested yet. Riders submit cash handover requests from the rider portal.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 text-[11px] border-b border-gray-200 dark:border-slate-700">
+                    <tr>
+                      <th className="py-2.5 px-3">Deposit Ref</th>
+                      <th className="py-2.5 px-3">Rider</th>
+                      <th className="py-2.5 px-3">Amount</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Submitted At</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                    {cashDeposits.map((dep) => (
+                      <tr key={dep.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                        <td className="py-2.5 px-3 font-mono font-bold">{dep.id}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-bold">{dep.riderName || 'Rider'}</span>
+                          <span className="text-gray-400 text-[10px] ml-1">({dep.riderPhone || dep.riderId})</span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-black text-amber-900 dark:text-amber-300">
+                          ₹{dep.amount}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            dep.status === 'CONFIRMED'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}>
+                            {dep.status || 'PENDING'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-400 text-[10px]">
+                          {dep.createdAt ? new Date(dep.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {dep.status === 'PENDING' ? (
+                            <button
+                              onClick={() => handleConfirmCashDeposit(dep.id)}
+                              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                            >
+                              Confirm Cash Received
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 font-semibold text-[11px]">✓ Confirmed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1491,14 +1577,14 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="p-3.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-2xs">
               <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
-                <span className="text-[11px] font-bold uppercase tracking-wider">0°C–4°C Compliance</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider">Cold-Chain Compliance</span>
                 <Thermometer className="w-4 h-4 text-emerald-600" />
               </div>
               <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                {cm.coldChainComplianceRate || cm.thermalCompliance?.compliancePercentage || '98.7%'}
+                {cm.coldChainComplianceRate || cm.thermalCompliance?.compliancePercentage || 'N/A'}
               </div>
               <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-0.5">
-                FSSC-22000 active chilled trips
+                Cold-chain active chilled trips
               </span>
             </div>
 
@@ -1508,7 +1594,7 @@ export const AdminDashboardPage: React.FC = () => {
                 <Clock className="w-4 h-4 text-sky-600" />
               </div>
               <div className="text-xl font-black text-sky-600 dark:text-sky-400 mt-1">
-                {cm.avgTatDays || cm.returnTAT?.averageTATText || (cm.avgTatHours ? `${cm.avgTatHours} hrs` : '18.4 hrs')}
+                {cm.avgTatDays || cm.returnTAT?.averageTATText || (cm.avgTatHours ? `${cm.avgTatHours} hrs` : 'N/A')}
               </div>
               <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-0.5">
                 Delivery to hub turnaround time
@@ -1521,7 +1607,7 @@ export const AdminDashboardPage: React.FC = () => {
                 <RotateCcw className="w-4 h-4 text-indigo-600" />
               </div>
               <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
-                {cm.boxRecoveryRate || cm.recoveryRate?.recoveryPercentage || '94.2%'}
+                {cm.boxRecoveryRate || cm.recoveryRate?.recoveryPercentage || 'N/A'}
               </div>
               <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-0.5">
                 Active reusable circular fleet
@@ -1559,7 +1645,7 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="p-4 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-950 dark:text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <span className="text-sm">Insulated ThermalVault™ EPP Boxes in Fleet ({coolers.length} Boxes)</span>
-                <span className="text-[11px] font-normal text-gray-500 block">Depot inventory, active custody, and IoT telemetry validation</span>
+                <span className="text-[11px] font-normal text-gray-500 block">Depot inventory and active custody</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1613,7 +1699,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-4">{c.currentUserName || 'In Central Depot'}</td>
                       <td className="py-2.5 px-4 font-mono">{c.cyclesUsed || 0} trips</td>
-                      <td className="py-2.5 px-4 font-mono text-emerald-700 dark:text-emerald-400 font-bold">₹{c.depositAmount || 250}</td>
+                      <td className="py-2.5 px-4 font-mono text-emerald-700 dark:text-emerald-400 font-bold">₹{c.depositAmount ?? 0}</td>
                       <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
@@ -1816,7 +1902,7 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="text-gray-400 text-[10px] font-mono">{cust.email}</div>
                           </td>
                           <td className="py-3 px-4">
-                            <div>{cust.phone || '9876543210'}</div>
+                            <div>{cust.phone || '—'}</div>
                             <div className="text-gray-400 text-[10px]">{cust.city || 'Bangalore'}</div>
                           </td>
                           <td className="py-3 px-4">
@@ -1920,7 +2006,7 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="text-gray-400 text-[10px] font-mono">{r.email}</div>
                           </td>
                           <td className="py-3 px-4">
-                            <div>{r.phone || '+91 97412 •••01'}</div>
+                            <div>{r.phone || '—'}</div>
                             <div className="text-gray-400 text-[10px]">{r.city || 'Bengaluru'}</div>
                           </td>
                           <td className="py-3 px-4">
@@ -2058,7 +2144,7 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="text-gray-400 text-[10px]">{p.city || 'Bengaluru'}</div>
                           </td>
                           <td className="py-3 px-4 font-mono text-[11px]">
-                            {p.fssaiNumber || '11224330000491'}
+                            {p.fssaiNumber || 'Unassigned'}
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
@@ -2192,7 +2278,7 @@ export const AdminDashboardPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-[11px] text-emerald-800 dark:text-emerald-400">
-                    Live Temperature: <strong>1.4°C (Safe 0-4°C)</strong> • Assigned: {selectedOrder.deliveryExecutive || 'In Depot Queue'}
+                    Live Temperature: <strong>{selectedOrder.liveTemp != null ? `${selectedOrder.liveTemp}°C` : 'Not recorded'}</strong> • Assigned: {selectedOrder.deliveryExecutive || 'In Depot Queue'}
                   </div>
                 </div>
               </div>
@@ -2209,7 +2295,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Line Items Table */}
-            <div className="border border-gray-100 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="border border-gray-100 dark:border-slate-800 rounded-xl overflow-hidden overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 text-[10px] uppercase font-bold">
                   <tr>
@@ -2603,7 +2689,7 @@ export const AdminDashboardPage: React.FC = () => {
                   rows={2}
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  placeholder="Fresh from daily harbor catch, trimmed in bio-secure environment..."
+                  placeholder="Fresh meat and seafood cuts..."
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>

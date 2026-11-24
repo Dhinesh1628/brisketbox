@@ -46,7 +46,7 @@ interface NavbarProps {
   setSelectedCity: (city: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  currentAddress?: DeliveryAddress;
+  currentAddress?: DeliveryAddress | null;
   onOpenLocationModal?: () => void;
   selectedCategory?: string;
   onSelectCategory?: (category: string) => void;
@@ -71,7 +71,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'chicken',
     name: 'Chicken',
     categoryValue: 'Fresh Chicken',
-    image: '/images/products/prod_6.jpg',
+    image: '/images/products/prod_6.webp',
     subCategories: [
       { name: 'Curry Cuts', searchTerm: 'Curry Cut' },
       { name: 'Boneless & Breast Fillets', searchTerm: 'Boneless' },
@@ -84,7 +84,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'mutton',
     name: 'Mutton',
     categoryValue: 'Tender Mutton',
-    image: '/images/products/prod_4.jpg',
+    image: '/images/products/prod_4.webp',
     subCategories: [
       { name: 'Biryani & Curry Cut', searchTerm: 'Biryani' },
       { name: 'Rich Rogan Josh Cuts', searchTerm: 'Rogan Josh' },
@@ -97,32 +97,32 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'fish',
     name: 'Fish & Seafood',
     categoryValue: 'Fish & Seafood',
-    image: '/images/products/prod_1.jpg',
+    image: '/images/products/prod_1.webp',
     subCategories: [
       { name: 'Surmai (Seer Fish) Steaks', searchTerm: 'Surmai' },
       { name: 'White Pomfret (Whole Cleaned)', searchTerm: 'Pomfret' },
       { name: 'Jumbo Sea Prawns (Deveined)', searchTerm: 'Prawns' },
       { name: 'Center-Cut Round Steaks', searchTerm: 'Steaks' },
-      { name: 'Coastal Harbor Fresh Catch', categoryFilter: 'Fish & Seafood' }
+      { name: 'Fresh Seafood Selection', categoryFilter: 'Fish & Seafood' }
     ]
   },
   {
     id: 'ready_to_cook',
     name: 'Ready to Cook',
     categoryValue: 'Ready to Cook',
-    image: '/images/products/prod_7.jpg',
+    image: '/images/products/prod_7.webp',
     subCategories: [
       { name: 'Amritsari Crispy Fish Tikka', searchTerm: 'Tikka' },
       { name: 'Marinated Skillet Roasts', searchTerm: 'Roast' },
       { name: 'Herb Butter Sizzlers', searchTerm: 'Butter' },
-      { name: 'Quick 8-Min Pan Fries', searchTerm: 'Fry' }
+      { name: 'Quick Pan Fries', searchTerm: 'Fry' }
     ]
   },
   {
     id: 'combos',
     name: 'Combos & Feasts',
     categoryValue: 'Combo Box',
-    image: '/images/products/prod_8.jpg',
+    image: '/images/products/prod_8.webp',
     subCategories: [
       { name: 'Grand Coastal Seafood Feast', searchTerm: 'Feast' },
       { name: 'Weekend Family Value Packs', searchTerm: 'Box' },
@@ -134,11 +134,11 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'specials',
     name: 'BrisketBox Specials',
     categoryValue: 'All',
-    image: '/images/hero_banner_meat.jpg',
+    image: '/images/hero_banner_meat.webp',
     subCategories: [
-      { name: '0°C to 4°C Fresh Certified', categoryFilter: 'All' },
-      { name: 'Daily Harbor Landings', categoryFilter: 'Fish & Seafood' },
-      { name: 'Antibiotic-Free Farm Cuts', categoryFilter: 'Fresh Chicken' },
+      { name: 'Fresh Chilled Cuts', categoryFilter: 'All' },
+      { name: 'Fresh Fish & Seafood', categoryFilter: 'Fish & Seafood' },
+      { name: 'Fresh Poultry Cuts', categoryFilter: 'Fresh Chicken' },
       { name: 'All Master Cuts', categoryFilter: 'All' }
     ]
   }
@@ -429,9 +429,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Trust badge */}
             <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                <Zap className="w-3.5 h-3.5" /> Express 90-Min Delivery
+                <Zap className="w-3.5 h-3.5" /> Express Chilled Delivery
               </span>
-              <span>Chilled fresh at 0°C to 4°C</span>
+              <span>Chilled fresh delivery</span>
             </div>
           </div>
         ) : (
@@ -484,11 +484,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <img
-                          src={product.imageUrl || product.image || '/images/products/prod_1.jpg'}
+                          src={product.imageUrl || product.image || '/images/products/prod_1.webp'}
                           alt={product.name}
                           className="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-700 shrink-0"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/images/products/prod_1.jpg';
+                            (e.target as HTMLImageElement).src = '/images/products/prod_1.webp';
                           }}
                         />
                         <div className="min-w-0">
@@ -570,7 +570,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const indianCities = [
     { name: 'Bengaluru', locality: 'Indiranagar, 560038' },
     { name: 'Mumbai', locality: 'Bandra West, 400050' },
-    { name: 'Hyderabad', locality: 'Jubilee Hills, 500033' },
+    { name: 'Hyderabad', locality: 'Banjara Hills, 500034' },
     { name: 'Delhi NCR', locality: 'Gurugram CyberCity, 122002' },
     { name: 'Pune', locality: 'Koregaon Park, 411001' },
     { name: 'Chennai', locality: 'Adyar, 600020' }
@@ -580,10 +580,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Smart, clean location display logic (Swiggy / Zepto standard)
   const getLocationHeading = () => {
-    if (!currentAddress) return selectedCity || 'Hyderabad';
+    if (!currentAddress) return selectedCity || 'Select Location';
     
     if (currentAddress.tag === 'Home' || currentAddress.tag === 'Work') {
-      return `${currentAddress.tag} • ${currentAddress.city || selectedCity}`;
+      return `${currentAddress.tag} • ${currentAddress.city || selectedCity || 'Select Location'}`;
     }
     
     // For GPS or other locations: show area or city
@@ -591,7 +591,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return `${currentAddress.area}, ${currentAddress.city}`;
     }
     
-    return currentAddress.area || currentAddress.city || selectedCity || 'Hyderabad';
+    return currentAddress.area || currentAddress.city || selectedCity || 'Select Location';
   };
 
   const getLocationSubtitle = () => {
@@ -621,7 +621,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     if (user.role !== 'admin') {
-      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an admin account (ops@brisketbox.in / admin123).');
+      alert('Access Restricted: Admin credentials required to access the Central Operations Hub. Please sign in with an authorized admin account.');
       onOpenAuth('admin');
       return;
     }
@@ -636,22 +636,23 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0 truncate">
             <span className="font-extrabold text-[#d11243] dark:text-rose-400 shrink-0 text-[10px] sm:text-[11px]">Fresh delivery:</span>
-            <span className="truncate text-gray-800 dark:text-gray-200 font-medium">Daily fresh cuts delivered in about 90 minutes</span>
+            <span className="truncate text-gray-800 dark:text-gray-200 font-medium">Daily fresh cuts delivered cold to your door</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 text-gray-600 dark:text-gray-300 shrink-0">
-            <a 
-              href="https://wa.me/919741288301?text=Hello%20BrisketBox%2C%20I%20need%20assistance%20with%20my%20order"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors text-gray-700 dark:text-gray-200"
-              title="Chat with BrisketBox Customer Support"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Support: +91 97412 88301</span>
-            </a>
-            
-          </div>
+          {((import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim()) && (
+            <div className="hidden sm:flex items-center gap-3 text-gray-600 dark:text-gray-300 shrink-0">
+              <a 
+                href={`https://wa.me/${(import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim().replace(/\D/g, '')}?text=Hello%20BrisketBox%2C%20I%20need%20assistance%20with%20my%20order`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors text-gray-700 dark:text-gray-200"
+                title="Chat with BrisketBox Customer Support"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Support: {(import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim()}</span>
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -666,12 +667,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center cursor-pointer shrink-0 py-1"
             >
               <img 
-                src="/images/logo.png" 
+                src="/images/logo.webp" 
                 alt="BrisketBox - Freshness, Sealed with Flavour" 
                 className="h-7.5 sm:h-11 w-auto max-w-[145px] sm:max-w-[210px] object-contain hover:opacity-95 transition dark:hidden" 
               />
               <img 
-                src="/images/logo-dark.png" 
+                src="/images/logo-dark.webp" 
                 alt="BrisketBox - Freshness, Sealed with Flavour" 
                 className="h-7.5 sm:h-11 w-auto max-w-[145px] sm:max-w-[210px] object-contain hover:opacity-95 transition hidden dark:block" 
               />
@@ -697,7 +698,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {getLocationSubtitle()}
                   </span>
                   <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">About 90 minutes</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">Express Dispatch</span>
                 </div>
               </div>
             </button>
@@ -809,7 +810,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} Cuts
                         </span>
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                          0°C - 4°C Fresh
+                          Chilled Fresh
                         </span>
                       </div>
 
@@ -903,7 +904,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Dark / Light Theme Toggle: ALWAYS VISIBLE ON NAVBAR */}
             <button
               onClick={toggleTheme}
-              className="h-8 sm:h-10 w-8 sm:w-10 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:border-[#d11243] hover:shadow-[0_0_15px_rgba(225,29,67,0.25)] transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:border-[#d11243] hover:shadow-[0_0_15px_rgba(225,29,67,0.25)] transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
               title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle theme"
             >
@@ -1092,9 +1093,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart Button: ALWAYS ACCESSIBLE */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="h-8 sm:h-10 px-2 sm:px-3.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs flex items-center gap-1 sm:gap-2 cursor-pointer shadow-sm hover:shadow-md transition shrink-0 whitespace-nowrap active:scale-95"
+              aria-label="View Shopping Cart"
+              className="min-h-[44px] min-w-[44px] h-10 px-2 sm:px-3.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs flex items-center justify-center gap-1 sm:gap-2 cursor-pointer shadow-sm hover:shadow-md transition shrink-0 whitespace-nowrap active:scale-95 focus-visible:ring-2 focus-visible:ring-[#d11243]"
             >
-              <ShoppingBag className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" />
+              <ShoppingBag className="w-4 h-4 text-white" />
               <span className="hidden sm:inline">Cart</span>
               {totalItems > 0 && (
                 <span className="px-1.5 py-0.5 bg-white text-[#d11243] rounded-full text-[10px] sm:text-[11px] font-extrabold leading-none">
@@ -1111,9 +1113,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Menu Toggle (screens < sm) */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="sm:hidden h-8 w-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shrink-0"
+              aria-label="Toggle Navigation Menu"
+              className="sm:hidden min-h-[44px] min-w-[44px] h-10 w-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shrink-0 focus-visible:ring-2 focus-visible:ring-[#d11243]"
             >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
           </div>
@@ -1125,7 +1128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="sm:hidden px-3 py-1.5 bg-gray-50/90 dark:bg-slate-900/90 border-b border-gray-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
         <button
           onClick={onOpenLocationModal}
-          className="flex items-center gap-1.5 text-left min-w-0 flex-1 cursor-pointer py-0.5 active:opacity-75 transition-opacity"
+          className="flex items-center gap-1.5 text-left min-w-0 flex-1 min-h-[44px] cursor-pointer py-0.5 active:opacity-75 transition-opacity"
           type="button"
           title="Click to detect or change delivery address"
         >
@@ -1136,7 +1139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-extrabold text-gray-900 dark:text-white text-xs truncate">
               Delivering to {getLocationHeading()}
             </span>
-            <span className="text-gray-400 dark:text-gray-500 text-[10px] truncate max-w-[110px]">
+            <span className="text-gray-600 dark:text-gray-300 text-[10px] truncate max-w-[110px]">
               {getLocationSubtitle()}
             </span>
             <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
@@ -1144,7 +1147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
         <div className="flex items-center gap-1 shrink-0 pl-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>About 90 mins</span>
+          <span>Express Chilled</span>
         </div>
       </div>
 
@@ -1167,15 +1170,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               }
             }}
             placeholder={isSearchFocused ? 'Search chicken, mutton, or fish...' : searchPlaceholders[placeholderIndex]}
-            className="w-full h-9 pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#d11243]"
+            className="w-full min-h-[44px] pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#d11243]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              aria-label="Clear search input"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -1204,7 +1208,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div>
                   <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
                     <span>Delivering to {getLocationHeading()}</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">• About 90 mins</span>
                   </div>
                   <div className="text-[11px] text-gray-600 dark:text-gray-300 truncate max-w-[240px]">
                     {getLocationSubtitle()}

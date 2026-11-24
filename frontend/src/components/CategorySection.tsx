@@ -15,15 +15,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'chicken',
     name: 'Chicken',
     value: 'Fresh Chicken',
-    image: '/images/products/prod_6.jpg',
-    badge: 'Farm Fresh',
-    badgeColor: 'bg-emerald-600'
+    image: '/images/products/prod_6.webp',
+    badge: 'Fresh Cuts',
+    badgeColor: 'bg-emerald-800'
   },
   {
     id: 'mutton',
     name: 'Mutton',
     value: 'Tender Mutton',
-    image: '/images/products/prod_4.jpg',
+    image: '/images/products/prod_4.webp',
     badge: 'Popular',
     badgeColor: 'bg-[#d11243]'
   },
@@ -31,15 +31,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'fish',
     name: 'Fish & Seafood',
     value: 'Fish & Seafood',
-    image: '/images/products/prod_1.jpg',
+    image: '/images/products/prod_1.webp',
     badge: 'Daily Catch',
-    badgeColor: 'bg-blue-600'
+    badgeColor: 'bg-blue-700'
   },
   {
     id: 'ready_to_cook',
     name: 'Ready to Cook',
     value: 'Ready to Cook',
-    image: '/images/products/prod_7.jpg',
+    image: '/images/products/prod_7.webp',
     badge: 'NEW',
     badgeColor: 'bg-[#d11243]'
   },
@@ -47,15 +47,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'combos',
     name: 'Combos & Feast',
     value: 'Combo Box',
-    image: '/images/products/prod_8.jpg',
+    image: '/images/products/prod_8.webp',
     badge: 'Save More',
-    badgeColor: 'bg-purple-600'
+    badgeColor: 'bg-purple-800'
   },
   {
     id: 'all',
     name: 'All Cuts',
     value: 'All',
-    image: '/images/hero_banner_meat.jpg'
+    image: '/images/hero_banner_meat.webp'
   }
 ];
 
@@ -79,13 +79,13 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             Explore by Category
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Hand-trimmed, vacuum-sealed cuts chilled strictly at 0°C to 4°C
+            Fresh chicken, mutton and seafood delivered chilled
           </p>
         </div>
 
         <button
           onClick={onViewAllSpecs}
-          className="text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
+          className="min-h-[44px] px-2 text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
         >
           <span>View All</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -94,7 +94,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
 
       {/* Licious-Style Circular Platter Grid / Horizontal Scroll */}
       <div className="bg-white dark:bg-slate-900/90 rounded-3xl p-5 sm:p-6 border border-gray-150 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-start justify-between gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-start justify-between gap-4 sm:gap-6 overflow-x-auto pt-4 pb-2 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.value;
 
@@ -106,10 +106,10 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                 className="flex flex-col items-center flex-1 min-w-[85px] sm:min-w-[100px] cursor-pointer group text-center select-none transition-transform focus:outline-none"
               >
                 {/* Circular Platter Plate Container */}
-                <div className="relative pt-2.5">
-                  {/* Floating Badge (e.g. "NEW", "POPULAR") */}
+                <div className="relative pt-4 pb-0.5">
+                  {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without clipping or ripping */}
                   {cat.badge && (
-                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-10 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md border-2 border-white dark:border-slate-900 pointer-events-none whitespace-nowrap ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap leading-tight ${cat.badgeColor || 'bg-[#d11243]'}`}>
                       {cat.badge}
                     </span>
                   )}
@@ -127,7 +127,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                       alt={cat.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/images/hero_banner_meat.jpg';
+                        (e.target as HTMLImageElement).src = '/images/hero_banner_meat.webp';
                       }}
                     />
                     {/* Subtle Circular Inner Rim Shadow to look like a ceramic plate */}

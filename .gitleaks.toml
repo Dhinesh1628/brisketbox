@@ -1,0 +1,38 @@
+# Gitleaks Configuration for BrisketBox CI
+title = "BrisketBox Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Allowlist strictly for explicit mock/test fixtures and fake placeholder test values in tests"
+regexTarget = "line"
+paths = [
+  '''(^|/)backend/tests/''',
+  '''\.test\.(js|ts)$''',
+  '''\.spec\.(js|ts)$''',
+  '''\.gitleaks\.toml$'''
+]
+stopWords = [
+  "test_jwt_secret",
+  "ci_test_fake_jwt_secret",
+  "ci_fake_razorpay",
+  "ci_fake_webhook",
+  "test_secret",
+  "test_webhook",
+  "fake_test",
+  "mock_secret",
+  "mockRazorpayBootstrap",
+  "dummy_token"
+]
+regexes = [
+  '''(?i)test_jwt_secret''',
+  '''(?i)ci_test_fake_jwt_secret''',
+  '''(?i)ci_fake_''',
+  '''(?i)test_secret''',
+  '''(?i)test_webhook_secret''',
+  '''(?i)fake_test_''',
+  '''(?i)mock_secret''',
+  '''(?i)mockRazorpayBootstrap''',
+  '''(?i)dummy_token'''
+]

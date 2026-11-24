@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import mongoose from 'mongoose';
+import { User } from '../models/User.js';
 import { db } from '../db.js';
 import { verifyGoogleIdToken } from '../services/googleAuth.js';
 
@@ -32,15 +34,27 @@ export async function handleGoogleAuth(req, res, createToken) {
       return res.status(401).json({ error: 'Your Google email is unverified. Only verified Google accounts can sign in.' });
     }
 
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+    const cleanEmail = (email || '').toLowerCase().trim();
+
     // 3. Search for existing user by Google sub ID
-    let user = db.get('users').find(u => u.googleId === googleId);
+    let user = null;
+    if (isMongo) {
+      user = await User.findOne({ googleId }).lean();
+    } else {
+      user = db.get('users').find(u => u.googleId === googleId);
+    }
 
     // 4. If not found by Google ID, search by verified email to securely link accounts
     if (!user) {
-      user = db.get('users').find(u => u.email && u.email.toLowerCase() === email);
+      if (isMongo) {
+        user = await User.findOne({ email: cleanEmail }).lean();
+      } else {
+        user = db.get('users').find(u => u.email && u.email.toLowerCase() === cleanEmail);
+      }
 
       if (user) {
-        console.log(`[Google Auth] Securely linking existing user account (${email}) with Google ID: ${googleId}`);
+        console.log(`[Google Auth] Securely linking existing user account (${cleanEmail}) with Google ID: ${googleId}`);
         const updates = {
           googleId,
           emailVerified: true,
@@ -49,7 +63,12 @@ export async function handleGoogleAuth(req, res, createToken) {
         if (!user.avatar && picture) {
           updates.avatar = picture;
         }
-        user = db.update('users', user.id, updates) || { ...user, ...updates };
+
+        if (isMongo) {
+          user = await User.findOneAndUpdate({ id: user.id }, { $set: updates }, { new: true }).lean();
+        } else {
+          user = db.update('users', user.id, updates) || { ...user, ...updates };
+        }
       }
     } else {
       // Existing Google user login: update last login timestamp and avatar if available
@@ -59,7 +78,12 @@ export async function handleGoogleAuth(req, res, createToken) {
       if (picture && !user.avatar) {
         updates.avatar = picture;
       }
-      user = db.update('users', user.id, updates) || { ...user, ...updates };
+
+      if (isMongo) {
+        user = await User.findOneAndUpdate({ id: user.id }, { $set: updates }, { new: true }).lean();
+      } else {
+        user = db.update('users', user.id, updates) || { ...user, ...updates };
+      }
     }
 
     // 5. If new user, create account in MongoDB and local store
@@ -67,7 +91,7 @@ export async function handleGoogleAuth(req, res, createToken) {
       const newUser = {
         id: `usr_${uuidv4().slice(0, 8)}`,
         name: name || email.split('@')[0],
-        email: email,
+        email: cleanEmail,
         googleId: googleId,
         avatar: picture || '',
         authProvider: 'google',
@@ -82,8 +106,13 @@ export async function handleGoogleAuth(req, res, createToken) {
         lastLogin: new Date().toISOString()
       };
 
-      user = db.insert('users', newUser);
-      console.log(`[Google Auth] Created new genuine Google user: ${email} (ID: ${user.id})`);
+      if (isMongo) {
+        await User.create(newUser);
+        user = newUser;
+      } else {
+        user = db.insert('users', newUser);
+      }
+      console.log(`[Google Auth] Created new genuine Google user: ${cleanEmail} (ID: ${user.id})`);
     }
 
     // 6. Issue secure application JWT token

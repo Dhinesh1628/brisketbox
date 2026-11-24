@@ -1,3 +1,6 @@
+import mongoose from 'mongoose';
+import { Product } from '../models/Product.js';
+import { Order } from '../models/Order.js';
 import { db } from '../db.js';
 
 /**
@@ -10,9 +13,19 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   const text = (userMessage || '').trim();
   const lower = text.toLowerCase();
 
-  // Load latest live catalog & active orders from database
-  const products = db.get('products') || [];
-  const orders = db.get('orders') || [];
+  // Load latest live catalog & active orders from database (MongoDB sole source of truth)
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  let products = [];
+  let orders = [];
+  if (isMongo) {
+    [products, orders] = await Promise.all([
+      Product.find().lean(),
+      Order.find().lean()
+    ]);
+  } else {
+    products = db.get('products') || [];
+    orders = db.get('orders') || [];
+  }
 
   // Helper product lookup
   const getProd = (id) => products.find(p => p.id === id);
@@ -45,7 +58,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
     if (cartSummary && cartSummary.items && cartSummary.items.length > 0) {
       const itemsList = cartSummary.items.map(i => `• ${i.qty}x *${i.name}* (${i.weight || '500g'}) — ₹${i.price * i.qty}`).join('\n');
       return {
-        reply: `🛒 *Here is what is currently in your BrisketBox Cart:*\n\n${itemsList}\n\n• *Subtotal:* ₹${cartSummary.subtotal}\n• *Total:* ₹${cartSummary.total || cartSummary.subtotal}\n${cartSummary.couponCode ? `• *Applied Deal:* ${cartSummary.couponCode} (20% OFF applied!)` : '• *Tip:* Type *"Apply 20% OFF"* to save 20% on your cart!'}\n\n⚡ *90-Minute Express Dispatch:* Ready to pack in 0°C to 4°C chilled box!\n\nI have unlocked the Cart Drawer for you below:`,
+        reply: `🛒 *Here is what is currently in your BrisketBox Cart:*\n\n${itemsList}\n\n• *Subtotal:* ₹${cartSummary.subtotal}\n• *Total:* ₹${cartSummary.total || cartSummary.subtotal}\n${cartSummary.couponCode ? `• *Applied Deal:* ${cartSummary.couponCode} (20% OFF applied!)` : '• *Tip:* Type *"Apply 20% OFF"* to save 20% on your cart!'}\n\n⚡ *Express Dispatch:* Packed fresh for chilled doorstep delivery!\n\nI have unlocked the Cart Drawer for you below:`,
         action: {
           type: 'OPEN_CART'
         },
@@ -63,13 +76,13 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
       };
     } else {
       return {
-        reply: `🛒 *Your BrisketBox Cart is currently empty!*\n\nOur depot is stocked with fresh coastal catches landed at 4:00 AM today and blast-chilled to 0°C.\n\nHere are the top picks you can add with 1 click:\n1. *${surmai?.name || 'Mangalore Surmai Tawa Steaks'}* (₹799 / 500g)\n2. *${mutton?.name || 'Kashmiri Mutton Rogan Josh'}* (₹549 / 500g)\n3. *${prawns?.name || 'Butter Garlic Jumbo Prawns'}* (₹449 / 500g)\n\nTell me what you'd like (e.g. *"Add 500g Surmai to my cart"*), or click below to view the catalog!`,
+        reply: `🛒 *Your BrisketBox Cart is currently empty!*\n\nOur depot is stocked with fresh chicken, mutton and seafood.\n\nHere are the top picks you can add with 1 click:\n1. *${surmai?.name || 'Surmai Tawa Steaks'}* (₹799 / 500g)\n2. *${mutton?.name || 'Mutton Rogan Josh'}* (₹549 / 500g)\n3. *${prawns?.name || 'Jumbo Prawns'}* (₹449 / 500g)\n\nTell me what you'd like (e.g. *"Add 500g Surmai to my cart"*), or click below to view the catalog!`,
         action: {
           type: 'OPEN_CART'
         },
         actionCard: {
           title: 'Browse Fresh Cuts Catalog',
-          subtitle: 'Daily 0°C blast-chilled chicken, mutton & coastal seafood',
+          subtitle: 'Fresh chicken, mutton and seafood',
           buttonText: 'Explore Fresh Cuts',
           actionType: 'OPEN_CART'
         },
@@ -145,7 +158,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
 
     if (targetProd) {
       return {
-        reply: `🛒 *Added to your BrisketBox Cart!* \n\n• *Item:* ${targetProd.name}\n• *Pack Size:* ${weight}\n• *Price:* ₹${weight === '1kg' ? targetProd.price * 2 - 50 : targetProd.price}\n• *Cold-Chain Spec:* Blast-chilled at 0°C to 4°C, 100% RO water washed.\n\n⚡ Guaranteed 90-minute express doorstep delivery inside our reusable insulated insulated bag cold box!`,
+        reply: `🛒 *Added to your BrisketBox Cart!* \n\n• *Item:* ${targetProd.name}\n• *Pack Size:* ${weight}\n• *Price:* ₹${weight === '1kg' ? targetProd.price * 2 - 50 : targetProd.price}\n• *Packaging:* Fresh cuts packed chilled with ice packs.\n\nDoorstep delivery in insulated packaging!`,
         action: {
           type: 'ADD_TO_CART',
           productId: targetProd.id,
@@ -156,7 +169,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
         },
         actionCard: {
           title: `View Cart & Checkout (${targetProd.name})`,
-          subtitle: `₹${targetProd.price} • Express 90-min dispatch`,
+          subtitle: `₹${targetProd.price} • Doorstep delivery`,
           buttonText: 'Open Cart & Proceed',
           actionType: 'OPEN_CART'
         },
@@ -179,9 +192,9 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
     // Surmai Tawa Fry Recipe
     if (lower.includes('surmai') || lower.includes('fish') || lower.includes('tawa fry')) {
       return {
-        reply: `👨‍🍳 *Chef Master Recipe: Crispy Mangalore Surmai Tawa Fry*\n\n⏱️ *Prep Time:* 10 Mins • *Cook Time:* 8 Mins • *Serves:* 3-4\n\n📌 *Ingredients:*\n• 500g Center-cut Surmai Steaks (BrisketBox 0°C Fresh)\n• 2 tbsp Kashmiri Red Chili Powder + 1/2 tsp Turmeric\n• 1 tbsp Ginger-Garlic Paste + 1 tbsp Lemon Juice\n• 1/2 cup Fine Rava (Semolina) for outer crisp crust\n• Salt to taste & Coconut oil for shallow frying\n\n🔥 *Step-by-Step Method:*\n1. *Marination:* Mix chili powder, turmeric, ginger-garlic, lemon juice & salt into a thick paste. Coat each Surmai steak generously. Rest for 15 mins.\n2. *Crust:* Dredge both sides of the marinated steak in fine rava for that iconic coastal crunch.\n3. *Sear:* Heat coconut oil in a cast iron tawa over medium-high heat. Place steaks gently.\n4. *Flip:* Fry for 3.5 to 4 minutes per side until golden crimson and crisp on edges.\n5. *Finish:* Garnish with fried curry leaves and lemon wedges!\n\n💡 *Master Butcher Tip:* Never crowd the tawa! Surmai has firm, succulent center flakes; high heat seals in the natural moisture.`,
+        reply: `👨‍🍳 *Chef Master Recipe: Crispy Surmai Tawa Fry*\n\n⏱️ *Prep Time:* 10 Mins • *Cook Time:* 8 Mins • *Serves:* 3-4\n\n📌 *Ingredients:*\n• 500g Center-cut Surmai Steaks (BrisketBox Fresh)\n• 2 tbsp Kashmiri Red Chili Powder + 1/2 tsp Turmeric\n• 1 tbsp Ginger-Garlic Paste + 1 tbsp Lemon Juice\n• 1/2 cup Fine Rava (Semolina) for outer crisp crust\n• Salt to taste & Coconut oil for shallow frying\n\n🔥 *Step-by-Step Method:*\n1. *Marination:* Mix chili powder, turmeric, ginger-garlic, lemon juice & salt into a thick paste. Coat each Surmai steak generously. Rest for 15 mins.\n2. *Crust:* Dredge both sides of the marinated steak in fine rava for that iconic coastal crunch.\n3. *Sear:* Heat coconut oil in a cast iron tawa over medium-high heat. Place steaks gently.\n4. *Flip:* Fry for 3.5 to 4 minutes per side until golden crimson and crisp on edges.\n5. *Finish:* Garnish with fried curry leaves and lemon wedges!\n\n💡 *Master Butcher Tip:* Never crowd the tawa! Surmai has firm, succulent center flakes; high heat seals in the natural moisture.`,
         recipe: {
-          title: 'Crispy Mangalore Surmai Tawa Fry',
+          title: 'Crispy Surmai Tawa Fry',
           prepTime: '10 mins',
           cookTime: '8 mins',
           difficulty: 'Easy',
@@ -199,7 +212,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
     // Mutton Rogan Josh Recipe
     if (lower.includes('mutton') || lower.includes('rogan') || lower.includes('goat') || lower.includes('biryani')) {
       return {
-        reply: `👨‍🍳 *Chef Master Recipe: Kashmiri Mutton Rogan Josh*\n\n⏱️ *Prep Time:* 15 Mins • *Cook Time:* 45 Mins • *Serves:* 4\n\n📌 *Ingredients:*\n• 500g Tender Bone-in Goat Curry Cut (BrisketBox Pasture-Raised)\n• 3 tbsp Pure Mustard Oil or Ghee\n• Whole Spices: 2 Black Cardamoms, 4 Green Cardamoms, 1 Cinnamon stick, 4 Cloves\n• 2 tsp Kashmiri Red Chili Powder (for deep crimson rogan color)\n• 1 tsp Fennel Powder (Saunf) + 1 tsp Dry Ginger Powder (Sonth)\n• 1/2 cup Whisked Yogurt & a pinch of Asafoetida (Hing)\n\n🔥 *Step-by-Step Method:*\n1. *Smoke Oil:* Heat mustard oil in a heavy handi until lightly smoking, then let it cool slightly.\n2. *Sear Cuts:* Add whole spices, hing, and BrisketBox mutton pieces. Sear on high heat for 6-8 mins until lightly browned.\n3. *Aromatics:* Whisk chili powder into 2 tbsp water, pour in. Add yogurt slowly while stirring continuously on low heat to prevent curdling.\n4. *Simmer:* Add fennel and ginger powders with 1.5 cups hot water. Cover and slow-simmer on dum (low heat) for 35-40 mins (or 3-4 whistles in pressure cooker).\n5. *Result:* Melt-in-mouth tender meat with a fragrant red oil layer floating on top!\n\n💡 *Master Butcher Tip:* Our bone-in cuts include marrow bone chunks. Slow cooking releases natural gelatin and bone collagen, giving you that rich, velvety restaurant-grade gravy.`,
+        reply: `👨‍🍳 *Chef Master Recipe: Kashmiri Mutton Rogan Josh*\n\n⏱️ *Prep Time:* 15 Mins • *Cook Time:* 45 Mins • *Serves:* 4\n\n📌 *Ingredients:*\n• 500g Bone-in Goat Curry Cut\n• 3 tbsp Pure Mustard Oil or Ghee\n• Whole Spices: 2 Black Cardamoms, 4 Green Cardamoms, 1 Cinnamon stick, 4 Cloves\n• 2 tsp Kashmiri Red Chili Powder (for deep crimson rogan color)\n• 1 tsp Fennel Powder (Saunf) + 1 tsp Dry Ginger Powder (Sonth)\n• 1/2 cup Whisked Yogurt & a pinch of Asafoetida (Hing)\n\n🔥 *Step-by-Step Method:*\n1. *Smoke Oil:* Heat mustard oil in a heavy handi until lightly smoking, then let it cool slightly.\n2. *Sear Cuts:* Add whole spices, hing, and BrisketBox mutton pieces. Sear on high heat for 6-8 mins until lightly browned.\n3. *Aromatics:* Whisk chili powder into 2 tbsp water, pour in. Add yogurt slowly while stirring continuously on low heat to prevent curdling.\n4. *Simmer:* Add fennel and ginger powders with 1.5 cups hot water. Cover and slow-simmer on dum (low heat) for 35-40 mins (or 3-4 whistles in pressure cooker).\n5. *Result:* Melt-in-mouth tender meat with a fragrant red oil layer floating on top!\n\n💡 *Master Butcher Tip:* Our bone-in cuts include marrow bone chunks. Slow cooking releases natural gelatin and bone collagen, giving you that rich, velvety restaurant-grade gravy.`,
         recipe: {
           title: 'Authentic Kashmiri Mutton Rogan Josh',
           prepTime: '15 mins',
@@ -272,9 +285,9 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
     const fishKg = (numGuests * 0.20).toFixed(1);
 
     return {
-      reply: `⚖️ *Master Butcher Portion Calculator for ${numGuests} People:*\n\nHere is the exact culinary weight breakdown per guest so you never run short:\n\n🍗 *Bone-In Curry Cuts (Chicken/Mutton):* ~*${boneInKg} kg* (Calculated at ~250g per adult to account for bones & slow reduction).\n🥩 *Boneless Fillets / Boti / Breast:* ~*${bonelessKg} kg* (Calculated at ~180g lean meat per adult).\n🐟 *Harbor Fish Steaks (Surmai / Pomfret):* ~*${fishKg} kg* (Approx 1 to 2 center-cut steaks per person).\n🦐 *Jumbo Tiger Prawns:* ~*${Math.ceil(numGuests * 4)} - ${Math.ceil(numGuests * 6)} pieces* (~${bonelessKg} kg).\n\n💡 *My Recommendation for ${numGuests} guests:*\n• Option A: 1kg Mutton Rogan Josh Cut + 500g Surmai Tawa Steaks\n• Option B: 1kg Country Chicken + 500g Jumbo Prawns\n\nWould you like me to add a customized feast pack to your cart?`,
+      reply: `⚖️ *Portion Guide for ${numGuests} People:*\n\nHere is an estimated weight guide per guest:\n\n🍗 *Bone-In Cuts (Chicken/Mutton):* ~*${boneInKg} kg* (Calculated at ~250g per adult to account for bones).\n🥩 *Boneless Fillets / Boti / Breast:* ~*${bonelessKg} kg* (Calculated at ~180g meat per adult).\n🐟 *Fish Steaks (Surmai / Pomfret):* ~*${fishKg} kg* (Approx 1 to 2 steaks per person).\n🦐 *Prawns:* ~*${Math.ceil(numGuests * 4)} - ${Math.ceil(numGuests * 6)} pieces* (~${bonelessKg} kg).\n\n💡 *Suggestions for ${numGuests} guests:*\n• Option A: 1kg Mutton Curry Cut + 500g Surmai Steaks\n• Option B: 1kg Country Chicken + 500g Prawns\n\nWould you like me to add these items to your cart?`,
       actionCard: {
-        title: `Weekend Coastal Feast Box (Serves ${numGuests})`,
+        title: `Weekend Feast Box (Serves ${numGuests})`,
         subtitle: 'Curated mix of Surmai Steaks, Prawns & Mutton',
         buttonText: 'Add Party Box to Cart',
         actionType: 'ADD_TO_CART',
@@ -293,11 +306,11 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   }
 
   // =========================================================================
-  // 5. COLD CHAIN SCIENCE & FOOD INTEGRITY
+  // 5. PACKAGING & FRESHNESS
   // =========================================================================
   if (lower.includes('frozen') || lower.includes('fresh') || lower.includes('chilled') || lower.includes('temperature') || lower.includes('formalin') || lower.includes('ammonia') || lower.includes('antibiotic') || lower.includes('safe') || lower.includes('quality')) {
     return {
-      reply: `❄️ *Fresh, never frozen:*\n\nWe deliver fresh meat and fish daily. Cuts are kept chilled between 0°C and 4°C with ice packs to stay fresh on the road without freezing. No chemical preservatives, no ammonia, no artificial washes.`,
+      reply: `❄️ *Fresh meat and seafood:*\n\nWe deliver fresh meat and fish daily. Cuts are kept chilled with ice packs to stay cold on the road without freezing.`,
       suggestedReplies: [
         "View fish cuts",
         "View mutton cuts",
@@ -310,7 +323,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // 6. PACKAGING & DELIVERY
   if (lower.includes('box') || lower.includes('cooler') || lower.includes('refund') || lower.includes('250') || lower.includes('return') || lower.includes('wapas') || lower.includes('deposit') || lower.includes('pack')) {
     return {
-      reply: `📦 *Packaging & Delivery:*\n\nEvery order is packed in a clean insulated bag with ice packs to keep meat chilled for about 90 minutes. You do not need to return any box, and there are no extra deposits or fees.`,
+      reply: `📦 *Packaging & Delivery:*\n\nEvery order is packed in an insulated bag with ice packs to keep meat chilled during delivery. You do not need to return any box, and there are no extra deposits or fees.`,
       suggestedReplies: [
         "View fish cuts",
         "View mutton cuts",
@@ -323,7 +336,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // =========================================================================
   if (lower.includes('surmai') || lower.includes('seer') || lower.includes('fish') || lower.includes('pomfret') || lower.includes('prawn') || lower.includes('tikka') || lower.includes('machli')) {
     return {
-      reply: `🐟 *Today's Harbor Seafood Catch (Mangalore & Malabar Coast):*\n\n1. *${surmai.name}* (₹799 / 500g)\n   • *Anatomy:* Pristine center-cut round steaks with silver skin.\n   • *Best For:* Crisp Rava Tawa Fry or Malabar Fish Curry.\n\n2. *${pomfret.name}* (₹689 / 400g)\n   • *Anatomy:* Whole cleaned silver pomfret with diamond slits on both sides.\n   • *Best For:* Stuffed Goan Rechado fry or tandoori whole roast.\n\n3. *${prawns.name}* (₹449 / 500g)\n   • *Anatomy:* Jumbo sea tiger prawns, fully cleaned, deveined with tails intact.\n   • *Best For:* Garlic Butter Chili Prawns or Coastal Prawn Curry.\n\n4. *${fishTikka.name}* (₹349 / 350g)\n   • *Anatomy:* Boneless fish cubes in carom-seed (ajwain) spiced batter.\n   • *Best For:* Air-fry or pan sear in 6 mins.\n\n⚡ All catches landed at 4:00 AM, cleaned in RO water, and delivered at 0°C!`,
+      reply: `🐟 *Seafood Selection:*\n\n1. *${surmai.name}* (₹799 / 500g)\n   • *Cut:* Center-cut round steaks.\n   • *Best For:* Rava Tawa Fry or Fish Curry.\n\n2. *${pomfret.name}* (₹689 / 400g)\n   • *Cut:* Cleaned whole pomfret.\n   • *Best For:* Stuffed pan fry or curry.\n\n3. *${prawns.name}* (₹449 / 500g)\n   • *Cut:* Cleaned and deveined with tails on.\n   • *Best For:* Garlic Butter Prawns or Prawn Curry.\n\n4. *${fishTikka.name}* (₹349 / 350g)\n   • *Cut:* Boneless fish cubes spiced for pan-frying.\n   • *Best For:* Pan fry or grill.\n\nFresh cuts, portioned and packed chilled for delivery.`,
       products: [surmai, pomfret, prawns, fishTikka],
       suggestedReplies: [
         "Add Surmai Tawa Steaks (₹799)",
@@ -339,7 +352,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // =========================================================================
   if (lower.includes('mutton') || lower.includes('goat') || lower.includes('gosht') || lower.includes('lamb') || lower.includes('biryani')) {
     return {
-      reply: `🥩 *Pasture-Grazed Tender Goat (Mutton) Cuts:*\n\n• *Product:* ${mutton.name} (₹549 / 500g)\n• *Age Assurance:* Young goat under 9 months for delicate, naturally tender meat.\n• *Cut Specification:* Precision bone-in curry and biryani cuts including shoulder chunks, succulent ribs, and marrow bones.\n• *Cleaning:* Zero bone-dust residue. Precision trimmed with RO water rinse and vacuum blast-chilled.\n• *Cooking Time:* Cooks to melt-in-mouth tenderness in 3-4 whistles in pressure cooker or 45 mins in clay handi.\n\nIdeal for slow-simmered Kashmiri Rogan Josh or rich Dum Biryani!`,
+      reply: `🥩 *Tender Goat (Mutton) Cuts:*\n\n• *Product:* ${mutton.name} (₹549 / 500g)\n• *Cut Specification:* Bone-in curry and biryani cuts including shoulder chunks, ribs, and marrow bones.\n• *Cleaning:* Cleaned and portioned cuts, packed chilled for delivery.\n• *Cooking Time:* Cooks tender in pressure cooker or slow-simmered in a pot.\n\nIdeal for Rogan Josh or Dum Biryani!`,
       products: [mutton],
       suggestedReplies: [
         "Add Mutton Rogan Josh (₹549)",
@@ -355,7 +368,7 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   // =========================================================================
   if (lower.includes('chicken') || lower.includes('murga') || lower.includes('nati koli') || lower.includes('breast')) {
     return {
-      reply: `🍗 *Farm-Fresh Bio-Secured Chicken Cuts:*\n\n1. *${chickenBreast.name}* (₹299 / 500g)\n   • *Cut:* Lean, fat-trimmed boneless breast fillets.\n   • *Nutrition:* ~31g protein per 100g. Ideal for gym diet, salads, and golden herb butter pan-searing.\n\n2. *${natiKoli.name}* (₹389 / 500g)\n   • *Cut:* Authentic free-range country chicken bone-in curry cuts.\n   • *Flavor Profile:* Firm muscle density with deep, organic rustic flavor.\n   • *Best For:* Spicy Andhra Pepper Roast or traditional village rasam curry.\n\n🌿 Antibiotic-free, vegetarian feed, and blast-chilled to 0°C–4°C within 90 minutes of processing!`,
+      reply: `🍗 *Fresh Chicken Cuts:*\n\n1. *${chickenBreast.name}* (₹299 / 500g)\n   • *Cut:* Boneless breast fillets.\n   • *Best For:* Grilling, pan-searing, and curries.\n\n2. *${natiKoli.name}* (₹389 / 500g)\n   • *Cut:* Country chicken bone-in curry cuts.\n   • *Flavor Profile:* Firm muscle texture with deep flavor.\n   • *Best For:* Pepper Roast or country chicken curry.\n\nFresh cuts portioned and delivered chilled.`,
       products: [chickenBreast, natiKoli],
       suggestedReplies: [
         "Add Chicken Breast (₹299)",
@@ -372,20 +385,17 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   if (lower.includes('track') || lower.includes('status') || lower.includes('where is my order') || lower.includes('delivery') || lower.includes('kaha hai')) {
     const sampleOrder = orders[0] || {
       trackingCode: 'BRISKETBOX-TRK-8821',
-      status: 'Out for Delivery (Cold Chain Active)',
-      currentTemp: 1.8,
-      etaMinutes: 22,
-      coolerId: 'BOX-BLR-409'
+      status: 'OUT_FOR_DELIVERY'
     };
 
     return {
-      reply: `🛵 *Live BrisketBox Cold-Chain Dispatch Telemetry:*\n\n• *Tracking ID:* \`${sampleOrder.trackingCode}\`\n• *Status:* ${sampleOrder.status}\n• *Real-Time Temperature:* ❄️ *${sampleOrder.currentTemp || 1.8}°C* (Safe zone: 0°C to 4°C)\n• *Estimated Arrival:* ⚡ In *${sampleOrder.etaMinutes || 20} mins*\n• *Assigned Cold Box:* \`${sampleOrder.coolerId || 'BOX-BLR-409'}\`\n• *Delivery Partner:* Raghavendra M. (EV Insulated Pod)\n\nYou can inspect the live real-time graph anytime on our tracking page!`,
+      reply: `🛵 *Order Tracking:*\n\n• *Tracking ID:* \`${sampleOrder.trackingCode}\`\n• *Status:* ${sampleOrder.status}\n\nYou can track the progress of your order in real time on the order tracking page!`,
       action: {
         type: 'OPEN_TRACKING'
       },
       actionCard: {
-        title: 'Live 0°C Telemetry HUD',
-        subtitle: `Temperature: ${sampleOrder.currentTemp || 1.8}°C • ETA: ${sampleOrder.etaMinutes || 20} mins`,
+        title: 'Order Tracking',
+        subtitle: `Status: ${sampleOrder.status}`,
         buttonText: 'Open Live Tracking Map',
         actionType: 'OPEN_TRACKING'
       },

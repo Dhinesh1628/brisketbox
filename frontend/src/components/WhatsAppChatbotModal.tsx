@@ -229,7 +229,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
       const errorMsg: Message = {
         id: `concierge_err_${Date.now()}`,
         sender: 'concierge',
-        text: "I am synchronizing cuts with our 0°C harbor cold hub. You can also message our master butcher directly on WhatsApp!",
+        text: "I am synchronizing cuts with our catalog. You can also message our support team on WhatsApp!",
         time: getCurrentTime(),
         suggestedReplies: ["Today's seafood catch", "Mutton cuts", "Apply 20% coupon"]
       };
@@ -268,12 +268,12 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
             <div className="relative">
               <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 p-1 flex items-center justify-center shadow-md">
                 <img 
-                  src="/images/logo.png" 
+                  src="/images/logo.webp" 
                   alt="BrisketBox" 
                   className="w-full h-full object-contain dark:hidden" 
                 />
                 <img 
-                  src="/images/logo-dark.png" 
+                  src="/images/logo-dark.webp" 
                   alt="BrisketBox" 
                   className="w-full h-full object-contain hidden dark:block" 
                 />
@@ -319,10 +319,10 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
         <div className="bg-[#128C7E] dark:bg-slate-800 px-4 py-1.5 flex items-center justify-between text-xs text-emerald-100 dark:text-emerald-300 border-t border-emerald-600/40 shrink-0 font-medium">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="text-[11px]">0°C to 4°C Blast-Chilled • 1-Tap Cart Execution Active</span>
+            <span className="text-[11px]">Fresh Cuts • 1-Tap Cart Execution Active</span>
           </div>
           <span className="text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded-md font-bold">
-            90-Min Dispatch
+            Express Dispatch
           </span>
         </div>
 
@@ -419,11 +419,11 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                         >
                           <div className="flex items-center gap-2 overflow-hidden">
                             <img 
-                              src={prod.image || prod.imageUrl || `/images/products/${prod.id}.jpg`} 
+                              src={prod.image || prod.imageUrl || `/images/products/${prod.id}.webp`} 
                               alt={prod.name} 
                               className="w-11 h-11 rounded-lg object-cover shrink-0 border border-gray-200 dark:border-slate-700" 
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = `/images/products/${prod.id}.jpg`;
+                                (e.target as HTMLImageElement).src = `/images/products/${prod.id}.webp`;
                               }}
                             />
                             <div className="overflow-hidden">

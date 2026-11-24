@@ -11,7 +11,7 @@ async function runTest() {
   const customerLogin = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'pooja.sundaram@gmail.com', password: 'customer123' })
+    body: JSON.stringify({ email: 'pooja.sundaram@gmail.com', password: process.env.TEST_PASSWORD || "" })
   }).then(r => r.json());
 
   if (!customerLogin.token) {
@@ -56,7 +56,7 @@ async function runTest() {
   const adminLogin = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ops@brisketbox.in', password: 'admin123' })
+    body: JSON.stringify({ email: 'ops@brisketbox.in', password: process.env.TEST_PASSWORD || "" })
   }).then(r => r.json());
   const adminToken = adminLogin.token;
 

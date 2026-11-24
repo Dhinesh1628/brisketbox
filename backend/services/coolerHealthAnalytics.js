@@ -94,26 +94,9 @@ export function getTemperatureCheck(cooler, data = {}) {
   if (isDepotStock) {
     out.verdict = {
       status: 'DEPOT_READY',
-      reason: 'Cooler is UV-C sanitized and pre-chilled in depot reserve (1.8°C). Ready for next dispatch.'
+      reason: 'Cooler is prepped and held in depot reserve. Ready for next dispatch.'
     };
     return out;
-  }
-
-  // Synthesize or ensure breach order for damaged test box if not already present
-  if (orders.length === 0 && isDamagedCooler) {
-    orders = [{
-      id: 'GM-100103',
-      coolerId: cid,
-      status: 'Delivered',
-      createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-      deliveredAt: new Date(Date.now() - 44 * 3600 * 1000).toISOString(),
-      tempLog: [
-        { time: '09:00', temp: 1.4, event: 'Sealed at Indiranagar Fulfillment Center' },
-        { time: '09:30', temp: 3.2, event: 'Dispatched with Cold-Chain Courier' },
-        { time: '10:15', temp: 5.4, event: 'ALERT: Gasket seal leaked in transit' },
-        { time: '10:45', temp: 5.8, event: 'ALERT: Customer doorstep delivery temp breach' }
-      ]
-    }];
   }
 
   if (orders.length === 0) {
@@ -135,22 +118,13 @@ export function getTemperatureCheck(cooler, data = {}) {
     orderedAt: formatTimeIST(latestOrder.createdAt)
   };
 
-  let logs = latestOrder.tempLog || latestOrder.temperatureLog || [];
-  
-  // If cooler is explicitly marked damaged/defective in system, inject realistic telemetry if logs are empty or missing breach
-  if (isDamagedCooler && (!logs.length || !logs.some(l => Number(l.temp) > HIGH))) {
-    logs = [
-      { time: '09:00', temp: 1.4, event: 'Sealed at Indiranagar Fulfillment Center' },
-      { time: '09:30', temp: 3.2, event: 'Dispatched with Cold-Chain Courier' },
-      { time: '10:15', temp: 5.4, event: 'ALERT: Gasket seal leaked in transit' },
-      { time: '10:45', temp: 5.8, event: 'ALERT: Customer doorstep delivery temp breach' }
-    ];
-  } else if (logs.length === 0 && (cid.includes('417') || isDelivered)) {
-    logs = [
-      { time: '08:00 AM', temp: 0.8, event: 'Sealed with chilled ice-gel packs at Mahadevapura Dark Hub' },
-      { time: '08:30 AM', temp: 1.2, event: 'Dispatched with EV Cold-Chain Courier' },
-      { time: '09:15 AM', temp: 1.8, event: 'Delivered at customer doorstep (Sub-4C guaranteed)' }
-    ];
+  const logs = latestOrder.tempLog || latestOrder.temperatureLog || [];
+  if (logs.length === 0) {
+    out.verdict = {
+      status: 'NO_READINGS',
+      reason: 'No temperature readings recorded for this order.'
+    };
+    return out;
   }
 
   const readings = [];
@@ -234,7 +208,7 @@ export function getTemperatureCheck(cooler, data = {}) {
 export function getFleetDetails(cooler, data = {}) {
   const cid = cooler.id;
   const limit = cooler.maxHoldingHours || 36;
-  const deposit = cooler.depositAmount || 250;
+  const deposit = Number(cooler.depositAmount) || 0;
 
   const isDepotStock = cooler.status === 'available' || cooler.status === 'sanitized' || cid.includes('633');
   if (isDepotStock) {
@@ -244,19 +218,19 @@ export function getFleetDetails(cooler, data = {}) {
       qrCode: cooler.qrCode,
       model: cooler.model,
       coolerStatus: cooler.status || 'available',
-      hub: cooler.assignedHub || 'Indiranagar Central Hub',
+      hub: cooler.assignedHub || 'Depot',
       limitHours: limit,
       depositAmount: deposit,
       decision: {
         status: 'IN_DEPOT',
-        reason: 'Cooler is safely in central depot stock. Ready for packing (No customer deposit held).'
+        reason: 'Cooler is in depot stock. Ready for packing (No customer deposit held).'
       },
       history: {
-        deliveries: cooler.cyclesUsed || 22,
-        returned: cooler.cyclesUsed || 22,
-        averageReturnHours: 18.4,
-        medianReturnHours: 16.0,
-        recoveryRatePct: 100,
+        deliveries: cooler.cyclesUsed || 0,
+        returned: cooler.cyclesUsed || 0,
+        averageReturnHours: null,
+        medianReturnHours: null,
+        recoveryRatePct: null,
         returnsWithoutOrder: []
       }
     };
@@ -266,17 +240,6 @@ export function getFleetDetails(cooler, data = {}) {
   let orders = allOrders
     .filter(o => o.coolerId === cid || o.id === cooler.currentOrderId)
     .sort((a, b) => parseTime(a.createdAt) - parseTime(b.createdAt));
-
-  const isDamagedCooler = cooler.status === 'damaged' || cooler.status === 'maintenance' || cid.includes('103');
-  if (orders.length === 0 && isDamagedCooler) {
-    orders = [{
-      id: 'GM-100103',
-      coolerId: cid,
-      status: 'Delivered',
-      createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-      deliveredAt: new Date(Date.now() - 44 * 3600 * 1000).toISOString()
-    }];
-  }
 
   const allReturns = data.coolerReturns || [];
   const returns = allReturns.filter(r => r.coolerId === cid);

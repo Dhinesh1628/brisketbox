@@ -86,6 +86,8 @@ export interface TempLogEntry {
   time: string;
   temp: number;
   event: string;
+  source?: 'STAFF_CHECK' | 'SENSOR';
+  recordedBy?: string | null;
 }
 
 export interface OrderItem {
@@ -180,12 +182,22 @@ export interface Order {
   refundId?: string;
   refundTxnId?: string;
   refundProcessedAt?: string;
-  liveTemp: number;
+  liveTemp?: number | null;
   deliveryExecutive?: string;
   tempLog: TempLogEntry[];
   deliverySlot: string;
   trackingCode: string;
   createdAt: string;
+  packedAt?: string;
+  outForDeliveryAt?: string;
+  deliveredAt?: string;
+  lifecycleTimestamps?: {
+    confirmedAt?: string;
+    preparingAt?: string;
+    packedAt?: string;
+    outForDeliveryAt?: string;
+    deliveredAt?: string;
+  };
   deliveryNotes?: string;
   tipAmount?: number;
   deliveryPin?: string;

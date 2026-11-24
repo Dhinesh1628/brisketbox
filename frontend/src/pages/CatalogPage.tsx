@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { DEFAULT_HONEST_PRODUCTS } from '../data/honestProducts';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
   Eye, Plus, Minus, Zap, ShieldCheck, Heart, ArrowUpDown, Filter, 
   CheckCircle2, Star, TrendingDown, Search, X, Sparkles, RotateCcw, 
@@ -9,11 +10,13 @@ import type { Product } from '../types';
 import { api } from '../api';
 import { useCart } from '../context/CartContext';
 import { useSound } from '../context/SoundContext';
-import { ProductDetailModal } from '../components/ProductDetailModal';
 import { HeroSection } from '../components/HeroSection';
 import { CategorySection } from '../components/CategorySection';
 import { getProductWeightOptions } from '../utils/weightUtils';
 import { getProductVisual } from '../data/productVisuals';
+
+// Lazy-load heavy product details modal to keep initial customer bundle minimal
+const ProductDetailModal = lazy(() => import('../components/ProductDetailModal').then(m => ({ default: m.ProductDetailModal })));
 
 const POPULAR_SEARCH_CHIPS = [
   { label: 'Curry Cut', term: 'Curry Cut' },
@@ -33,6 +36,9 @@ interface CatalogPageProps {
   onSetSearchQuery?: (query: string) => void;
   selectedCategory?: string;
   onSelectCategory?: (category: string) => void;
+  initialProductId?: string;
+  onProductInspected?: (product: Product | null) => void;
+  onProductClosed?: () => void;
 }
 
 export const CatalogPage: React.FC<CatalogPageProps> = ({ 
@@ -41,9 +47,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   searchQuery,
   onSetSearchQuery,
   selectedCategory: propCategory,
-  onSelectCategory: propOnSelectCategory
+  onSelectCategory: propOnSelectCategory,
+  initialProductId,
+  onProductInspected,
+  onProductClosed
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(DEFAULT_HONEST_PRODUCTS);
   const [loading, setLoading] = useState(true);
   const [localCategory, setLocalCategory] = useState('All');
   const selectedCategory = propCategory ?? localCategory;
@@ -100,20 +109,39 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   };
 
   const handleOpenProductDetail = (product: Product, weight?: string) => {
-    window.history.pushState({ modal: 'product-detail' }, '');
+    window.history.pushState({ modal: 'product-detail' }, '', `/product/${product.id}`);
     setInspectingWeight(weight || selectedWeights[product.id] || '500g');
     setInspectingProduct(product);
+    onProductInspected?.(product);
   };
+
+  const handleCloseProductDetail = () => {
+    setInspectingProduct(null);
+    onProductClosed?.();
+  };
+
+  // Sync initial product if loaded via direct URL like /product/prod_1
+  useEffect(() => {
+    if (initialProductId && products.length > 0) {
+      const match = products.find(p => p.id === initialProductId);
+      if (match) {
+        setInspectingProduct(match);
+        setInspectingWeight(selectedWeights[match.id] || '500g');
+        onProductInspected?.(match);
+      }
+    }
+  }, [initialProductId, products]);
 
   useEffect(() => {
     const handlePopState = () => {
       if (inspectingProduct) {
         setInspectingProduct(null);
+        onProductClosed?.();
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [inspectingProduct]);
+  }, [inspectingProduct, onProductClosed]);
 
   const handleScrollToCatalog = () => {
     catalogGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -214,6 +242,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           <img
             src={visual.cookedImage}
             alt={`${visual.cookedDishName} cooked`}
+            width={400}
+            height={208}
             className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-500 ease-out"
             loading="lazy"
           />
@@ -221,10 +251,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           {/* Cooked Dish Warm Sizzle Vignette */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
-          {/* Layer 2: Fresh 0°C Raw Cut with Smooth Cross-Fade */}
+          {/* Layer 2: Fresh Raw Cut with Smooth Cross-Fade */}
           <img
             src={product.image || visual.rawImage}
             alt={product.name}
+            width={400}
+            height={208}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-in-out ${
               isCookedActive 
                 ? 'opacity-0 scale-105 pointer-events-none' 
@@ -242,12 +274,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           }`} />
 
           {/* Interactive Raw vs Cooked Toggle Pill */}
-          <div className="absolute top-2.5 left-2.5 z-20 flex items-center">
+          <div className="absolute top-2 left-2 z-20 flex items-center">
             <button
               type="button"
               onClick={(e) => toggleMobileCooked(product.id, e)}
               title="Tap to toggle Raw vs Cooked view"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm transition-all duration-200 border border-white/20 active:scale-95 cursor-pointer bg-black/65 hover:bg-black/85 text-white"
+              className="min-h-[44px] min-w-[44px] flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm transition-all duration-200 border border-white/20 active:scale-95 cursor-pointer bg-black/65 hover:bg-black/85 text-white focus-visible:ring-2 focus-visible:ring-white"
             >
               <span className={`inline-block w-2 h-2 rounded-full transition-colors duration-200 ${
                 isCookedActive ? 'bg-amber-400' : 'bg-cyan-400 group-hover:bg-amber-400'
@@ -256,25 +288,26 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 {visual.cookedDishName}
               </span>
               <span className={`group-hover:hidden ${isCookedActive ? 'text-amber-300 font-semibold' : 'text-cyan-200'}`}>
-                {isCookedActive ? visual.cookedDishName : '0°C Raw Cut'}
+                {isCookedActive ? visual.cookedDishName : 'Raw Cut'}
               </span>
             </button>
           </div>
 
           {/* Delivery time tag */}
-          <div className="absolute top-2.5 right-11 z-20 bg-black/60 dark:bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold text-amber-300 shadow-xs flex items-center gap-1 border border-white/10">
+          <div className="absolute top-2.5 right-14 z-20 bg-black/60 dark:bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold text-amber-300 shadow-xs flex items-center gap-1 border border-white/10">
             <Zap className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-            <span>90 mins</span>
+            <span>Express</span>
           </div>
 
           {/* Save for Later Heart Button */}
           <button
             type="button"
             onClick={(e) => toggleWishlist(product.id, product.name, e)}
-            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-[#d11243] dark:hover:text-rose-400 shadow-md transition z-20 cursor-pointer"
+            className="absolute top-1.5 right-1.5 min-h-[44px] min-w-[44px] rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-[#d11243] dark:hover:text-rose-400 shadow-md transition z-20 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
             title={isWishlisted ? 'Remove from Saved' : 'Save for Later'}
+            aria-label={isWishlisted ? 'Remove from Saved' : 'Save for Later'}
           >
-            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-[#d11243] text-[#d11243]' : ''}`} />
+            <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#d11243] text-[#d11243]' : ''}`} />
           </button>
 
           {/* Net weight tag */}
@@ -325,7 +358,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
                 <span className="uppercase tracking-wider">Choose Pack Size:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1">
+                <span className="text-emerald-800 dark:text-emerald-300 font-extrabold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   Daily Rate
                 </span>
@@ -349,7 +382,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     >
                       <div className="truncate">{opt.weight}</div>
                       {opt.badge && (
-                        <div className="text-[8px] font-black uppercase text-amber-600 dark:text-amber-400 truncate mt-0.5">
+                        <div className="text-[8px] font-black uppercase text-amber-800 dark:text-amber-300 truncate mt-0.5">
                           {opt.badge}
                         </div>
                       )}
@@ -365,14 +398,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-extrabold text-base text-gray-950 dark:text-white">₹{currentOption.price}</span>
-                <span className="text-[11px] text-gray-400 line-through">₹{currentOption.mrp}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 line-through">₹{currentOption.mrp}</span>
               </div>
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400">
+                <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-300">
                   {currentOption.discountPercent}% OFF
-                </span>
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  • Save ₹{currentOption.savings}
                 </span>
               </div>
             </div>
@@ -383,10 +413,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   e.stopPropagation();
                   handleOpenProductDetail(product, currentOption.weight);
                 }}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300 cursor-pointer transition"
+                className="min-h-[44px] min-w-[44px] p-2 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300 cursor-pointer transition flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#d11243]"
                 title="View details"
+                aria-label={`View details for ${product.name}`}
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-4 h-4" />
               </button>
 
               {qty === 0 ? (
@@ -396,20 +427,22 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     addItem(product, 1, undefined, currentOption.weight, currentOption.price, currentOption.mrp);
                     showToast(`Added ${product.name} (${currentOption.weight}) to Your Cart`);
                   }}
-                  className="h-8 min-w-[78px] px-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[#d11243] dark:text-rose-400 font-black text-xs uppercase cursor-pointer border-2 border-[#d11243]/80 hover:border-[#d11243] shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1 select-none"
+                  className="min-h-[44px] min-w-[80px] px-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[#d11243] dark:text-rose-400 font-black text-xs uppercase cursor-pointer border-2 border-[#d11243]/80 hover:border-[#d11243] shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1 select-none focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  aria-label={`Add ${product.name} to cart`}
                 >
                   <span>ADD</span>
                   <span className="text-sm font-black leading-none">+</span>
                 </button>
               ) : (
-                <div className="h-8 min-w-[78px] flex items-center justify-between border-2 border-[#d11243] rounded-xl bg-white dark:bg-slate-900 shadow-xs overflow-hidden select-none">
+                <div className="min-h-[44px] min-w-[88px] flex items-center justify-between border-2 border-[#d11243] rounded-xl bg-white dark:bg-slate-900 shadow-xs overflow-hidden select-none">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       updateQuantity(cartItem?.id || product.id, qty - 1);
                     }}
-                    className="w-7 h-full flex items-center justify-center text-[#d11243] dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 font-black transition cursor-pointer active:scale-90"
+                    className="min-h-[44px] min-w-[36px] flex items-center justify-center text-[#d11243] dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 font-black transition cursor-pointer active:scale-90 focus-visible:ring-2 focus-visible:ring-[#d11243]"
                     title="Decrease quantity"
+                    aria-label={`Decrease quantity of ${product.name}`}
                   >
                     <Minus className="w-3.5 h-3.5 stroke-[3]" />
                   </button>
@@ -421,8 +454,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                       e.stopPropagation();
                       updateQuantity(cartItem?.id || product.id, qty + 1);
                     }}
-                    className="w-7 h-full flex items-center justify-center text-[#d11243] dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 font-black transition cursor-pointer active:scale-90"
+                    className="min-h-[44px] min-w-[36px] flex items-center justify-center text-[#d11243] dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 font-black transition cursor-pointer active:scale-90 focus-visible:ring-2 focus-visible:ring-[#d11243]"
                     title="Increase quantity"
+                    aria-label={`Increase quantity of ${product.name}`}
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
                   </button>
@@ -462,30 +496,30 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           onViewAllSpecs={handleScrollToCatalog}
         />
 
-        {/* Always Chilled 0°C to 4°C Assurance Strip */}
+        {/* Chilled Packaging Assurance Strip */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-3 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4 transition-colors">
           <div className="flex items-center gap-2.5 sm:gap-3.5">
             <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-100 dark:border-rose-900 flex items-center justify-center text-[#d11243] dark:text-rose-400 font-black text-xs sm:text-sm shrink-0 shadow-xs">
-              0°C
+              <ThermometerSnowflake className="w-5 h-5 text-[#d11243] dark:text-rose-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xs sm:text-sm text-gray-950 dark:text-white">
-                  Always Chilled at 0°C to 4°C
+                  Fresh Chilled Packaging
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[9px] sm:text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
-                  Never Frozen
+                  Chilled
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Delivered fresh in temperature-controlled packaging across {selectedCity}. Express 90-min delivery.
+                Delivered fresh in temperature-controlled packaging across {selectedCity || 'your city'}.
               </p>
             </div>
           </div>
 
           <button
             onClick={onNavigateToReturns}
-            className="w-full md:w-auto px-3.5 py-2 rounded-xl bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold cursor-pointer shrink-0 transition shadow-xs flex items-center justify-center gap-1.5"
+            className="w-full md:w-auto px-4 py-2 min-h-[44px] rounded-xl bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold cursor-pointer shrink-0 transition shadow-xs flex items-center justify-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
             <span>Eco Box Packaging</span>
@@ -502,7 +536,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <button
               key={chip.term}
               onClick={() => onSetSearchQuery?.(chip.term)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition border ${
+              className={`px-3.5 py-2 min-h-[44px] inline-flex items-center rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition border ${
                 searchQuery.toLowerCase() === chip.term.toLowerCase()
                   ? 'bg-rose-50 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-400 border-[#d11243]'
                   : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-800 hover:border-gray-400'
@@ -525,7 +559,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             </div>
             <button
               onClick={() => onSetSearchQuery?.('')}
-              className="flex items-center gap-1 text-[#d11243] hover:text-[#b80f3b] font-bold cursor-pointer shrink-0 ml-2"
+              className="min-h-[44px] px-2 flex items-center gap-1 text-[#d11243] hover:text-[#b80f3b] font-bold cursor-pointer shrink-0 ml-2"
             >
               <X className="w-3.5 h-3.5" />
               <span>Clear</span>
@@ -547,7 +581,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               <button
                 key={b.id}
                 onClick={() => setPriceBudget(b.id as any)}
-                className={`px-2.5 sm:px-3 py-1 rounded-xl font-bold text-[11px] sm:text-xs cursor-pointer transition whitespace-nowrap ${
+                className={`px-3 py-2 min-h-[44px] inline-flex items-center rounded-xl font-bold text-[11px] sm:text-xs cursor-pointer transition whitespace-nowrap ${
                   priceBudget === b.id
                     ? 'bg-[#d11243] text-white shadow-xs'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
@@ -561,11 +595,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           {/* Sort Selector */}
           <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
             <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-gray-500 dark:text-gray-400 font-semibold text-[10px] sm:text-[11px]">Sort By:</span>
+            <label htmlFor="sort-products-select" className="text-gray-500 dark:text-gray-400 font-semibold text-[10px] sm:text-[11px]">Sort By:</label>
             <select
+              id="sort-products-select"
+              aria-label="Sort products by"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2 py-1 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 font-bold text-[11px] sm:text-xs focus:outline-none focus:border-[#d11243] cursor-pointer"
+              className="min-h-[44px] sm:min-h-0 px-2.5 py-1.5 sm:py-1 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 font-bold text-[11px] sm:text-xs focus:outline-none focus:border-[#d11243] cursor-pointer"
             >
               <option value="featured">Featured</option>
               <option value="price-asc">Price: Low to High</option>
@@ -605,7 +641,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             {searchQuery && (
               <button
                 onClick={() => onSetSearchQuery?.('')}
-                className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-4 py-2 min-h-[44px] bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Show All Fresh Cuts</span>
@@ -613,7 +649,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             )}
             <button
               onClick={() => setSelectedCategory('All')}
-              className="px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition cursor-pointer"
+              className="px-4 py-2 min-h-[44px] bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition flex items-center cursor-pointer"
             >
               Reset Category
             </button>
@@ -631,7 +667,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                0°C to 4°C chilled • Delivered fresh in 90 minutes across {selectedCity}
+                Chilled packaging • Delivered fresh across {selectedCity || 'your city'}
               </p>
             </div>
             <button
@@ -668,12 +704,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Most ordered cuts • Delivered in about 90 minutes
+                  Most ordered cuts • Delivered cold to your doorstep
                 </p>
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>Browse All</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -706,7 +742,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>View More</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -729,7 +765,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 FLAT 20% OFF ON ORDERS ABOVE ₹799
               </h3>
               <p className="text-xs sm:text-sm text-rose-100 font-medium">
-                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">BRISKET20</span> at checkout. Hand-cut, 0°C chilled & delivered in 90 mins.
+                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">BRISKET20</span> at checkout. Fresh cuts in chilled packaging.
               </p>
             </div>
 
@@ -739,13 +775,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   navigator.clipboard?.writeText('BRISKET20');
                   showToast('Coupon code "BRISKET20" copied to clipboard!');
                 }}
-                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 min-h-[44px] flex items-center justify-center rounded-2xl bg-white text-[#d11243] hover:bg-rose-50 font-black text-xs uppercase tracking-wider shadow-md transition-transform active:scale-95 cursor-pointer"
               >
                 Copy Code: BRISKET20
               </button>
               <button
                 onClick={handleScrollToCatalog}
-                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-black/40 hover:bg-black/60 text-white font-bold text-xs ring-1 ring-white/20 transition cursor-pointer"
+                className="w-full sm:w-auto text-center px-4 sm:px-5 py-2.5 sm:py-3 min-h-[44px] flex items-center justify-center rounded-2xl bg-black/40 hover:bg-black/60 text-white font-bold text-xs ring-1 ring-white/20 transition cursor-pointer"
               >
                 Shop Now →
               </button>
@@ -757,23 +793,23 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-3 border-b border-gray-200/80 dark:border-slate-800/80">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300">
                     <Star className="w-5 h-5 fill-emerald-500" />
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
                     Customer Favourites
                   </h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
-                    ⭐ 4.9+ Rated
+                    Customer Loved
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Highest customer satisfaction cuts verified by 50,000+ Bangalore households
+                  Popular customer-selected cuts delivered cold to your doorstep
                 </p>
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
                 <span>View Ratings</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -797,7 +833,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     Fresh Picks
                   </h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-900">
-                    Harbor Catch 4 AM
+                    Daily Selection
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -806,9 +842,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               </div>
               <button 
                 onClick={handleScrollToCatalog}
-                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto min-h-[44px] min-w-[44px]"
               >
-                <span>See Catch Origin</span>
+                <span>See Selection Details</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -829,18 +865,22 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               Fresh cuts, prepared daily
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              All our meat and seafood is cut and cleaned fresh every morning. Packed on ice and delivered to your door in about 90 minutes.
+              All our meat and seafood is cut and cleaned fresh every morning. Packed on ice and delivered cold to your door.
             </p>
           </div>
         </div>
       </section>
 
       {/* Product Detail Modal */}
-      <ProductDetailModal
-        product={inspectingProduct}
-        initialWeight={inspectingWeight}
-        onClose={() => setInspectingProduct(null)}
-      />
+      {inspectingProduct && (
+        <Suspense fallback={null}>
+          <ProductDetailModal
+            product={inspectingProduct}
+            initialWeight={inspectingWeight}
+            onClose={handleCloseProductDetail}
+          />
+        </Suspense>
+      )}
 
     </div>
   );

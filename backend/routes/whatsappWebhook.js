@@ -3,9 +3,10 @@ import { processCustomerMessage } from '../services/aiChatbot.js';
 
 const router = express.Router();
 
+const isProd = process.env.NODE_ENV === 'production';
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || '';
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'brisketbox_whatsapp_verify_2026';
+const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || (isProd ? '' : 'dev_whatsapp_verify_token');
 
 /**
  * 1. Meta WhatsApp Cloud API Webhook Verification (GET)
@@ -89,7 +90,7 @@ router.post('/chatbot/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message text is required' });
     }
 
-    const botResponse = await processCustomerMessage(message, phone || '+91 98765 00000', cartSummary);
+    const botResponse = await processCustomerMessage(message, phone || '', cartSummary);
     res.json({
       success: true,
       timestamp: new Date().toISOString(),

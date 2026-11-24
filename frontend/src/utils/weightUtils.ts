@@ -28,7 +28,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         savings: baseMrp - basePrice,
         netWeight: '6 Eggs',
         grossWeight: '6 Eggs',
-        pieces: '6 Farm Fresh Eggs',
+        pieces: '6 Eggs',
         serves: 'Serves 1-2'
       },
       {
@@ -40,7 +40,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         savings: (baseMrp * 2) - Math.round(basePrice * 1.9),
         netWeight: '12 Eggs',
         grossWeight: '12 Eggs',
-        pieces: '12 Farm Fresh Eggs',
+        pieces: '12 Eggs',
         serves: 'Serves 2-4',
         badge: 'Popular'
       },
@@ -53,7 +53,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         savings: (baseMrp * 5) - Math.round(basePrice * 4.4),
         netWeight: '30 Eggs',
         grossWeight: '30 Eggs',
-        pieces: '30 Farm Fresh Eggs (Crate)',
+        pieces: '30 Eggs (Crate)',
         serves: 'Family Monthly Value',
         badge: 'Best Value'
       }

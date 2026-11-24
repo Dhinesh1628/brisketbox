@@ -2,6 +2,10 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
+import { Order } from '../models/Order.js';
+import { User } from '../models/User.js';
+import { Cooler } from '../models/Cooler.js';
 import { db } from '../db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -108,7 +112,7 @@ const checkDL = (num) => {
 // ==========================================
 // 3. LOAD DATASET (LIVE vs BENCHMARK TEST DATA)
 // ==========================================
-const getSourceData = (req) => {
+const getSourceData = async (req) => {
   const source = req.query.source || 'live';
   if (source === 'benchmark' || source === 'test') {
     const candidatePaths = [
@@ -128,6 +132,18 @@ const getSourceData = (req) => {
   }
 
   // Fallback to Live In-Memory / MongoDB database
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    const [orders, users, coolers] = await Promise.all([
+      Order.find().lean(),
+      User.find().lean(),
+      Cooler.find().lean()
+    ]);
+    return {
+      data: { orders, users, coolers },
+      source: 'live'
+    };
+  }
+
   return {
     data: {
       orders: db.get('orders') || [],
@@ -586,9 +602,9 @@ const computeRiderIdCheck = (data) => {
 // ==========================================
 
 // GET /api/analytics/overview (All KPI cards & comprehensive dashboard snapshot)
-router.get('/overview', (req, res) => {
+router.get('/overview', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     const riderReport = computeRiderReport(data);
     const diagnosis = computeRiderOrCooler(data);
     const demand = computeDemand(data);
@@ -623,9 +639,9 @@ router.get('/overview', (req, res) => {
 });
 
 // GET /api/analytics/rider-report
-router.get('/rider-report', (req, res) => {
+router.get('/rider-report', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     res.json({ success: true, source, ...computeRiderReport(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -633,9 +649,9 @@ router.get('/rider-report', (req, res) => {
 });
 
 // GET /api/analytics/rider-or-cooler
-router.get('/rider-or-cooler', (req, res) => {
+router.get('/rider-or-cooler', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     res.json({ success: true, source, ...computeRiderOrCooler(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -643,9 +659,9 @@ router.get('/rider-or-cooler', (req, res) => {
 });
 
 // GET /api/analytics/demand-check
-router.get('/demand-check', (req, res) => {
+router.get('/demand-check', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     res.json({ success: true, source, ...computeDemand(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -653,9 +669,9 @@ router.get('/demand-check', (req, res) => {
 });
 
 // GET /api/analytics/cash-check
-router.get('/cash-check', (req, res) => {
+router.get('/cash-check', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     res.json({ success: true, source, ...computeCash(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -663,9 +679,9 @@ router.get('/cash-check', (req, res) => {
 });
 
 // GET /api/analytics/rider-id-check
-router.get('/rider-id-check', (req, res) => {
+router.get('/rider-id-check', async (req, res) => {
   try {
-    const { data, source } = getSourceData(req);
+    const { data, source } = await getSourceData(req);
     res.json({ success: true, source, ...computeRiderIdCheck(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });

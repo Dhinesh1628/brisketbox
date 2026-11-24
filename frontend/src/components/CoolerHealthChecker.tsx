@@ -104,7 +104,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
                 <Cpu className="w-3 h-3" />
                 Script #3 Engine • BrisketBox Fleet Telemetry
               </span>
-              <span className="text-[10px] text-gray-400">FreshSeal 0°C-4°C SLA</span>
+              <span className="text-[10px] text-gray-400">Cold Chain Status</span>
             </div>
             <h2 className="text-xl font-black tracking-tight text-white mt-1 flex items-center gap-2">
               Cooler Health & Cold-Chain Compliance Checker
@@ -146,7 +146,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
               <span className="text-lg font-black text-emerald-300">{overview.summary.optimal} Active</span>
             </div>
             <div className="bg-white/5 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
-              <span className="text-[10px] text-cyan-400 block font-bold uppercase tracking-wider">0°C-4°C Compliant</span>
+              <span className="text-[10px] text-cyan-400 block font-bold uppercase tracking-wider">Chilled Compliant</span>
               <span className="text-lg font-black text-cyan-300">{overview.summary.complianceRatePct}%</span>
             </div>
             <div className="bg-white/5 backdrop-blur-xs p-2.5 rounded-xl border border-white/10">
@@ -311,7 +311,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
             )}
           </div>
 
-          {/* Grid: Script 1 (Compliance) and Script 2 (Fleet SLA) */}
+          {/* Grid: Script 1 (Compliance) and Script 2 (Fleet Analytics) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             
             {/* CARD 1: Cold Chain Temperature Compliance (compliance_scan.py) */}
@@ -428,7 +428,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
               )}
             </div>
 
-            {/* CARD 2: Fleet Turnaround & 36h Refund SLA (fleet_scan.py) */}
+            {/* CARD 2: Fleet Turnaround & 36h Return Window (fleet_scan.py) */}
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs space-y-3.5">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -437,7 +437,7 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
                   </div>
                   <div>
                     <h4 className="font-extrabold text-xs text-gray-950 dark:text-white">
-                      Fleet Turnaround & 36h SLA Status
+                      Fleet Turnaround & Return Window Status
                     </h4>
                     <span className="text-[10px] text-gray-500">Script #3: fleet_scan.py Logic</span>
                   </div>
@@ -547,18 +547,18 @@ export const CoolerHealthChecker: React.FC<CoolerHealthCheckerProps> = ({
                   Cooler Depot Actions & Maintenance Operations
                 </h5>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  Update box lifecycle status, record UV-C sanitization batches, or flag defective insulation for depot repair.
+                  Update box lifecycle status, record sanitization batches, or flag defective insulation for depot repair.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => handleAction('sanitize', 'Certified UV-C cycle + new ice bricks')}
+                  onClick={() => handleAction('sanitize', 'Sanitization cycle + new ice bricks')}
                   disabled={actionLoading}
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Log UV Sanitization</span>
+                  <span>Log Sanitization</span>
                 </button>
 
                 <button

@@ -19,7 +19,7 @@ const puppeteer = require('puppeteer-core');
     const loginRes = await fetch('http://localhost:5000/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'ops@gomeat.in', password: 'admin123' })
+      body: JSON.stringify({ email: 'ops@gomeat.in', password: process.env.TEST_PASSWORD || "" })
     });
     const data = await loginRes.json();
     localStorage.setItem('frost_token', data.token);

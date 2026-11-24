@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { 
   X, 
   Send, 
@@ -21,6 +22,9 @@ interface ContactModalProps {
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, initialTopic }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
+  const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -77,7 +81,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contact-modal-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto focus:outline-none"
+      >
         
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
@@ -86,20 +97,21 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
               <Headphones className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base text-gray-950 dark:text-white">
+              <h3 id="contact-modal-title" className="font-black text-base text-gray-950 dark:text-white">
                 BrisketBox Concierge Support
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Fresh quality guarantee • 15-Min Response Time
+                Customer Support Desk
               </p>
             </div>
           </div>
 
           <button
             onClick={resetAndClose}
-            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 cursor-pointer"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+            aria-label="Close support dialog"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -118,17 +130,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
                 We've Received Your Message!
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
-                Thank you, <strong>{name}</strong>. Our cold-chain support team at Bengaluru Central Hub has been alerted and will contact you via WhatsApp / SMS at <strong>{phone}</strong> within 15 minutes.
+                Thank you, <strong>{name}</strong>. Our cold-chain support team has been alerted and will contact you via WhatsApp / SMS at <strong>{phone}</strong> promptly.
               </p>
             </div>
 
             <div className="p-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200 dark:border-slate-700/60 text-xs text-left space-y-1.5">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>BrisketBox 100% Freshness Guarantee</span>
+                <span>BrisketBox Customer Support</span>
               </div>
               <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                If your order had temperature breaches, seal defects, or cut weight discrepancies, we issue immediate replacement or 100% wallet credit.
+                If your order had packaging issues or order discrepancies, we issue prompt resolution or wallet credit.
               </p>
             </div>
 
@@ -144,17 +156,19 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* Quick Contact Chips Strip */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <a
-                href="tel:+919741288301"
-                className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center gap-2 hover:border-[#d11243] transition"
-              >
-                <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                <div>
-                  <span className="text-[10px] text-gray-400 block">Toll-Free Helpline</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-200">+91 97412 88301</span>
-                </div>
-              </a>
+            <div className={`grid ${supportPhone ? 'grid-cols-2' : 'grid-cols-1'} gap-2 text-xs`}>
+              {supportPhone && (
+                <a
+                  href={`tel:${supportPhone}`}
+                  className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center gap-2 hover:border-[#d11243] transition"
+                >
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                  <div>
+                    <span className="text-[10px] text-gray-400 block">Helpline</span>
+                    <span className="font-bold text-gray-900 dark:text-gray-200">{supportPhone}</span>
+                  </div>
+                </a>
+              )}
 
               <a
                 href="mailto:support@brisketbox.in"
@@ -196,7 +210,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Pooja Sundaram"
+                  placeholder="Your Full Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-gray-900 dark:text-white focus:border-[#d11243] focus:outline-none"
@@ -210,7 +224,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 98XXXXXXXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-gray-900 dark:text-white focus:border-[#d11243] focus:outline-none"
@@ -226,7 +240,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
                 </label>
                 <input
                   type="email"
-                  placeholder="pooja@example.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-gray-900 dark:text-white focus:border-[#d11243] focus:outline-none"

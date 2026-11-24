@@ -83,7 +83,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                90-minute delivery promise, 0°C to 4°C cold box temperatures, hub order demand, and cash in hand.
+                Delivery performance, cold box temperatures, hub order demand, and cash in hand.
               </p>
             </div>
           </div>
@@ -275,14 +275,14 @@ export const RiderAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SUB-TAB 1: RIDER SLA & ON-TIME PERFORMANCE                                */}
+      {/* SUB-TAB 1: RIDER ON-TIME PERFORMANCE                                */}
       {/* ========================================================================= */}
       {activeSubTab === 'report' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-2xs">
           <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
             <div>
               <h3 className="font-extrabold text-gray-900 dark:text-white text-sm">
-                Rider Delivery SLA Performance (90-Minute Commitment)
+                Rider Delivery Performance
               </h3>
               <p className="text-xs text-gray-500">
                 Performance stages: <strong className="text-emerald-600">GOOD (&ge;90%)</strong>, <strong className="text-amber-500">WATCH (75–89%)</strong>, <strong className="text-rose-500">POOR (&lt;75%)</strong>.
@@ -383,7 +383,7 @@ export const RiderAnalyticsDashboard: React.FC = () => {
                     • <strong>Rider Check:</strong> Checked using good coolers only. Riders whose deliveries warm up even with good coolers are flagged for slow delivery or stops on the road.
                   </p>
                   <p>
-                    • <strong>Trip Duration:</strong> Deliveries taking longer than 45 minutes had a <strong>{diagnosis.tripImpact?.longTripsBreachPct || 28.9}% failure rate</strong>, compared to only <strong>{diagnosis.tripImpact?.shortTripsBreachPct || 2.4}%</strong> for quick deliveries under 45 minutes.
+                    • <strong>Trip Duration:</strong> Extended transit trips had a <strong>{diagnosis.tripImpact?.longTripsBreachPct || 28.9}% failure rate</strong>, compared to only <strong>{diagnosis.tripImpact?.shortTripsBreachPct || 2.4}%</strong> for prompt transit.
                   </p>
                 </div>
               </div>

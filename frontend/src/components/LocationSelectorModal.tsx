@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { 
   MapPin, 
   Search, 
@@ -27,7 +28,7 @@ interface LocationSelectorModalProps {
 // Popular localities by city for quick search & selection
 const POPULAR_LOCALITIES: Record<string, { area: string; pincode: string }[]> = {
   'Hyderabad': [
-    { area: 'Jubilee Hills, Road No. 36', pincode: '500033' },
+    { area: 'Banjara Hills', pincode: '500034' },
     { area: 'Banjara Hills, Road No. 12', pincode: '500034' },
     { area: 'Madhapur, Hitech City', pincode: '500081' },
     { area: 'Gachibowli, Financial District', pincode: '500032' },
@@ -142,6 +143,8 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   selectedCity,
   onCityChange
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [gpsNotice, setGpsNotice] = useState<string | null>(null);
@@ -227,33 +230,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
         // ignore
       }
     } else {
-      // Default initial addresses so user has good examples
-      const initial: DeliveryAddress[] = [
-        {
-          id: 'addr_1',
-          tag: 'Home',
-          flatNo: 'Flat 402, Lotus Residency',
-          building: 'Road No. 36',
-          street: 'Near Jubilee Hills Checkpost',
-          area: 'Jubilee Hills',
-          city: 'Hyderabad',
-          pincode: '500033',
-          formattedAddress: 'Flat 402, Lotus Residency, Road No. 36, Jubilee Hills, Hyderabad 500033'
-        },
-        {
-          id: 'addr_2',
-          tag: 'Work',
-          flatNo: 'Building 12, Floor 5',
-          building: 'Raheja Mindspace IT Park',
-          street: 'Hitech City Main Road',
-          area: 'Madhapur',
-          city: 'Hyderabad',
-          pincode: '500081',
-          formattedAddress: 'Building 12, Floor 5, Raheja Mindspace, Madhapur, Hyderabad 500081'
-        }
-      ];
-      setSavedAddresses(initial);
-      localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(initial));
+      setSavedAddresses([]);
     }
   }, []);
 
@@ -282,7 +259,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   // Fallback to IP-based Geolocation if hardware GPS is not available or timed out
   const fallbackIpLocation = async () => {
     try {
-      setGpsNotice('Acquiring location telemetry from network...');
+      setGpsNotice('Acquiring location from network...');
       
       const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en');
       if (res.ok) {
@@ -338,8 +315,8 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
     setIsDetectingGps(false);
     const fallbackCity = selectedCity || 'Hyderabad';
-    const fallbackArea = fallbackCity === 'Hyderabad' ? 'Jubilee Hills' : 'Indiranagar';
-    const fallbackPin = fallbackCity === 'Hyderabad' ? '500033' : '560038';
+    const fallbackArea = fallbackCity === 'Hyderabad' ? 'Banjara Hills' : 'Indiranagar';
+    const fallbackPin = fallbackCity === 'Hyderabad' ? '500034' : '560038';
     const fallbackAddr: DeliveryAddress = {
       id: `addr_fb_${Date.now()}`,
       tag: 'Other',
@@ -551,25 +528,33 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 text-gray-800 dark:text-gray-100 z-10 space-y-4 text-xs shadow-2xl animate-fade-in max-h-[90vh] flex flex-col">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="location-dialog-title"
+        tabIndex={-1}
+        className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 text-gray-800 dark:text-gray-100 z-10 space-y-4 text-xs shadow-2xl animate-fade-in max-h-[90vh] flex flex-col focus:outline-none"
+      >
         
         {/* Header */}
         <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-[#d11243]" />
-              <h3 className="font-extrabold text-gray-950 dark:text-white text-base">
+              <h3 id="location-dialog-title" className="font-extrabold text-gray-950 dark:text-white text-base">
                 Choose Delivery Address
               </h3>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-              Enter your manual home or office address for express 90-min chilled delivery
+              Enter your manual home or office address for chilled delivery
             </p>
           </div>
 
           <button 
             onClick={onClose} 
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+            className="min-h-[44px] min-w-[44px] rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#d11243]"
+            aria-label="Close location picker"
           >
             <X className="w-5 h-5" />
           </button>
@@ -790,7 +775,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
                     required
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    placeholder="Jubilee Hills"
+                    placeholder="Banjara Hills"
                     className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                   />
                 </div>

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { CheckCircle2, Clock, PackageCheck, ArrowRight, X, ShieldCheck, MapPin } from 'lucide-react';
 import type { Order } from '../types';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface OrderConfirmationModalProps {
   order: Order | null;
@@ -17,11 +18,14 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   onViewLiveTelemetry,
   onNavigateToReturns
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
+
   if (!isOpen || !order) return null;
 
   const estimatedDeliveryTime = order.deliverySlot 
     ? order.deliverySlot 
-    : '25 – 35 Mins (Express Cold-Chain Delivery)';
+    : 'Express Cold-Chain Delivery';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -32,16 +36,23 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
       />
 
       {/* 1. Centered pop-up card */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 text-gray-900 dark:text-gray-100 z-10 animate-scale-up">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-confirmation-title"
+        tabIndex={-1}
+        className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 text-gray-900 dark:text-gray-100 z-10 animate-scale-up focus:outline-none"
+      >
         
         {/* 4. Close X button on top-right corner */}
         <button
           onClick={onClose}
           type="button"
           aria-label="Close Order Confirmed Pop-up"
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition cursor-pointer"
+          className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
 
         {/* Celebratory Checkmark Icon */}

@@ -72,8 +72,8 @@ export interface Product {
   serves?: string;
   eta?: string;
   chillingMethod: string;
-  catchDate: string;
-  origin: string;
+  catchDate?: string;
+  origin?: string;
   cutStyle: string;
   stock: number;
   image?: string;
@@ -103,6 +103,8 @@ export interface TempLogEntry {
   time: string;
   temp: number;
   event: string;
+  source?: 'STAFF_CHECK' | 'SENSOR';
+  recordedBy?: string | null;
 }
 
 export interface OrderItem {
@@ -200,7 +202,7 @@ export interface Order {
   refundId?: string;
   refundTxnId?: string;
   refundProcessedAt?: string;
-  liveTemp: number;
+  liveTemp?: number | null;
   deliveryExecutive?: string;
   tempLog: TempLogEntry[];
   deliverySlot: string;
@@ -218,6 +220,15 @@ export interface Order {
   podImage?: string;
   handoverNotes?: string;
   deliveredAt?: string;
+  packedAt?: string;
+  outForDeliveryAt?: string;
+  lifecycleTimestamps?: {
+    confirmedAt?: string;
+    preparingAt?: string;
+    packedAt?: string;
+    outForDeliveryAt?: string;
+    deliveredAt?: string;
+  };
   riderId?: string;
   riderName?: string;
   riderFullName?: string;

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,10 +8,8 @@ import { User, Product, Order, Cooler, CoolerReturn } from './mongo.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
-const DATA_FILE = isVercel 
-  ? (fs.existsSync(path.join('/tmp', 'brisketbox_data.json')) ? path.join('/tmp', 'brisketbox_data.json') : path.join('/tmp', 'sagar_data.json')) 
-  : path.join(__dirname, 'data.json');
+const isProd = process.env.NODE_ENV === 'production';
+const DATA_FILE = isProd ? null : path.join(__dirname, 'data.json');
 
 const getModel = (collection) => {
   switch (collection) {
@@ -23,174 +22,95 @@ const getModel = (collection) => {
   }
 };
 
-const hashPassword = (pw) => bcrypt.hashSync(pw, 10);
+const isDemoSeedEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_SEED === 'true';
 
-const INITIAL_DATA = {
-  users: [
+const getInitialUsers = () => {
+  if (!isDemoSeedEnabled) return [];
+  const devPassword = process.env.DEV_DEMO_PASSWORD || crypto.randomBytes(12).toString('hex');
+  const demoHash = bcrypt.hashSync(devPassword, 10);
+  if (!process.env.DEV_DEMO_PASSWORD) {
+    console.info('[DEV DEMO SEED] Generated random demo password for local session (never committed).');
+  }
+  return [
     {
       id: "usr_admin",
-      name: "Rajeshwar Rao (Operations Head)",
+      name: "Operations Admin",
       email: "ops@brisketbox.in",
-      password: hashPassword("Brisket#Admin2026!"),
+      password: demoHash,
       role: "admin",
       phone: "+91 90000 00000",
       city: "Bengaluru",
-      address: "BrisketBox Fulfillment Center, Outer Ring Road, Mahadevapura, Bengaluru 560048",
+      address: "BrisketBox Operations Center, Mahadevapura, Bengaluru 560048",
       depositBalance: 0,
       upiId: "ops@icici",
       createdAt: "2026-01-15T08:00:00.000Z"
     },
     {
       id: "usr_customer",
-      name: "Pooja Sundaram",
-      email: "pooja.sundaram@gmail.com",
-      password: hashPassword("Brisket#Customer2026!"),
+      name: "Demo Customer",
+      email: "customer@brisketbox.in",
+      password: demoHash,
       role: "customer",
-      phone: "+91 98765 43210",
+      phone: "",
       city: "Bengaluru",
-      address: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      depositBalance: 500,
-      upiId: "pooja@okhdfcbank",
+      address: "Indiranagar, Bengaluru 560038",
+      depositBalance: 0,
+      upiId: "customer@upi",
       createdAt: "2026-02-10T11:20:00.000Z"
     },
     {
       id: "usr_rider_1",
-      name: "Suresh Patil",
+      name: "Demo Rider",
       email: "rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
+      password: demoHash,
       role: "rider",
       approvalStatus: "approved",
-      phone: "+91 97412 88301",
+      phone: "",
       city: "Bengaluru",
-      address: "B-22, Kodihalli, HAL 2nd Stage, Indiranagar, Bengaluru 560008",
-      vehicleType: "EV 2-Wheeler (Ather 450X)",
-      vehicleNumber: "KA-04-EV-819",
-      licenseNumber: "KA0420220019281",
-      upiId: "suresh.patil@okaxis",
-      idDocType: "Driving License (Smart Card)",
+      address: "Indiranagar, Bengaluru 560008",
+      vehicleType: "EV 2-Wheeler",
+      vehicleNumber: "KA-04-EV-000",
+      licenseNumber: "KA0420220000000",
+      upiId: "rider@upi",
+      idDocType: "Driving License",
       assignedHub: "Bengaluru Central Hub Depot",
       isOnline: true,
-      rating: 4.92,
-      earningsToday: 480,
-      totalDeliveries: 342,
+      rating: 5.0,
+      earningsToday: 0,
+      totalDeliveries: 0,
       createdAt: "2026-03-01T08:00:00.000Z"
     },
     {
-      id: "usr_rider_pending",
-      name: "Mahesh Kumar",
-      email: "mahesh.rider@gmail.com",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 98450 11223",
-      city: "Bengaluru",
-      address: "14/2, Whitefield Main Road, Bengaluru 560066",
-      vehicleType: "EV 2-Wheeler (Ola S1 Pro)",
-      vehicleNumber: "KA-03-HA-4412",
-      licenseNumber: "KA0320230099182",
-      upiId: "mahesh.kumar@oksbi",
-      idDocType: "Driving License",
-      assignedHub: "Mahadevapura Dark Hub",
-      isOnline: true,
-      rating: 4.85,
-      earningsToday: 240,
-      totalDeliveries: 120,
-      cashInHand: 0,
-      createdAt: "2026-11-10T09:00:00.000Z"
-    },
-    {
-      id: "usr_rider_3",
-      name: "Ramesh Gowda",
-      email: "ramesh.rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 98860 33441",
-      city: "Bengaluru",
-      address: "28, 12th Main Road, HAL 2nd Stage, Indiranagar, Bengaluru 560008",
-      vehicleType: "EV 2-Wheeler (TVS iQube Electric)",
-      vehicleNumber: "KA-05-EJ-1920",
-      licenseNumber: "KA0520210088219",
-      upiId: "ramesh.gowda@okhdfcbank",
-      idDocType: "Driving License",
-      assignedHub: "Indiranagar Regional Hub",
-      isOnline: true,
-      rating: 4.88,
-      earningsToday: 350,
-      totalDeliveries: 214,
-      cashInHand: 0,
-      createdAt: "2026-03-05T08:00:00.000Z"
-    },
-    {
-      id: "usr_rider_4",
-      name: "Imran Pasha",
-      email: "imran.rider@brisketbox.in",
-      password: hashPassword("Brisket#Rider2026!"),
-      role: "rider",
-      approvalStatus: "approved",
-      phone: "+91 97311 55662",
-      city: "Bengaluru",
-      address: "77, 80 Feet Road, Koramangala 4th Block, Bengaluru 560034",
-      vehicleType: "EV 2-Wheeler (Bajaj Chetak EV)",
-      vehicleNumber: "KA-01-MJ-7744",
-      licenseNumber: "KA0120200055123",
-      upiId: "imran.pasha@okaxis",
-      idDocType: "Driving License",
-      assignedHub: "Koramangala Cold Hub",
-      isOnline: true,
-      rating: 4.95,
-      earningsToday: 520,
-      totalDeliveries: 418,
-      cashInHand: 0,
-      createdAt: "2026-02-15T08:00:00.000Z"
-    },
-    {
       id: "usr_partner_1",
-      name: "Abdul Rahim (Master Butcher)",
+      name: "Demo Partner",
       email: "partner@brisketbox.in",
-      password: hashPassword("Brisket#Station2026!"),
+      password: demoHash,
       role: "partner",
       approvalStatus: "approved",
-      phone: "+91 98860 33445",
+      phone: "+91 98860 00000",
       city: "Bengaluru",
-      address: "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
+      address: "100 Feet Road, Indiranagar, Bengaluru 560038",
       shopId: "shop_central_butcher",
-      shopName: "Halal Cuts & Coastal Harbor Station #14",
-      shopAddress: "12/A, 100 Feet Road, Indiranagar, Bengaluru 560038",
-      fssaiNumber: "FSSAI-11223344556677",
+      shopName: "BrisketBox Central Station",
+      shopAddress: "100 Feet Road, Indiranagar, Bengaluru 560038",
+      fssaiNumber: "",
       operatingHours: "06:00 AM - 10:00 PM",
       categories: ["Fish & Seafood", "Mutton & Lamb", "Farm Fresh Chicken"],
-      rating: 4.95,
-      totalOrdersHandled: 890,
-      createdAt: "2026-02-01T08:00:00.000Z"
-    },
-    {
-      id: "usr_partner_pending",
-      name: "Karthik Gowda (Owner)",
-      email: "karthik.poultry@gmail.com",
-      password: hashPassword("Brisket#Station2026!"),
-      role: "partner",
-      approvalStatus: "pending_approval",
-      phone: "+91 97310 99887",
-      city: "Bengaluru",
-      address: "NH 48, Nelamangala Rural, Bengaluru 562123",
-      shopId: "shop_nelamangala_fresh",
-      shopName: "Nelamangala Organic Broiler & Country Birds",
-      shopAddress: "NH 48, Nelamangala Rural, Bengaluru 562123",
-      fssaiNumber: "FSSAI-22446688001122",
-      operatingHours: "07:00 AM - 09:00 PM",
-      categories: ["Farm Fresh Chicken", "Eggs & Specialties"],
       rating: 5.0,
       totalOrdersHandled: 0,
-      createdAt: "2026-11-10T10:30:00.000Z"
+      createdAt: "2026-02-01T08:00:00.000Z"
     }
-  ],
+  ];
+};
+
+const INITIAL_DATA = {
+  users: getInitialUsers(),
     products: [
     {
       id: "prod_1",
       name: "Surmai Tawa Fry",
       category: "Fish & Seafood",
-      description: "Center-cut seer fish steaks, descaled and cleaned. Packed fresh on ice and ready to cook.",
+      description: "Center-cut neat steaks from fresh catch, cleaned and chilled.",
       price: 799,
       mrp: 899,
       unit: "500g",
@@ -199,13 +119,13 @@ const INITIAL_DATA = {
       pieces: "4-6 Steaks",
       serves: "Serves 3-4",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Today 4:00 AM catch",
-      origin: "Mangalore Port, Karnataka",
+      origin: '',
       cutStyle: "Tawa fry steaks",
       stock: 40,
-      image: "/images/products/prod_1.jpg",
-      imageUrl: "/images/products/prod_1.jpg",
+      image: "/images/products/prod_1.webp",
+      imageUrl: "/images/products/prod_1.webp",
       vacuumSealed: true,
       featured: true
     },
@@ -213,7 +133,7 @@ const INITIAL_DATA = {
       id: "prod_2",
       name: "White Pomfret Whole",
       category: "Fish & Seafood",
-      description: "Cleaned and gutted silver pomfret with light slits for frying. Good for tawa fry or curry.",
+      description: "Whole cleaned pristine silver-scaled pomfret, degilled and gutted, ready to cook.",
       price: 689,
       mrp: 749,
       unit: "400g",
@@ -222,13 +142,13 @@ const INITIAL_DATA = {
       pieces: "2 Whole Fish",
       serves: "Serves 2-3",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Daily inward",
-      origin: "Ratnagiri, Maharashtra",
+      origin: '',
       cutStyle: "Whole cleaned with slits",
       stock: 35,
-      image: "/images/products/prod_2.jpg",
-      imageUrl: "/images/products/prod_2.jpg",
+      image: "/images/products/prod_2.webp",
+      imageUrl: "/images/products/prod_2.webp",
       vacuumSealed: true,
       featured: true
     },
@@ -236,7 +156,7 @@ const INITIAL_DATA = {
       id: "prod_3",
       name: "Jumbo Prawns",
       category: "Fish & Seafood",
-      description: "Peeled and deveined sea prawns with tails on. Ready to cook in garlic butter or roast.",
+      description: "Large sea prawns peeled and completely deveined with tail-on, chilled for delivery.",
       price: 599,
       mrp: 679,
       unit: "350g",
@@ -245,13 +165,13 @@ const INITIAL_DATA = {
       pieces: "14-18 Pieces",
       serves: "Serves 2-3",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Today catch",
-      origin: "Karwar Coast, Karnataka",
+      origin: '',
       cutStyle: "Tail-on deveined",
       stock: 50,
-      image: "/images/products/prod_3.jpg",
-      imageUrl: "/images/products/prod_3.jpg",
+      image: "/images/products/prod_3.webp",
+      imageUrl: "/images/products/prod_3.webp",
       vacuumSealed: true,
       featured: true
     },
@@ -259,7 +179,7 @@ const INITIAL_DATA = {
       id: "prod_4",
       name: "Mutton Rogan Josh",
       category: "Tender Mutton",
-      description: "Tender young goat cuts with bone. Cleaned and cut for curries and dum biryani.",
+      description: "Bone-in mutton curry and biryani cut pieces, freshly prepared and chilled.",
       price: 549,
       mrp: 599,
       unit: "500g",
@@ -268,13 +188,13 @@ const INITIAL_DATA = {
       pieces: "12-16 Pieces",
       serves: "Serves 3-4",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Fresh today",
-      origin: "Dindigul Farms, Tamil Nadu",
+      origin: '',
       cutStyle: "Bone-in curry cut",
       stock: 60,
-      image: "/images/products/prod_4.jpg",
-      imageUrl: "/images/products/prod_4.jpg",
+      image: "/images/products/prod_4.webp",
+      imageUrl: "/images/products/prod_4.webp",
       vacuumSealed: true,
       featured: true
     },
@@ -282,7 +202,7 @@ const INITIAL_DATA = {
       id: "prod_5",
       name: "Chicken Breast Fillet",
       category: "Fresh Chicken",
-      description: "Boneless skinless chicken breast fillets. Trimmed clean for grilling, pan-searing, or stir-fry.",
+      description: "Tender boneless chicken breast fillets trimmed of excess fat, cleaned and chilled.",
       price: 289,
       mrp: 320,
       unit: "450g",
@@ -291,13 +211,13 @@ const INITIAL_DATA = {
       pieces: "3-4 Fillets",
       serves: "Serves 3",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Fresh today",
-      origin: "Local Poultry Farms, Karnataka",
+      origin: '',
       cutStyle: "Boneless fillets",
       stock: 75,
-      image: "/images/products/prod_5.jpg",
-      imageUrl: "/images/products/prod_5.jpg",
+      image: "/images/products/prod_5.webp",
+      imageUrl: "/images/products/prod_5.webp",
       vacuumSealed: true,
       featured: true
     },
@@ -305,7 +225,7 @@ const INITIAL_DATA = {
       id: "prod_6",
       name: "Country Chicken Curry Cut",
       category: "Fresh Chicken",
-      description: "Country chicken cut into curry pieces with firm meat and rich flavor.",
+      description: "Desi country chicken with firm meat, cleaned bone-in curry cut pieces.",
       price: 389,
       mrp: 429,
       unit: "600g",
@@ -314,13 +234,13 @@ const INITIAL_DATA = {
       pieces: "14-18 Pieces",
       serves: "Serves 3-4",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Fresh today",
-      origin: "Local Organic Farms, Karnataka",
+      origin: '',
       cutStyle: "Medium curry cut",
       stock: 45,
-      image: "/images/products/prod_6.jpg",
-      imageUrl: "/images/products/prod_6.jpg",
+      image: "/images/products/prod_6.webp",
+      imageUrl: "/images/products/prod_6.webp",
       vacuumSealed: true,
       featured: false
     },
@@ -328,7 +248,7 @@ const INITIAL_DATA = {
       id: "prod_7",
       name: "Fish Tikka Cut",
       category: "Ready to Cook",
-      description: "Boneless fish cubes spiced with ajwain and herbs. Ready to pan-fry or grill.",
+      description: "Fresh boneless fish cubes marinated in traditional spices, ready to cook.",
       price: 369,
       mrp: 399,
       unit: "350g",
@@ -337,13 +257,13 @@ const INITIAL_DATA = {
       pieces: "8-10 Pieces",
       serves: "Serves 2-3",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Fresh batch",
-      origin: "Local Coastal Catch",
+      origin: '',
       cutStyle: "Boneless cubes",
       stock: 30,
-      image: "/images/products/prod_7.jpg",
-      imageUrl: "/images/products/prod_7.jpg",
+      image: "/images/products/prod_7.webp",
+      imageUrl: "/images/products/prod_7.webp",
       vacuumSealed: true,
       featured: false
     },
@@ -351,7 +271,7 @@ const INITIAL_DATA = {
       id: "prod_8",
       name: "Chicken Drumsticks",
       category: "Fresh Chicken",
-      description: "Juicy chicken leg drumsticks with skin off. Good for frying, roasting, or rich gravies.",
+      description: "Curated box of fresh fish steaks, cleaned sea prawns, and tender mutton pieces.",
       price: 299,
       mrp: 349,
       unit: "500g",
@@ -360,13 +280,13 @@ const INITIAL_DATA = {
       pieces: "5-6 Pieces",
       serves: "Serves 3-4",
       eta: "About 90 minutes",
-      chillingMethod: "Chilled at 0°C to 4°C",
+      chillingMethod: 'Cold Chain',
       catchDate: "Fresh today",
-      origin: "Local Poultry Farms, Karnataka",
+      origin: '',
       cutStyle: "Skinless drumsticks",
       stock: 40,
-      image: "/images/products/prod_8.jpg",
-      imageUrl: "/images/products/prod_8.jpg",
+      image: "/images/products/prod_8.webp",
+      imageUrl: "/images/products/prod_8.webp",
       vacuumSealed: true,
       featured: true
     }
@@ -530,225 +450,8 @@ const INITIAL_DATA = {
       assignedHub: "Wash & UV Sanitization Bay"
     }
   ],
-  orders: [
-    {
-      id: "ORD-9281",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      items: [
-        {
-          productId: "prod_1",
-          name: "Seer Fish / Surmai (Large Steaks)",
-          price: 799,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_4",
-          name: "Rich Tender Goat (Biryani & Rogan Josh Cut)",
-          price: 549,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C Temperature Regulated"
-        }
-      ],
-      subtotal: 1348,
-      coolerDeposit: 250,
-      shippingFee: 0,
-      total: 1598,
-      status: "Out for Delivery",
-      lifecycleStatus: "OUT_FOR_DELIVERY",
-      partnerId: "shop_central_butcher",
-      partnerName: "Halal Cuts & Coastal Harbor Station #14",
-      riderId: "usr_rider_1",
-      riderName: "Suresh",
-      riderFullName: "Suresh Patil",
-      riderPhone: "+91 97412 •••01",
-      riderVehicle: "EV 2-Wheeler (KA-04-EV-819)",
-      riderEta: "20–30 minutes",
-      coolerId: "BOX-BLR-103",
-      coolerModel: "insulated bag 24L - Dual Phase ColdGel Box",
-      liveTemp: 1.2,
-      deliveryExecutive: "Suresh Patil (EV Fleet #14, +91 97412 88301)",
-      tempLog: [
-        { time: "06:15", temp: 0.2, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" },
-        { time: "07:00", temp: 0.8, event: "Loaded onto insulated delivery electric vehicle" },
-        { time: "07:45", temp: 1.2, event: "Delivery partner Suresh en route near Marathahalli" }
-      ],
-      deliverySlot: "Today, Express in 90 Mins",
-      trackingCode: "BRISKETBOX-TRK-4412",
-      deliveryPin: "6314",
-      paymentMethod: "UPI (Google Pay)",
-      createdAt: "2026-10-30T01:30:00.000Z",
-      deliveryNotes: "Leave at security desk or ring Flat 402 doorbell."
-    },
-    {
-      id: "ORD-417-DELIVERED",
-      orderNumber: "ORD-417-DELIVERED",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      coolerId: "BOX-BLR-417",
-      coolerModel: "Insulated Cold Bag",
-      status: "Delivered",
-      orderStatus: "DELIVERED",
-      lifecycleStatus: "DELIVERED",
-      items: [
-        {
-          productId: "prod_1",
-          name: "Seer Fish / Surmai (Large Steaks)",
-          price: 799,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_3",
-          name: "Tender Curry Cut Broiler Chicken (Skinless)",
-          price: 249,
-          quantity: 2,
-          unit: "500g",
-          netWeight: "900g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      total: 1299,
-      coolerDeposit: 250,
-      createdAt: "2026-11-11T12:00:00.000Z",
-      deliveredAt: "2026-11-11T14:30:00.000Z",
-      tempLog: [
-        { time: "08:00 AM", temp: 0.8, event: "Sealed with chilled ice-gel packs at Mahadevapura Dark Hub" },
-        { time: "08:30 AM", temp: 1.2, event: "Dispatched with EV Cold-Chain Courier" },
-        { time: "09:15 AM", temp: 1.8, event: "Delivered at customer doorstep (Sub-4C guaranteed)" }
-      ]
-    },
-    {
-      id: "ORD-7740",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Bengaluru 560037",
-      city: "Bengaluru",
-      items: [
-        {
-          productId: "prod_3",
-          name: "Tender Curry Cut Broiler Chicken (Skinless)",
-          price: 249,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      subtotal: 249,
-      coolerDeposit: 250,
-      shippingFee: 40,
-      total: 539,
-      status: "Preparing",
-      lifecycleStatus: "PREPARING",
-      partnerId: "shop_central_butcher",
-      partnerName: "Halal Cuts & Coastal Harbor Station #14",
-      riderId: "usr_rider_1",
-      riderName: "Suresh",
-      riderFullName: "Suresh Patil",
-      riderPhone: "+91 97412 •••01",
-      riderVehicle: "EV 2-Wheeler (KA-04-EV-819)",
-      riderEta: "Pending butcher packing",
-      coolerId: "BOX-BLR-774",
-      coolerModel: "Insulated Cold Bag",
-      liveTemp: 1.0,
-      tempLog: [
-        { time: "06:15 AM", temp: 0.2, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" }
-      ],
-      deliveryExecutive: "Suresh Patil (EV Fleet #14)",
-      deliverySlot: "Today, Evening 5:00 PM - 7:00 PM",
-      trackingCode: "BRISKETBOX-TRK-7740",
-      deliveryPin: "4918",
-      paymentMethod: "Razorpay (Credit Card)",
-      createdAt: new Date().toISOString(),
-      deliveryNotes: "Fresh cuts only. Please make medium bone-in pieces."
-    },
-    {
-      id: "ORD-103-BREACH",
-      orderNumber: "ORD-103-BREACH",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      coolerId: "BOX-BLR-103",
-      coolerModel: "insulated bag 24L - Dual Phase ColdGel Box",
-      status: "Delivered",
-      orderStatus: "DELIVERED",
-      lifecycleStatus: "DELIVERED",
-      items: [
-        {
-          productId: "prod_2",
-          name: "Young Goat / Mutton Biryani Cut (Tender)",
-          price: 549,
-          quantity: 2,
-          unit: "500g",
-          netWeight: "1000g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_4",
-          name: "White Prawns / Jhinga (Cleaned & Deveined)",
-          price: 499,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      total: 1598,
-      totalAmount: 1598,
-      createdAt: "2026-11-08T09:00:00.000Z",
-      deliveredAt: "2026-11-08T10:45:00.000Z",
-      coolerReturned: false,
-      deliveryExecutive: "Suresh Patil (EV Fleet #14, +91 97412 88301)",
-      riderFullName: "Suresh Patil",
-      riderId: "usr_rider_1",
-      paymentMethod: "UPI (Google Pay)",
-      tempLog: [
-        { time: "09:00", temp: 1.4, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" },
-        { time: "09:30", temp: 3.2, event: "Dispatched with EV Chilled Courier" },
-        { time: "10:15", temp: 5.4, event: "ALERT: Sensor rose above 4C safe threshold" },
-        { time: "10:45", temp: 5.8, event: "Delivered at doorstep - Gasket seal compromised (5.8C)" }
-      ]
-    }
-  ],
-  coolerReturns: [
-    {
-      id: "RET-702",
-      coolerId: "BOX-BLR-102",
-      orderId: "ORD-8890",
-      userId: "usr_customer",
-      userName: "Pooja Sundaram",
-      userPhone: "+91 98765 43210",
-      userAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      status: "pickup_requested",
-      requestDate: "2026-10-29T16:00:00.000Z",
-      scheduledPickupSlot: "Tomorrow Morning, 7:00 AM - 10:00 AM",
-      refundAmount: 250,
-      refundMode: "UPI (pooja@okhdfcbank)",
-      notes: "Empty box rinsed with gel packs kept inside the building security reception.",
-      courierAssigned: "Return Partner Chetan (+91 99002 11842)"
-    }
-  ]
+  orders: [],
+  coolerReturns: []
 };
 
 class Database {
@@ -758,8 +461,21 @@ class Database {
   }
 
   init() {
+    if (isProd) {
+      this.data = {
+        users: [],
+        products: [],
+        orders: [],
+        coolers: [],
+        coolerReturns: [],
+        couponUsages: [],
+        walletLedger: []
+      };
+      console.log('[DB] Production mode: MongoDB is the exclusive source of truth (no /tmp JSON fallback).');
+      return;
+    }
     try {
-      if (fs.existsSync(DATA_FILE)) {
+      if (DATA_FILE && fs.existsSync(DATA_FILE)) {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.data = JSON.parse(raw);
         if (!this.data.coolers) this.data.coolers = [];
@@ -845,15 +561,18 @@ class Database {
   async syncWithMongo() {
     if (mongoose.connection.readyState !== 1) return;
     try {
-      const prodCount = await Product.countDocuments();
-      if (prodCount === 0) {
-        console.log('[MongoDB] Collections empty, auto-seeding BrisketBox catalog into MongoDB...');
-        await User.insertMany(INITIAL_DATA.users);
-        await Product.insertMany(INITIAL_DATA.products);
-        await Cooler.insertMany(INITIAL_DATA.coolers);
-        await Order.insertMany(INITIAL_DATA.orders);
-        await CoolerReturn.insertMany(INITIAL_DATA.coolerReturns);
-        console.log('[MongoDB] Auto-seeding into MongoDB complete.');
+      // Auto-seeding is strictly prohibited in production; only seed in dev if explicitly enabled
+      if (!isProd && isDemoSeedEnabled) {
+        const prodCount = await Product.countDocuments();
+        if (prodCount === 0) {
+          console.log('[MongoDB] Development mode: Seeding initial catalog into MongoDB...');
+          await User.insertMany(INITIAL_DATA.users);
+          await Product.insertMany(INITIAL_DATA.products);
+          await Cooler.insertMany(INITIAL_DATA.coolers);
+          await Order.insertMany(INITIAL_DATA.orders);
+          await CoolerReturn.insertMany(INITIAL_DATA.coolerReturns);
+          console.log('[MongoDB] Seeding into MongoDB complete.');
+        }
       }
 
       // Sync from MongoDB collections
@@ -867,14 +586,16 @@ class Database {
 
       if (users.length) {
         this.data.users = users;
-        // Ensure default riders and partners exist in cache and MongoDB
-        const defaultRidersAndPartners = INITIAL_DATA.users.filter(u => u.role === 'rider' || u.role === 'partner');
-        for (const r of defaultRidersAndPartners) {
-          if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
-            this.data.users.push({ ...r });
-            try {
-              await User.create(r);
-            } catch {}
+        // In dev, ensure default riders and partners exist
+        if (!isProd && isDemoSeedEnabled) {
+          const defaultRidersAndPartners = INITIAL_DATA.users.filter(u => u.role === 'rider' || u.role === 'partner');
+          for (const r of defaultRidersAndPartners) {
+            if (!this.data.users.some(u => u.email === r.email || u.id === r.id)) {
+              this.data.users.push({ ...r });
+              try {
+                await User.create(r);
+              } catch {}
+            }
           }
         }
       }
@@ -890,6 +611,15 @@ class Database {
   }
 
   save() {
+    if (
+      isProd ||
+      !DATA_FILE ||
+      process.env.NODE_ENV === 'test' ||
+      process.env.CI ||
+      process.argv.some(arg => typeof arg === 'string' && (arg.includes('test') || arg.includes('check')))
+    ) {
+      return; // Never write JSON documents in production, CI, or test runs
+    }
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
     } catch (err) {
@@ -912,7 +642,11 @@ class Database {
     this.data[collection].unshift(item);
     this.save();
 
-    // Persist to MongoDB asynchronously if connected
+    // In production, MongoDB is the exclusive source of truth
+    if (isProd && mongoose.connection.readyState !== 1) {
+      throw new Error('Database connection is offline');
+    }
+    // Persist to MongoDB if connected
     if (mongoose.connection.readyState === 1) {
       const Model = getModel(collection);
       if (Model) {
