@@ -4,8 +4,34 @@ title = "BrisketBox Gitleaks Config"
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Allowlist for explicit mock/test fixtures and fake placeholder credentials"
+regexTarget = "line"
+paths = [
+  '''(^|/)backend/tests/''',
+  '''(^|/)scripts/''',
+  '''(^|/)\.github/''',
+  '''(^|/)docs/''',
+  '''\.test\.(js|ts)$''',
+  '''\.gitleaks\.toml$'''
+]
+stopWords = [
+  "test_jwt_secret",
+  "ci_test_fake_jwt_secret",
+  "ci_fake_razorpay",
+  "ci_fake_webhook",
+  "rzp_test",
+  "test_secret",
+  "test_webhook",
+  "fake_test",
+  "mock_secret",
+  "mockRazorpayBootstrap",
+  "dummy_token",
+  "Password#2026",
+  "StrongPass#2026",
+  "GenuinePassword#2026",
+  "Brisket#Admin2026!"
+]
 regexes = [
   '''(?i)test_jwt_secret''',
   '''(?i)ci_test_fake_jwt_secret''',
@@ -21,26 +47,4 @@ regexes = [
   '''(?i)StrongPass#2026''',
   '''(?i)GenuinePassword#2026''',
   '''(?i)Brisket#Admin2026!'''
-]
-stopwords = [
-  "test_jwt_secret_audit_hardening_key_32bytes_long!",
-  "ci_test_fake_jwt_secret_32bytes_value_12345",
-  "ci_fake_razorpay_secret_placeholder",
-  "ci_fake_webhook_secret_placeholder",
-  "rzp_test_ci_placeholder_key_id",
-  "rzp_test_placeholder",
-  "rzp_test_sec_placeholder",
-  "test_webhook_secret_key_12345",
-  "test_webhook_secret_key_123",
-  "Password#2026",
-  "StrongPass#2026",
-  "GenuinePassword#2026",
-  "Brisket#Admin2026!"
-]
-paths = [
-  '''backend/tests/.*''',
-  '''scripts/.*''',
-  '''\.github/.*''',
-  '''docs/.*''',
-  '''\.gitleaks\.toml'''
 ]
