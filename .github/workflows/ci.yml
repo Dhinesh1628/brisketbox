@@ -26,6 +26,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install system dependencies for MongoDB
         run: sudo apt-get update && sudo apt-get install -y libcurl4
@@ -35,6 +36,9 @@ jobs:
 
       - name: Install backend dependencies
         run: npm --prefix backend ci
+
+      - name: Install frontend dependencies (for honest-data asset scanning)
+        run: npm --prefix frontend ci
 
       - name: Cache MongoDB Memory Server binary
         uses: actions/cache@v4
@@ -92,7 +96,8 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
