@@ -279,212 +279,358 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 md:bg-[#0c0d10] text-neutral-900 dark:text-white md:text-white border border-neutral-200 dark:border-neutral-800 md:border-neutral-800 shadow-sm md:shadow-xl transition-all duration-300"
+        className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-neutral-50 dark:bg-neutral-900 md:bg-[#0c0d10] text-neutral-900 dark:text-white md:text-white border border-neutral-200 dark:border-neutral-800 md:border-neutral-800 shadow-xs md:shadow-xl transition-all duration-300"
       >
-        {/* Dynamic Theatrical Ambient Glow - Desktop only */}
-        <div 
-          className="hidden md:block absolute -top-24 -left-24 w-80 h-80 rounded-full blur-[130px] pointer-events-none transition-all duration-1000 opacity-60"
-          style={{ backgroundColor: currentSlide.accentHex }}
-        />
-        <div 
-          className="hidden md:block absolute -bottom-20 -right-20 w-80 h-80 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 opacity-40"
-          style={{ backgroundColor: currentSlide.accentHex }}
-        />
+        {/* MOBILE VIEWPORT HERO (Rule 12: Shorter & lighter bg on mobile, first card visible on 390x844) */}
+        <div className="block md:hidden p-3.5 bg-neutral-50 dark:bg-neutral-900">
+          {/* Top category & dispatch chip row */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 bg-neutral-200 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full border border-neutral-300 dark:border-neutral-700 truncate">
+              {currentSlide.shortCategory} • Fresh Cut
+            </span>
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cold Chain
+            </span>
+          </div>
 
-        {/* Subtle Slate Background Texture */}
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:20px_20px] opacity-30 pointer-events-none" />
-
-        {/* Main Content Stage Grid with Generous Gutter Clearance for Carousel Controls */}
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 items-center gap-3 sm:gap-6 px-4 sm:px-14 lg:px-16 py-3.5 sm:py-8 lg:py-9">
-          
-          {/* Left Column: Freshness Telemetry, Headline & Action */}
-          <div className="md:col-span-7 space-y-2.5 sm:space-y-4">
-            
-            {/* Freshness Telemetry Chips (Rule 9: Neutral style, no blue, purple, amber, teal, pink) */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 md:bg-white/10 text-neutral-800 dark:text-neutral-200 md:text-neutral-200 border border-neutral-300 dark:border-neutral-700 md:border-white/15 text-xs font-semibold">
-                <span>{currentSlide.badge}</span>
-              </div>
-
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 md:bg-white/10 text-neutral-800 dark:text-neutral-200 md:text-neutral-200 border border-neutral-300 dark:border-neutral-700 md:border-white/15 text-xs font-semibold">
-                <ThermometerSnowflake className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-300" />
-                <span>Cold Chain</span>
-              </div>
-
-              <div className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 md:bg-white/10 text-neutral-800 dark:text-neutral-200 md:text-neutral-200 border border-neutral-300 dark:border-neutral-700 md:border-white/15 text-xs font-semibold">
-                <Clock className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-300" />
-                <span>Daily Cut Dispatch</span>
-              </div>
-            </div>
-
-            {/* Headline and Taxonomy */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                <Compass className="w-3.5 h-3.5 text-neutral-500 md:text-neutral-400" />
-                <span className="text-neutral-800 dark:text-neutral-200 md:text-white">{currentSlide.categoryName}</span>
-              </div>
-
-              <h1 className="text-lg sm:text-3xl lg:text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight">
-                {currentSlide.title}
-              </h1>
-
-              <p className="text-xs sm:text-sm font-semibold text-neutral-600 dark:text-neutral-400 md:text-neutral-300 tracking-wide leading-snug">
+          {/* Main Content: Left text & price + Right Image platter */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0 space-y-1">
+              <h2 className="text-base font-black text-neutral-900 dark:text-white tracking-tight leading-snug line-clamp-1">
+                {currentSlide.shortTitle}
+              </h2>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">
                 {currentSlide.subtitle}
               </p>
-            </div>
 
-            {/* Editorial Description - hidden on mobile to avoid heavy scrolling */}
-            <p className="hidden sm:block text-xs sm:text-sm text-neutral-600 dark:text-neutral-300/80 md:text-neutral-300/80 max-w-xl leading-relaxed pt-1">
-              {currentSlide.description}
-            </p>
+              {/* Price and Add button */}
+              <div className="pt-1.5 flex items-center justify-between gap-2">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-black text-neutral-900 dark:text-white">
+                    ₹{currentSlide.price}
+                  </span>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400 line-through">
+                    ₹{currentSlide.mrp}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    {Math.round(((currentSlide.mrp - currentSlide.price) / currentSlide.mrp) * 100)}% OFF
+                  </span>
+                </div>
 
-            {/* Pricing Matrix & Call to Action */}
-            <div className="pt-1 flex flex-wrap items-center gap-3 sm:gap-6">
-              <div className="flex items-baseline gap-1.5 sm:gap-2">
-                <span className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white">
-                  ₹{currentSlide.price}
-                </span>
-                <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-through">
-                  ₹{currentSlide.mrp}
-                </span>
-                {/* Discount in success green or neutral (Rule 10) */}
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 sm:px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                  {Math.round(((currentSlide.mrp - currentSlide.price) / currentSlide.mrp) * 100)}% OFF
-                </span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-semibold">
-                  / {currentSlide.unit}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Buy Action Button: Primary Red (Rule 8) */}
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className={`btn-buy-primary min-h-[44px] min-w-[44px] px-4 sm:px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all duration-200 active:scale-95 ${
-                    addedCutId === currentSlide.id
-                      ? 'bg-emerald-700 hover:bg-emerald-800'
-                      : ''
-                  }`}
+                  className="btn-buy-primary min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 ml-auto"
+                  aria-label={`Add ${currentSlide.shortTitle} to cart`}
                 >
                   {addedCutId === currentSlide.id ? (
                     <>
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      <span>Added to Chill Box</span>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Added</span>
                     </>
                   ) : (
                     <>
-                      <span>Add to Chill Box</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <span>Add</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={onExploreCuts}
-                  className="min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 md:bg-white/10 md:hover:bg-white/20 text-neutral-900 dark:text-white md:text-white font-semibold text-xs border border-neutral-300 dark:border-neutral-700 md:border-white/15 cursor-pointer transition flex items-center justify-center"
-                >
-                  View All Cuts
-                </button>
               </div>
             </div>
 
-            {/* Preparation Notice */}
-            <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 pt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Cut to order and sealed for fresh delivery.</span>
+            {/* Product Image Platter */}
+            <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs relative bg-neutral-100 dark:bg-neutral-800">
+              <img
+                src={currentSlide.rawImage}
+                alt={currentSlide.title}
+                width={96}
+                height={96}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
             </div>
           </div>
 
-          {/* Right Column: Floating Platter with Raw ↔ Cooked Interactive Switch */}
-          <div className="md:col-span-5 flex flex-col items-center justify-center relative">
-            <div className="relative w-36 h-36 sm:w-72 sm:h-72 lg:w-80 lg:h-80 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 md:border-white/15 shadow-md md:shadow-2xl bg-neutral-900 group">
+          {/* Swipe Dots */}
+          <div className="flex items-center justify-center gap-1 pt-2">
+            {HERO_SLIDES.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setCurrentIndex(idx)}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-0 cursor-pointer"
+                aria-label={`Go to slide ${idx + 1}`}
+              >
+                <span className={`block h-1.5 rounded-full transition-all ${
+                  idx === currentIndex
+                    ? 'w-6 bg-neutral-900 dark:bg-white'
+                    : 'w-1.5 bg-neutral-300 dark:bg-neutral-700'
+                }`} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* DESKTOP VIEWPORT HERO (Rule 12: Dark cinematic console on desktop) */}
+        <div className="hidden md:block">
+          {/* Dynamic Theatrical Ambient Glow - Desktop only */}
+          <div 
+            className="absolute -top-24 -left-24 w-80 h-80 rounded-full blur-[130px] pointer-events-none transition-all duration-1000 opacity-60"
+            style={{ backgroundColor: currentSlide.accentHex }}
+          />
+          <div 
+            className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 opacity-40"
+            style={{ backgroundColor: currentSlide.accentHex }}
+          />
+
+          {/* Subtle Slate Background Texture */}
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:20px_20px] opacity-30 pointer-events-none" />
+
+          {/* Main Content Stage Grid with Generous Gutter Clearance for Carousel Controls */}
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 items-center gap-6 px-14 lg:px-16 py-8 lg:py-9">
+            
+            {/* Left Column: Freshness Telemetry, Headline & Action */}
+            <div className="md:col-span-7 space-y-4">
               
-              {/* Product Visual */}
-              <img
-                src={viewCooked ? currentSlide.cookedImage : currentSlide.rawImage}
-                alt={viewCooked ? currentSlide.cookedTitle : currentSlide.title}
-                width={640}
-                height={640}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                fetchPriority="high"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/25 pointer-events-none" />
-
-              {/* Raw vs Cooked Toggle Pill (Rule 8 & 9: Neutral styles, no red, no amber) */}
-              <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex items-center justify-between z-20">
-                <div className="flex items-center bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-md">
-                  <button
-                    type="button"
-                    onClick={() => setViewCooked(false)}
-                    className={`min-h-[44px] min-w-[44px] flex items-center justify-center gap-1 sm:gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
-                      !viewCooked
-                        ? 'bg-neutral-800 text-white border border-neutral-600'
-                        : 'text-neutral-300 hover:text-white'
-                    }`}
-                  >
-                    <Snowflake className="w-3.5 h-3.5" />
-                    <span>Raw Cut</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setViewCooked(true)}
-                    className={`min-h-[44px] min-w-[44px] flex items-center justify-center gap-1 sm:gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
-                      viewCooked
-                        ? 'bg-neutral-800 text-white border border-neutral-600'
-                        : 'text-neutral-300 hover:text-white'
-                    }`}
-                  >
-                    <Flame className="w-3.5 h-3.5 text-neutral-300" />
-                    <span>{isTouchDevice ? 'Tap to see dish' : 'Cooked Dish'}</span>
-                  </button>
+              {/* Freshness Telemetry Chips (Rule 9: Neutral style, no blue, purple, amber, teal, pink) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-neutral-200 border border-white/15 text-xs font-semibold">
+                  <span>{currentSlide.badge}</span>
                 </div>
 
-                <div className="hidden sm:inline-flex items-center gap-1 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/15 text-xs font-semibold text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Chilled</span>
+                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 text-neutral-200 border border-white/15 text-xs font-semibold">
+                  <ThermometerSnowflake className="w-3.5 h-3.5 text-neutral-300" />
+                  <span>Cold Chain</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-neutral-200 border border-white/15 text-xs font-semibold">
+                  <Clock className="w-3.5 h-3.5 text-neutral-300" />
+                  <span>Daily Cut Dispatch</span>
                 </div>
               </div>
 
-              {/* Platter Bottom Label */}
-              <div className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-between bg-black/80 backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/15 text-xs">
-                <div className="min-w-0 pr-2">
-                  <div className="text-xs text-neutral-400 font-medium">
-                    {viewCooked ? 'Culinary Inspiration' : 'Butcher Cut'}
-                  </div>
-                  <div className="font-bold text-white text-xs leading-tight truncate">
-                    {viewCooked ? currentSlide.cookedTitle : currentSlide.cutTag}
-                  </div>
+              {/* Headline and Taxonomy */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  <Compass className="w-3.5 h-3.5 text-neutral-400" />
+                  <span className="text-white">{currentSlide.categoryName}</span>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <div className="text-xs text-neutral-400 font-medium">Cold Chain</div>
-                  <div className="font-bold text-neutral-200 text-xs">
-                    Chilled
-                  </div>
+                <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                  {currentSlide.title}
+                </h1>
+
+                <p className="text-sm font-semibold text-neutral-300 tracking-wide leading-snug">
+                  {currentSlide.subtitle}
+                </p>
+              </div>
+
+              {/* Editorial Description */}
+              <p className="text-sm text-neutral-300/80 max-w-xl leading-relaxed pt-1">
+                {currentSlide.description}
+              </p>
+
+              {/* Pricing Matrix & Call to Action */}
+              <div className="pt-1 flex flex-wrap items-center gap-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">
+                    ₹{currentSlide.price}
+                  </span>
+                  <span className="text-sm text-neutral-400 line-through">
+                    ₹{currentSlide.mrp}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                    {Math.round(((currentSlide.mrp - currentSlide.price) / currentSlide.mrp) * 100)}% OFF
+                  </span>
+                  <span className="text-xs text-neutral-400 font-semibold">
+                    / {currentSlide.unit}
+                  </span>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className={`btn-buy-primary min-h-[44px] min-w-[44px] px-5 py-2.5 rounded-xl font-bold text-sm tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all duration-200 active:scale-95 ${
+                      addedCutId === currentSlide.id
+                        ? 'bg-emerald-700 hover:bg-emerald-800'
+                        : ''
+                    }`}
+                  >
+                    {addedCutId === currentSlide.id ? (
+                      <>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span>Added to Chill Box</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Add to Chill Box</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onExploreCuts}
+                    className="min-h-[44px] min-w-[44px] px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/15 cursor-pointer transition flex items-center justify-center"
+                  >
+                    View All Cuts
+                  </button>
+                </div>
+              </div>
+
+              {/* Preparation Notice */}
+              <div className="flex items-center gap-2 text-xs text-neutral-400 pt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Cut to order and sealed for fresh delivery.</span>
               </div>
             </div>
 
-            <div className="hidden sm:flex mt-2 text-xs text-neutral-500 dark:text-neutral-400 items-center gap-1">
-              <span>Switch between</span>
-              <span className="px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-white/10 text-neutral-800 dark:text-white text-xs font-semibold border border-neutral-300 dark:border-white/10">Raw</span>
-              <span>and</span>
-              <span className="px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-white/10 text-neutral-800 dark:text-white text-xs font-semibold border border-neutral-300 dark:border-white/10">Cooked</span>
-              <span>to preview dishes</span>
+            {/* Right Column: Floating Platter with Raw ↔ Cooked Interactive Switch */}
+            <div className="md:col-span-5 flex flex-col items-center justify-center relative">
+              <div className="relative w-72 h-72 lg:w-80 lg:h-80 rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-neutral-900 group">
+                
+                {/* Product Visual */}
+                <img
+                  src={viewCooked ? currentSlide.cookedImage : currentSlide.rawImage}
+                  alt={viewCooked ? currentSlide.cookedTitle : currentSlide.title}
+                  width={640}
+                  height={640}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  fetchPriority="high"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/25 pointer-events-none" />
+
+                {/* Raw vs Cooked Toggle Pill */}
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20">
+                  <div className="flex items-center bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-md">
+                    <button
+                      type="button"
+                      onClick={() => setViewCooked(false)}
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        !viewCooked
+                          ? 'bg-neutral-800 text-white border border-neutral-600'
+                          : 'text-neutral-300 hover:text-white'
+                      }`}
+                    >
+                      <Snowflake className="w-3.5 h-3.5" />
+                      <span>Raw Cut</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewCooked(true)}
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        viewCooked
+                          ? 'bg-neutral-800 text-white border border-neutral-600'
+                          : 'text-neutral-300 hover:text-white'
+                      }`}
+                    >
+                      <Flame className="w-3.5 h-3.5 text-neutral-300" />
+                      <span>Cooked Dish</span>
+                    </button>
+                  </div>
+
+                  <div className="inline-flex items-center gap-1 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/15 text-xs font-semibold text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Chilled</span>
+                  </div>
+                </div>
+
+                {/* Platter Bottom Label */}
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-between bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
+                  <div className="min-w-0 pr-2">
+                    <div className="text-xs text-neutral-400 font-medium">
+                      {viewCooked ? 'Culinary Inspiration' : 'Butcher Cut'}
+                    </div>
+                    <div className="font-bold text-white text-xs leading-tight truncate">
+                      {viewCooked ? currentSlide.cookedTitle : currentSlide.cutTag}
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="text-xs text-neutral-400 font-medium">Cold Chain</div>
+                    <div className="font-bold text-neutral-200 text-xs">
+                      Chilled
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex mt-2 text-xs text-neutral-400 items-center gap-1">
+                <span>Switch between</span>
+                <span className="px-1.5 py-0.2 rounded bg-white/10 text-white text-xs font-semibold border border-white/10">Raw</span>
+                <span>and</span>
+                <span className="px-1.5 py-0.2 rounded bg-white/10 text-white text-xs font-semibold border border-white/10">Cooked</span>
+                <span>to preview dishes</span>
+              </div>
+            </div>
+          </div>
+
+          {/* DOCKED Bento Timeline Navigator */}
+          <div className="relative z-10 border-t border-white/10 bg-black/40 backdrop-blur-md px-6 py-2.5">
+            <div className="grid grid-cols-4 gap-2">
+              {HERO_SLIDES.map((slide, idx) => {
+                const isActive = idx === currentIndex;
+                return (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => {
+                      setSlideProgress(0);
+                      setCurrentIndex(idx);
+                    }}
+                    className={`relative overflow-hidden text-left p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
+                      isActive
+                        ? 'bg-white/15 text-white border-white/30 shadow-md ring-1 ring-white/20'
+                        : 'bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white border-white/10'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/20">
+                        <div
+                          className="h-full bg-white transition-all duration-75 ease-linear"
+                          style={{ width: `${slideProgress}%` }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={slide.rawImage}
+                        alt={slide.title}
+                        className="w-9 h-9 rounded-lg object-cover border border-white/15 shrink-0"
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold uppercase tracking-wider text-neutral-300 truncate">
+                          {slide.shortCategory}
+                        </div>
+                        <div className="text-xs font-bold leading-tight text-white truncate">
+                          {slide.shortTitle}
+                        </div>
+                        <div className="text-xs text-neutral-400 font-semibold flex items-center gap-1.5">
+                          <span>₹{slide.price}</span>
+                          <span className="text-emerald-400">In Stock</span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Carousel Arrow Controls */}
+        {/* Carousel Arrow Controls - Desktop only (hidden on mobile to prevent overlapping CTA buttons) */}
         <button
           type="button"
           onClick={handlePrev}
           aria-label="Previous culinary cut"
-          className="absolute left-2 sm:left-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
+          className="hidden md:flex absolute left-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -493,69 +639,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           type="button"
           onClick={handleNext}
           aria-label="Next culinary cut"
-          className="absolute right-2 sm:right-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
+          className="hidden md:flex absolute right-3.5 top-1/2 -translate-y-1/2 z-20 min-h-[44px] min-w-[44px] w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/20 backdrop-blur-md items-center justify-center cursor-pointer transition shadow-lg active:scale-95"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
-
-        {/* DOCKED Bento Timeline Navigator - Hidden on mobile so hero remains short and first card is visible on screen 1 */}
-        <div className="hidden sm:block relative z-10 border-t border-neutral-200 dark:border-white/10 bg-black/40 backdrop-blur-md px-3 sm:px-6 py-2.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {HERO_SLIDES.map((slide, idx) => {
-              const isActive = idx === currentIndex;
-              return (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => {
-                    setSlideProgress(0);
-                    setCurrentIndex(idx);
-                  }}
-                  className={`relative overflow-hidden text-left p-2 sm:p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? 'bg-white/15 text-white border-white/30 shadow-md ring-1 ring-white/20'
-                      : 'bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white border-white/10'
-                  }`}
-                >
-                  {/* Active Progress Bar along top edge */}
-                  {isActive && (
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/20">
-                      <div
-                        className="h-full bg-white transition-all duration-75 ease-linear"
-                        style={{ width: `${slideProgress}%` }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={slide.rawImage}
-                      alt={slide.title}
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-white/15 shrink-0"
-                    />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold uppercase tracking-wider text-neutral-300 truncate">
-                        {slide.shortCategory}
-                      </div>
-                      <div className="text-xs font-bold leading-tight text-white truncate">
-                        {slide.shortTitle}
-                      </div>
-                      <div className="text-xs text-neutral-400 font-semibold flex items-center gap-1.5">
-                        <span>₹{slide.price}</span>
-                        <span className="text-emerald-400">In Stock</span>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </section>
 
-      {/* 4-Point Brand Trust Ribbon with Reusable Box & Cold-Chain Packaging */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+      {/* 4-Point Brand Trust Ribbon with Reusable Box & Cold-Chain Packaging - Desktop only */}
+      <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
         <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
           <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
             <Clock className="w-4 h-4" />
@@ -577,7 +668,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -589,14 +680,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <button
           type="button"
           onClick={onNavigateToReturns}
-          className="bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs text-left cursor-pointer transition"
+          className="bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs text-left cursor-pointer transition min-h-[44px]"
         >
           <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
             <Package className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white">ThermalVault™ Box</div>
-            <div className="text-xs text-emerald-800 dark:text-emerald-300 font-bold">₹0 Deposit • Free Return</div>
+            <div className="text-xs font-bold text-gray-900 dark:text-white">Cold Box Fleet</div>
+            <div className="text-xs text-emerald-800 dark:text-emerald-300 font-bold">Zero Deposit • Easy Return</div>
           </div>
         </button>
       </div>
