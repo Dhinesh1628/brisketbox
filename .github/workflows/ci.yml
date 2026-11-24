@@ -94,10 +94,9 @@ jobs:
   gitleaks:
     name: Secret Scanning (Gitleaks)
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push'
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,15 +105,6 @@ jobs:
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        id: gitleaks
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
-
-      - name: Report and Print Gitleaks Findings
-        if: steps.gitleaks.outcome != 'success'
-        run: |
-          echo "=== GITLEAKS FINDINGS ==="
-          find . -name "*.sarif" -exec cat {} + 2>/dev/null || true
-          exit 1
