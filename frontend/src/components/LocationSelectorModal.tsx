@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { 
   MapPin, 
   Search, 
@@ -142,6 +143,8 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   selectedCity,
   onCityChange
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [gpsNotice, setGpsNotice] = useState<string | null>(null);
@@ -525,14 +528,21 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 text-gray-800 dark:text-gray-100 z-10 space-y-4 text-xs shadow-2xl animate-fade-in max-h-[90vh] flex flex-col">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="location-dialog-title"
+        tabIndex={-1}
+        className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 text-gray-800 dark:text-gray-100 z-10 space-y-4 text-xs shadow-2xl animate-fade-in max-h-[90vh] flex flex-col focus:outline-none"
+      >
         
         {/* Header */}
         <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-[#d11243]" />
-              <h3 className="font-extrabold text-gray-950 dark:text-white text-base">
+              <h3 id="location-dialog-title" className="font-extrabold text-gray-950 dark:text-white text-base">
                 Choose Delivery Address
               </h3>
             </div>
@@ -543,7 +553,8 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
           <button 
             onClick={onClose} 
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+            className="min-h-[44px] min-w-[44px] rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#d11243]"
+            aria-label="Close location picker"
           >
             <X className="w-5 h-5" />
           </button>

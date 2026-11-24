@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2, Info, ChevronDown, ChevronUp, Truck, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface CartDrawerProps {
   onCheckout: () => void;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
+  const drawerRef = useRef<HTMLDivElement>(null);
   const { 
     items, 
     removeItem, 
@@ -23,6 +25,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
     removeCoupon,
     total 
   } = useCart();
+
+  useFocusTrap(isCartOpen, drawerRef, () => setIsCartOpen(false));
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -99,7 +103,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl flex flex-col text-gray-800 dark:text-gray-100 h-full">
+        <div 
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Shopping Cart"
+          tabIndex={-1}
+          className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl flex flex-col text-gray-800 dark:text-gray-100 h-full focus:outline-none"
+        >
           
           {/* Header */}
           <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 shrink-0">
@@ -117,9 +128,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
             </div>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+              aria-label="Close cart"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -189,11 +201,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                         className="p-3 bg-white dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 rounded-xl flex gap-3 items-center shadow-2xs hover:border-gray-300 dark:hover:border-slate-600 transition"
                       >
                         <img 
-                          src={item.product.image || item.product.imageUrl || `/images/products/${item.product.id}.jpg`} 
+                          src={item.product.image || item.product.imageUrl || `/images/products/${item.product.id}.webp`} 
                           alt={item.product.name}
                           className="w-16 h-16 rounded-xl object-cover border border-gray-100 dark:border-slate-700 shrink-0" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `/images/products/${item.product.id}.jpg`;
+                            (e.target as HTMLImageElement).src = `/images/products/${item.product.id}.webp`;
                           }}
                         />
 

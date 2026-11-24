@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface LegalModalProps {
   type: 'tos' | 'privacy' | null;
@@ -7,18 +8,32 @@ interface LegalModalProps {
 }
 
 export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(Boolean(type), modalRef, onClose);
+
   if (!type) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
-      <div onClick={onClose} className="fixed inset-0 bg-black/75" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/75 backdrop-blur-xs" />
 
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-lg shadow-xl p-6 text-slate-200 z-10 max-h-[85vh] overflow-y-auto">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="legal-modal-title"
+        tabIndex={-1}
+        className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-xl p-6 text-slate-200 z-10 max-h-[85vh] overflow-y-auto focus:outline-none"
+      >
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <h2 className="text-base font-semibold text-white">
+          <h2 id="legal-modal-title" className="text-base font-semibold text-white">
             {type === 'tos' ? 'Terms of Service - BrisketBox India' : 'Privacy Policy - BrisketBox India'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
+          <button 
+            onClick={onClose} 
+            className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center text-slate-400 hover:text-white p-1 focus-visible:ring-2 focus-visible:ring-white"
+            aria-label="Close legal terms dialog"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

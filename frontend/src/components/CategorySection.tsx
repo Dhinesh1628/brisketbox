@@ -15,15 +15,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'chicken',
     name: 'Chicken',
     value: 'Fresh Chicken',
-    image: '/images/products/prod_6.jpg',
+    image: '/images/products/prod_6.webp',
     badge: 'Fresh Cuts',
-    badgeColor: 'bg-emerald-600'
+    badgeColor: 'bg-emerald-800'
   },
   {
     id: 'mutton',
     name: 'Mutton',
     value: 'Tender Mutton',
-    image: '/images/products/prod_4.jpg',
+    image: '/images/products/prod_4.webp',
     badge: 'Popular',
     badgeColor: 'bg-[#d11243]'
   },
@@ -31,15 +31,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'fish',
     name: 'Fish & Seafood',
     value: 'Fish & Seafood',
-    image: '/images/products/prod_1.jpg',
+    image: '/images/products/prod_1.webp',
     badge: 'Daily Catch',
-    badgeColor: 'bg-blue-600'
+    badgeColor: 'bg-blue-700'
   },
   {
     id: 'ready_to_cook',
     name: 'Ready to Cook',
     value: 'Ready to Cook',
-    image: '/images/products/prod_7.jpg',
+    image: '/images/products/prod_7.webp',
     badge: 'NEW',
     badgeColor: 'bg-[#d11243]'
   },
@@ -47,15 +47,15 @@ export const CATEGORIES: CategoryCircleItem[] = [
     id: 'combos',
     name: 'Combos & Feast',
     value: 'Combo Box',
-    image: '/images/products/prod_8.jpg',
+    image: '/images/products/prod_8.webp',
     badge: 'Save More',
-    badgeColor: 'bg-purple-600'
+    badgeColor: 'bg-purple-800'
   },
   {
     id: 'all',
     name: 'All Cuts',
     value: 'All',
-    image: '/images/hero_banner_meat.jpg'
+    image: '/images/hero_banner_meat.webp'
   }
 ];
 
@@ -127,7 +127,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                       alt={cat.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/images/hero_banner_meat.jpg';
+                        (e.target as HTMLImageElement).src = '/images/hero_banner_meat.webp';
                       }}
                     />
                     {/* Subtle Circular Inner Rim Shadow to look like a ceramic plate */}

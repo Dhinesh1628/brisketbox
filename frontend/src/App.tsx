@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SoundProvider } from './context/SoundContext';
@@ -7,40 +7,79 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { SoundControlButton } from './components/SoundControlButton';
 import { CatalogPage } from './pages/CatalogPage';
-import { OrderTrackingPage } from './pages/OrderTrackingPage';
-import { CustomerDashboardPage } from './pages/CustomerDashboardPage';
-import { CoolerReturnsPage } from './pages/CoolerReturnsPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { RiderDeliveryPage } from './pages/RiderDeliveryPage';
-import { ButcherStationPage } from './pages/ButcherStationPage';
 import { CartDrawer } from './components/CartDrawer';
-import { CheckoutModal } from './components/CheckoutModal';
-import { OrderConfirmationModal } from './components/OrderConfirmationModal';
-import { LegalModal } from './components/LegalModals';
-import { ContactModal } from './components/ContactModal';
-import { WhatsAppButton } from './components/WhatsAppButton';
-import { GlassmorphicLoginGate } from './components/GlassmorphicLoginGate';
-import { LocationSelectorModal } from './components/LocationSelectorModal';
 import { FloatingBottomCartBar } from './components/FloatingBottomCartBar';
+import { SEOHead } from './components/SEOHead';
 import type { Order, DeliveryAddress } from './types';
 
-const getInitialTab = (): 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher' => {
-  if (typeof window === 'undefined') return 'catalog';
-  const path = window.location.pathname.replace(/^\//, '').toLowerCase();
+// Lazy-load portal and admin dashboards - customers must NEVER download admin, rider, or partner code on initial visit
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+const RiderDeliveryPage = lazy(() => import('./pages/RiderDeliveryPage').then(m => ({ default: m.RiderDeliveryPage })));
+const ButcherStationPage = lazy(() => import('./pages/ButcherStationPage').then(m => ({ default: m.ButcherStationPage })));
+const CustomerDashboardPage = lazy(() => import('./pages/CustomerDashboardPage').then(m => ({ default: m.CustomerDashboardPage })));
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage').then(m => ({ default: m.OrderTrackingPage })));
+const CoolerReturnsPage = lazy(() => import('./pages/CoolerReturnsPage').then(m => ({ default: m.CoolerReturnsPage })));
+
+// Lazy-load overlay modals
+const CheckoutModal = lazy(() => import('./components/CheckoutModal').then(m => ({ default: m.CheckoutModal })));
+const OrderConfirmationModal = lazy(() => import('./components/OrderConfirmationModal').then(m => ({ default: m.OrderConfirmationModal })));
+const LegalModal = lazy(() => import('./components/LegalModals').then(m => ({ default: m.LegalModal })));
+const ContactModal = lazy(() => import('./components/ContactModal').then(m => ({ default: m.ContactModal })));
+const WhatsAppButton = lazy(() => import('./components/WhatsAppButton').then(m => ({ default: m.WhatsAppButton })));
+const GlassmorphicLoginGate = lazy(() => import('./components/GlassmorphicLoginGate').then(m => ({ default: m.GlassmorphicLoginGate })));
+const LocationSelectorModal = lazy(() => import('./components/LocationSelectorModal').then(m => ({ default: m.LocationSelectorModal })));
+
+const PageLoadingSpinner = () => (
+  <div className="flex flex-col items-center justify-center py-24 min-h-[300px]">
+    <div className="w-8 h-8 border-3 border-[#d11243] border-t-transparent rounded-full animate-spin mb-3" />
+    <span className="text-xs font-semibold text-gray-500">Loading module...</span>
+  </div>
+);
+
+interface RouteState {
+  page: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher' | 'product';
+  category?: string;
+  productId?: string;
+  orderId?: string;
+}
+
+const parseCurrentRoute = (): RouteState => {
+  if (typeof window === 'undefined') return { page: 'catalog' };
+  const pathname = window.location.pathname.replace(/\/$/, '') || '/';
   const hash = window.location.hash.replace(/^#/, '').toLowerCase();
-  if (path === 'rider' || hash === 'rider') return 'rider';
-  if (['partner', 'butcher'].includes(path) || ['partner', 'butcher'].includes(hash)) return 'butcher';
-  if (path === 'admin' || hash === 'admin') return 'admin';
-  if (path === 'tracking' || hash === 'tracking') return 'tracking';
-  if (path === 'dashboard' || hash === 'dashboard') return 'dashboard';
-  if (path === 'coolers' || hash === 'coolers') return 'coolers';
-  return 'catalog';
+
+  // Backward compatibility for hash links
+  if (hash === 'rider' || pathname === '/rider') return { page: 'rider' };
+  if (['partner', 'butcher'].includes(hash) || ['/partner', '/butcher'].includes(pathname)) return { page: 'butcher' };
+  if (hash === 'admin' || pathname === '/admin') return { page: 'admin' };
+  if (hash === 'dashboard' || pathname === '/dashboard') return { page: 'dashboard' };
+  if (hash === 'coolers' || pathname === '/coolers') return { page: 'coolers' };
+
+  if (pathname.startsWith('/tracking') || hash === 'tracking') {
+    const parts = pathname.split('/');
+    return { page: 'tracking', orderId: parts[2] || '' };
+  }
+
+  if (pathname.startsWith('/category/')) {
+    const rawCat = pathname.replace('/category/', '');
+    const decoded = decodeURIComponent(rawCat);
+    const matched = ['Chicken', 'Mutton', 'Seafood', 'Combos'].find(c => c.toLowerCase() === decoded.toLowerCase()) || decoded;
+    return { page: 'catalog', category: matched };
+  }
+
+  if (pathname.startsWith('/product/')) {
+    const prodId = pathname.replace('/product/', '');
+    return { page: 'product', productId: decodeURIComponent(prodId) };
+  }
+
+  return { page: 'catalog' };
 };
 
 const MainApp: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { isCartOpen, setIsCartOpen } = useCart();
-  const [currentTab, setCurrentTab] = useState<'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher'>(getInitialTab);
+  const [route, setRoute] = useState<RouteState>(parseCurrentRoute);
+  
   // Modals and Overlays
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authRoleHint, setAuthRoleHint] = useState<'customer' | 'admin'>('customer');
@@ -51,6 +90,7 @@ const MainApp: React.FC = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isAiButcherOpen, setIsAiButcherOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [activeProductForSeo, setActiveProductForSeo] = useState<any>(null);
 
   // Customer Delivery Address State (saved in localStorage - null for new visitors)
   const [currentAddress, setCurrentAddress] = useState<DeliveryAddress | null>(() => {
@@ -67,7 +107,21 @@ const MainApp: React.FC = () => {
 
   const [selectedCity, setSelectedCity] = useState(() => currentAddress?.city || '');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => route.category || 'All');
+
+  const currentTab = ['rider', 'butcher', 'admin', 'dashboard', 'coolers', 'tracking'].includes(route.page)
+    ? (route.page as 'rider' | 'butcher' | 'admin' | 'dashboard' | 'coolers' | 'tracking')
+    : 'catalog';
+
+  const navigate = (to: string) => {
+    if (typeof window === 'undefined') return;
+    window.history.pushState({ type: 'route', path: to }, '', to);
+    const parsed = parseCurrentRoute();
+    setRoute(parsed);
+    if (parsed.category) {
+      setSelectedCategory(parsed.category);
+    }
+  };
 
   const handleSelectAddress = (addr: DeliveryAddress) => {
     setCurrentAddress(addr);
@@ -80,15 +134,10 @@ const MainApp: React.FC = () => {
     setIsLocationModalOpen(true);
   };
 
-  // Synchronize browser history so pressing "Back" retreats by 1 step instead of exiting the website
+  // Synchronize browser history popstate
   useEffect(() => {
-    // Baseline state on initial load
-    if (!window.history.state) {
-      window.history.replaceState({ type: 'tab', tab: 'catalog' }, '', window.location.hash || '/');
-    }
-
     const handlePopState = () => {
-      // Step 1: If any overlay or modal is active, dismiss it (retreats 1 step)
+      // Step 1: If any overlay or modal is active, dismiss it
       if (isLocationModalOpen) {
         setIsLocationModalOpen(false);
         return;
@@ -122,24 +171,39 @@ const MainApp: React.FC = () => {
         return;
       }
 
-      // Step 2: If on a sub-tab (Live Tracking, Dashboard, Coolers, Hub Ops, Rider, Butcher), return to Catalog homepage
-      const hash = window.location.hash.replace('#', '') as any;
-      if (hash && ['catalog', 'tracking', 'dashboard', 'coolers', 'admin', 'rider', 'butcher'].includes(hash)) {
-        setCurrentTab(hash);
-      } else {
-        setCurrentTab('catalog');
+      // Step 2: Route update
+      const updated = parseCurrentRoute();
+      setRoute(updated);
+      if (updated.category) {
+        setSelectedCategory(updated.category);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [isLocationModalOpen, isAiButcherOpen, isAuthOpen, isCheckoutOpen, isConfirmationOpen, legalModalType, isContactOpen, isCartOpen, currentTab, setIsCartOpen]);
+  }, [isLocationModalOpen, isAiButcherOpen, isAuthOpen, isCheckoutOpen, isConfirmationOpen, legalModalType, isContactOpen, isCartOpen, setIsCartOpen]);
 
-  // Tab switching with history push
+  // Tab switching with real URL routes
   const handleTabChange = (tab: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher') => {
-    if (tab === currentTab) return;
-    window.history.pushState({ type: 'tab', tab }, '', tab === 'catalog' ? '/' : `#${tab}`);
-    setCurrentTab(tab);
+    const pathMap: Record<string, string> = {
+      catalog: '/',
+      tracking: '/tracking',
+      dashboard: '/dashboard',
+      coolers: '/coolers',
+      admin: '/admin',
+      rider: '/rider',
+      butcher: '/partner'
+    };
+    navigate(pathMap[tab] || '/');
+  };
+
+  const handleCategorySelect = (cat: string) => {
+    setSelectedCategory(cat);
+    if (cat === 'All') {
+      navigate('/');
+    } else {
+      navigate(`/category/${cat.toLowerCase()}`);
+    }
   };
 
   const handleOpenAuth = (roleHint?: 'customer' | 'admin') => {
@@ -151,7 +215,7 @@ const MainApp: React.FC = () => {
   const handleCloseAuth = () => {
     setIsAuthOpen(false);
     if (authRoleHint === 'admin') {
-      setCurrentTab('admin');
+      handleTabChange('admin');
     }
   };
 
@@ -191,6 +255,35 @@ const MainApp: React.FC = () => {
   return (
     <div className="min-h-screen max-w-full overflow-x-hidden bg-[#f7f7f9] dark:bg-[#080c14] text-gray-800 dark:text-gray-100 flex flex-col font-sans selection:bg-[#d11243] selection:text-white transition-colors duration-300 relative">
       
+      {/* Dynamic SEO Metadata & Schema */}
+      {route.page === 'product' ? (
+        <SEOHead 
+          title={activeProductForSeo ? `${activeProductForSeo.name} | BrisketBox` : 'Fresh Cut Meat & Seafood | BrisketBox'}
+          description={activeProductForSeo?.description || 'Fresh meat cut to order and delivered cold in reusable packaging.'}
+          path={`/product/${route.productId}`}
+          image={activeProductForSeo?.image || '/images/hero_banner_meat.webp'}
+          product={activeProductForSeo}
+        />
+      ) : route.page === 'catalog' && selectedCategory && selectedCategory !== 'All' ? (
+        <SEOHead 
+          title={`Fresh ${selectedCategory} Cut Daily | BrisketBox`}
+          description={`Order farm-fresh ${selectedCategory.toLowerCase()} cut daily and delivered chilled with zero preservatives.`}
+          path={`/category/${selectedCategory.toLowerCase()}`}
+        />
+      ) : route.page === 'tracking' ? (
+        <SEOHead 
+          title="Live Cold-Chain Order Tracking | BrisketBox"
+          description="Track your fresh meat delivery in real-time with temperature telemetry and live GPS."
+          path="/tracking"
+        />
+      ) : (
+        <SEOHead 
+          title="BrisketBox | Freshness, Sealed with Flavour"
+          description="Fresh chicken, mutton and coastal seafood cut daily and delivered cold in reusable cold boxes."
+          path="/"
+        />
+      )}
+
       {/* Top Navbar - Only rendered for Consumer Storefront & Admin Hub */}
       {!['rider', 'butcher'].includes(currentTab) && (
         <Navbar
@@ -204,10 +297,7 @@ const MainApp: React.FC = () => {
           currentAddress={currentAddress}
           onOpenLocationModal={handleOpenLocationModal}
           selectedCategory={selectedCategory}
-          onSelectCategory={(cat) => {
-            setSelectedCategory(cat);
-            handleTabChange('catalog');
-          }}
+          onSelectCategory={handleCategorySelect}
         />
       )}
 
@@ -223,89 +313,99 @@ const MainApp: React.FC = () => {
             searchQuery={searchQuery}
             onSetSearchQuery={setSearchQuery}
             selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
-        )}
-
-        {currentTab === 'tracking' && (
-          <OrderTrackingPage 
-            onNavigateToReturns={() => {
-              if (!user) handleOpenAuth('customer');
-              else handleTabChange('coolers');
+            onSelectCategory={handleCategorySelect}
+            initialProductId={route.page === 'product' ? route.productId : undefined}
+            onProductInspected={(p) => setActiveProductForSeo(p)}
+            onProductClosed={() => {
+              setActiveProductForSeo(null);
+              if (route.page === 'product') {
+                navigate(selectedCategory !== 'All' ? `/category/${selectedCategory.toLowerCase()}` : '/');
+              }
             }}
           />
         )}
 
-        {currentTab === 'dashboard' && (
-          user ? (
-            <CustomerDashboardPage 
-              onNavigateToTracking={(orderId) => {
-                handleTabChange('tracking');
-              }}
-              onNavigateToCatalog={() => {
-                handleTabChange('catalog');
+        <Suspense fallback={<PageLoadingSpinner />}>
+          {currentTab === 'tracking' && (
+            <OrderTrackingPage 
+              onNavigateToReturns={() => {
+                if (!user) handleOpenAuth('customer');
+                else handleTabChange('coolers');
               }}
             />
-          ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm">Please Sign In to Access Customer Dashboard</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">View previous orders, track live parcels, download invoices, and manage cold-box refunds.</p>
-              <button
-                onClick={() => handleOpenAuth('customer')}
-                className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
-              >
-                Sign In to Dashboard
-              </button>
-            </div>
-          )
-        )}
+          )}
 
-        {currentTab === 'coolers' && (
-          user ? (
-            <CoolerReturnsPage />
-          ) : (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center max-w-md mx-auto my-12 space-y-3">
-              <h3 className="font-bold text-gray-900 text-sm">Please Sign In to View Your Cold Boxes</h3>
-              <p className="text-xs text-gray-500">Sign in with your registered account to manage cold boxes and delivery tracking.</p>
-              <button
-                onClick={() => handleOpenAuth('customer')}
-                className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
-              >
-                Sign In with Credentials
-              </button>
-            </div>
-          )
-        )}
+          {currentTab === 'dashboard' && (
+            user ? (
+              <CustomerDashboardPage 
+                onNavigateToTracking={(_orderId) => {
+                  handleTabChange('tracking');
+                }}
+                onNavigateToCatalog={() => {
+                  handleTabChange('catalog');
+                }}
+              />
+            ) : (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Please Sign In to Access Customer Dashboard</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">View previous orders, track live parcels, download invoices, and manage cold-box refunds.</p>
+                <button
+                  onClick={() => handleOpenAuth('customer')}
+                  className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
+                >
+                  Sign In to Dashboard
+                </button>
+              </div>
+            )
+          )}
 
-        {currentTab === 'admin' && (
-          authLoading ? (
-            <div className="flex items-center justify-center py-24 text-xs text-gray-500 font-bold">
-              <div className="animate-spin mr-2 w-4 h-4 border-2 border-[#d11243] border-t-transparent rounded-full" />
-              <span>Verifying Operations Hub credentials...</span>
-            </div>
-          ) : user?.role === 'admin' ? (
-            <AdminDashboardPage />
-          ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm">Operations Admin Authentication Required</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials.</p>
-              <button
-                onClick={() => handleOpenAuth('admin')}
-                className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs"
-              >
-                Sign In as Admin
-              </button>
-            </div>
-          )
-        )}
+          {currentTab === 'coolers' && (
+            user ? (
+              <CoolerReturnsPage />
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center max-w-md mx-auto my-12 space-y-3">
+                <h3 className="font-bold text-gray-900 text-sm">Please Sign In to View Your Cold Boxes</h3>
+                <p className="text-xs text-gray-500">Sign in with your registered account to manage cold boxes and delivery tracking.</p>
+                <button
+                  onClick={() => handleOpenAuth('customer')}
+                  className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
+                >
+                  Sign In with Credentials
+                </button>
+              </div>
+            )
+          )}
 
-        {currentTab === 'rider' && (
-          <RiderDeliveryPage onBackToStore={() => handleTabChange('catalog')} />
-        )}
+          {currentTab === 'admin' && (
+            authLoading ? (
+              <div className="flex items-center justify-center py-24 text-xs text-gray-500 font-bold">
+                <div className="animate-spin mr-2 w-4 h-4 border-2 border-[#d11243] border-t-transparent rounded-full" />
+                <span>Verifying Operations Hub credentials...</span>
+              </div>
+            ) : user?.role === 'admin' ? (
+              <AdminDashboardPage />
+            ) : (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 text-center max-w-md mx-auto my-12 space-y-3">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Operations Admin Authentication Required</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Access to the Central Hub Operations Control Room requires verified administrator credentials.</p>
+                <button
+                  onClick={() => handleOpenAuth('admin')}
+                  className="px-4 py-2 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs"
+                >
+                  Sign In as Admin
+                </button>
+              </div>
+            )
+          )}
 
-        {currentTab === 'butcher' && (
-          <ButcherStationPage onBackToStore={() => handleTabChange('catalog')} />
-        )}
+          {currentTab === 'rider' && (
+            <RiderDeliveryPage onBackToStore={() => handleTabChange('catalog')} />
+          )}
+
+          {currentTab === 'butcher' && (
+            <ButcherStationPage onBackToStore={() => handleTabChange('catalog')} />
+          )}
+        </Suspense>
       </main>
 
       {/* Footer - Only shown for Consumer Storefront & Admin */}
@@ -317,12 +417,12 @@ const MainApp: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center">
                 <img 
-                  src="/images/logo.png" 
+                  src="/images/logo.webp" 
                   alt="BrisketBox - Freshness, Sealed with Flavour" 
                   className="h-10 sm:h-12 w-auto max-w-[200px] object-contain dark:hidden" 
                 />
                 <img 
-                  src="/images/logo-dark.png" 
+                  src="/images/logo-dark.webp" 
                   alt="BrisketBox - Freshness, Sealed with Flavour" 
                   className="h-10 sm:h-12 w-auto max-w-[200px] object-contain hidden dark:block" 
                 />
@@ -354,15 +454,21 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Customer & Legal</h4>
-              <ul className="space-y-1.5 text-[11px]">
+              <h4 className="text-gray-950 dark:text-white font-bold mb-3">Customer & Legal</h4>
+              <ul className="space-y-1 text-xs">
                 <li>
-                  <button onClick={() => handleOpenLegalModal('tos')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => handleOpenLegalModal('tos')} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Terms of Service & Delivery Policy
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleOpenLegalModal('privacy')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => handleOpenLegalModal('privacy')} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Privacy Policy (DPDP Compliance)
                   </button>
                 </li>
@@ -372,35 +478,47 @@ const MainApp: React.FC = () => {
                       window.history.pushState({ type: 'modal', name: 'contact' }, '');
                       setIsContactOpen(true);
                     }} 
-                    className="text-emerald-700 dark:text-emerald-400 font-bold hover:text-emerald-800 dark:hover:text-emerald-300 cursor-pointer flex items-center gap-1.5"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-emerald-800 dark:text-emerald-300 font-bold hover:text-emerald-900 dark:hover:text-emerald-200 cursor-pointer gap-1.5 focus-visible:ring-2 focus-visible:ring-[#d11243]"
                   >
                     <span>Contact Support & Concierge</span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-300 dark:border-emerald-700">24/7 Live</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 font-extrabold border border-emerald-300 dark:border-emerald-700">24/7 Live</span>
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => {
-                    if (!user) handleOpenAuth('customer');
-                    else handleTabChange('coolers');
-                  }} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => {
+                      if (!user) handleOpenAuth('customer');
+                      else handleTabChange('coolers');
+                    }} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Doorstep Box Collection
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleTabChange('rider')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => handleTabChange('rider')} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Fleet Rider Partner App
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleTabChange('butcher')} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => handleTabChange('butcher')} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Master Butcher Station & KDS
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => {
-                    if (user?.role === 'admin') handleTabChange('admin');
-                    else handleOpenAuth('admin');
-                  }} className="text-gray-600 dark:text-gray-400 hover:text-[#d11243] cursor-pointer">
+                  <button 
+                    onClick={() => {
+                      if (user?.role === 'admin') handleTabChange('admin');
+                      else handleOpenAuth('admin');
+                    }} 
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                  >
                     Hub Fulfillment Operations
                   </button>
                 </li>
@@ -430,71 +548,85 @@ const MainApp: React.FC = () => {
       {/* Cart Drawer */}
       <CartDrawer onCheckout={handleProceedToCheckout} />
 
-      {/* Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={handleCloseCheckout}
-        onOrderSuccess={handleOrderSuccess}
-        selectedCity={selectedCity}
-        currentAddress={currentAddress}
-        onOpenLocationModal={handleOpenLocationModal}
-      />
+      <Suspense fallback={null}>
+        {/* Checkout Modal */}
+        {isCheckoutOpen && (
+          <CheckoutModal
+            isOpen={isCheckoutOpen}
+            onClose={handleCloseCheckout}
+            onOrderSuccess={handleOrderSuccess}
+            selectedCity={selectedCity}
+            currentAddress={currentAddress}
+            onOpenLocationModal={handleOpenLocationModal}
+          />
+        )}
 
-      {/* Location Selector Modal */}
-      <LocationSelectorModal
-        isOpen={isLocationModalOpen}
-        onClose={() => setIsLocationModalOpen(false)}
-        currentAddress={currentAddress}
-        onSelectAddress={handleSelectAddress}
-        selectedCity={selectedCity}
-        onCityChange={setSelectedCity}
-      />
+        {/* Location Selector Modal */}
+        {isLocationModalOpen && (
+          <LocationSelectorModal
+            isOpen={isLocationModalOpen}
+            onClose={() => setIsLocationModalOpen(false)}
+            currentAddress={currentAddress}
+            onSelectAddress={handleSelectAddress}
+            selectedCity={selectedCity}
+            onCityChange={setSelectedCity}
+          />
+        )}
 
-      {/* Order Confirmation & Telemetry Modal (Figma Step 5) */}
-      <OrderConfirmationModal
-        order={confirmedOrder}
-        isOpen={isConfirmationOpen}
-        onClose={() => setIsConfirmationOpen(false)}
-        onViewLiveTelemetry={() => {
-          setIsConfirmationOpen(false);
-          handleTabChange('tracking');
-        }}
-        onNavigateToReturns={() => {
-          setIsConfirmationOpen(false);
-          handleTabChange('coolers');
-        }}
-      />
+        {/* Order Confirmation & Telemetry Modal (Figma Step 5) */}
+        {isConfirmationOpen && (
+          <OrderConfirmationModal
+            order={confirmedOrder}
+            isOpen={isConfirmationOpen}
+            onClose={() => setIsConfirmationOpen(false)}
+            onViewLiveTelemetry={() => {
+              setIsConfirmationOpen(false);
+              handleTabChange('tracking');
+            }}
+            onNavigateToReturns={() => {
+              setIsConfirmationOpen(false);
+              handleTabChange('coolers');
+            }}
+          />
+        )}
 
-      {/* Glassmorphic Login / Register Modal (Prompted only on Checkout or Sign In click) */}
-      <GlassmorphicLoginGate
-        isOpen={isAuthOpen}
-        isModalMode={true}
-        roleHint={authRoleHint}
-        onCloseModal={handleCloseAuth}
-        onUnlockGuest={handleCloseAuth}
-      />
+        {/* Glassmorphic Login / Register Modal (Prompted only on Checkout or Sign In click) */}
+        {isAuthOpen && (
+          <GlassmorphicLoginGate
+            isOpen={isAuthOpen}
+            isModalMode={true}
+            roleHint={authRoleHint}
+            onCloseModal={handleCloseAuth}
+            onUnlockGuest={handleCloseAuth}
+          />
+        )}
 
-      {/* Legal Modals */}
-      <LegalModal
-        type={legalModalType}
-        onClose={() => setLegalModalType(null)}
-      />
+        {/* Legal Modals */}
+        {legalModalType && (
+          <LegalModal
+            type={legalModalType}
+            onClose={() => setLegalModalType(null)}
+          />
+        )}
 
-      {/* Customer Support & Concierge Modal */}
-      <ContactModal
-        isOpen={isContactOpen}
-        onClose={() => setIsContactOpen(false)}
-      />
+        {/* Customer Support & Concierge Modal */}
+        {isContactOpen && (
+          <ContactModal
+            isOpen={isContactOpen}
+            onClose={() => setIsContactOpen(false)}
+          />
+        )}
 
-      {/* Floating Master Butcher Concierge & WhatsApp Concierge */}
-      {!['rider', 'butcher', 'admin'].includes(currentTab) && (
-        <WhatsAppButton 
-          isChatbotOpen={isAiButcherOpen}
-          onOpenChatbot={handleOpenAiButcher}
-          onCloseChatbot={handleCloseAiButcher}
-          onNavigateTab={handleTabChange}
-        />
-      )}
+        {/* Floating Master Butcher Concierge & WhatsApp Concierge */}
+        {!['rider', 'butcher', 'admin'].includes(currentTab) && (
+          <WhatsAppButton 
+            isChatbotOpen={isAiButcherOpen}
+            onOpenChatbot={handleOpenAiButcher}
+            onCloseChatbot={handleCloseAiButcher}
+            onNavigateTab={handleTabChange}
+          />
+        )}
+      </Suspense>
 
       {/* Fixed Sound Control Button (Top-Right on All Pages & Portals) */}
       <SoundControlButton />

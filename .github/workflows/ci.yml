@@ -91,6 +91,9 @@ jobs:
       - name: Typecheck and build frontend (tsc -b && vite build)
         run: npm --prefix frontend run build
 
+      - name: Verify bundle size budget and code isolation (<= 170 KB gzipped)
+        run: node scripts/check-bundle-size.js
+
   gitleaks:
     name: Secret Scanning (Gitleaks)
     runs-on: ubuntu-22.04

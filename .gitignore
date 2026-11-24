@@ -69,3 +69,9 @@ desktop.ini
 docs/presentations/*.pdf
 docs/presentations/*.pptx
 screenshots/
+
+# Test and audit outputs
+.lighthouseci/
+test-results/
+playwright-report/
+frontend/image-originals-backup/

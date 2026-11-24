@@ -60,7 +60,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
             <div className="bg-[#128C7E] text-white p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-0.5 shadow-xs">
-                  <img src="/images/logo.png" alt="BrisketBox" className="w-full h-full object-contain" />
+                  <img src="/images/logo.webp" alt="BrisketBox" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h4 className="font-bold text-xs leading-tight">BrisketBox Concierge Support</h4>

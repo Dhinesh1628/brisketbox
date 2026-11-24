@@ -2,40 +2,124 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   
-  <!-- Main Catalog Storefront -->
+  <!-- Home -->
   <url>
-    <loc>https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/</loc>
-    <lastmod>2026-11-11</lastmod>
+    <loc>https://brisketbox.vercel.app/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/images/hero_banner_meat.jpg</image:loc>
+      <image:loc>https://brisketbox.vercel.app/images/hero_banner_meat.webp</image:loc>
       <image:title>BrisketBox Fresh Cold-Chain Meat and Seafood</image:title>
     </image:image>
   </url>
 
-  <!-- Live Cold-Chain Order Tracking -->
+  <!-- Catalog -->
   <url>
-    <loc>https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/#tracking</loc>
-    <lastmod>2026-11-11</lastmod>
-    <changefreq>always</changefreq>
+    <loc>https://brisketbox.vercel.app/catalog</loc>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
-  <!-- ThermalVault Cold Box Return & Deposit Refund -->
+  <!-- Categories -->
   <url>
-    <loc>https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/#coolers</loc>
-    <lastmod>2026-11-11</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://brisketbox.vercel.app/category/seafood</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/category/mutton</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/category/chicken</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/category/combo-box</loc>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- Customer Dashboard & Passbook -->
+  <!-- Products -->
   <url>
-    <loc>https://brisketbox-git-main-dhinesh-s-projects1.vercel.app/#dashboard</loc>
-    <lastmod>2026-11-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://brisketbox.vercel.app/product/prod_1</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_1.webp</image:loc>
+      <image:title>Surmai Steaks (Seer Fish)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_2</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_2.webp</image:loc>
+      <image:title>White Pomfret Whole Cleaned</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_3</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_3.webp</image:loc>
+      <image:title>Jumbo Prawns Cleaned</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_4</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_4.webp</image:loc>
+      <image:title>Mutton Curry and Biryani Cut</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_5</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_5.webp</image:loc>
+      <image:title>Chicken Breast Fillet</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_6</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_6.webp</image:loc>
+      <image:title>Country Chicken Curry Cut</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_7</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_7.webp</image:loc>
+      <image:title>Fish Tikka Ready to Cook</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://brisketbox.vercel.app/product/prod_8</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://brisketbox.vercel.app/images/products/prod_8.webp</image:loc>
+      <image:title>Grand Coastal Feast Box</image:title>
+    </image:image>
   </url>
 
+  <!-- Live Tracking -->
+  <url>
+    <loc>https://brisketbox.vercel.app/tracking</loc>
+    <changefreq>always</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

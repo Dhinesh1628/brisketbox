@@ -2055,7 +2055,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                       {/* Product Thumbnail */}
                       <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden relative shrink-0 border border-gray-100">
                         <img 
-                          src={prod.imageUrl || prod.image || '/images/products/prod_1.jpg'} 
+                          src={prod.imageUrl || prod.image || '/images/products/prod_1.webp'} 
                           alt={prod.name} 
                           className="w-full h-full object-cover"
                         />

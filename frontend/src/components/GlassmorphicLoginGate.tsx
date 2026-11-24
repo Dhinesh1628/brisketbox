@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User as UserIcon, Lock, Mail, Phone, MapPin, Eye, EyeOff, Sparkles, Shield, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface GlassmorphicLoginGateProps {
   onUnlockGuest: () => void;
@@ -18,6 +19,8 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
   isModalMode = false,
   roleHint
 }) => {
+  const gateRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(Boolean(isOpen && isModalMode), gateRef, onCloseModal);
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [identifier, setIdentifier] = useState('');
@@ -197,7 +200,13 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
       {/* ======================================================== */}
       {/* Centered Frosted Glass Login Container (Exact Reference)  */}
       {/* ======================================================== */}
-      <div className="relative z-10 w-full max-w-[420px] mx-4 animate-in fade-in zoom-in-95 duration-300">
+      <div 
+        ref={gateRef}
+        role={isModalMode ? 'dialog' : undefined}
+        aria-modal={isModalMode ? 'true' : undefined}
+        tabIndex={isModalMode ? -1 : undefined}
+        className="relative z-10 w-full max-w-[420px] mx-4 animate-in fade-in zoom-in-95 duration-300 focus:outline-none"
+      >
         
         {/* The Glass Card Body */}
         <div className="relative rounded-3xl bg-slate-900/40 backdrop-blur-2xl border border-white/25 shadow-2xl p-7 pt-9 text-white overflow-hidden">
@@ -215,7 +224,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
           {/* Brand Header */}
           <div className="text-center mt-2 mb-6">
             <div className="inline-flex items-center gap-2 mb-1">
-              <img src="/images/logo-dark.png" alt="BrisketBox" className="h-7 w-auto object-contain drop-shadow-md" />
+              <img src="/images/logo-dark.webp" alt="BrisketBox" className="h-7 w-auto object-contain drop-shadow-md" />
             </div>
             <p className="text-[11px] text-slate-300/90 font-medium">
               Freshness, sealed with flavour. • Chilled Cold Chain

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { 
   X, 
   Send, 
@@ -21,6 +22,8 @@ interface ContactModalProps {
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, initialTopic }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, modalRef, onClose);
   const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -78,7 +81,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contact-modal-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto focus:outline-none"
+      >
         
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
@@ -87,7 +97,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
               <Headphones className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base text-gray-950 dark:text-white">
+              <h3 id="contact-modal-title" className="font-black text-base text-gray-950 dark:text-white">
                 BrisketBox Concierge Support
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -98,9 +108,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, ini
 
           <button
             onClick={resetAndClose}
-            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 cursor-pointer"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+            aria-label="Close support dialog"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

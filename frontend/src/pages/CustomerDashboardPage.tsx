@@ -402,11 +402,11 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                       {(ord.items || []).map((it, idx) => (
                         <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-800">
                           <img 
-                            src={it.image || it.imageUrl || `/images/products/${it.productId}.jpg`} 
+                            src={it.image || it.imageUrl || `/images/products/${it.productId}.webp`} 
                             alt={it.name}
                             className="w-12 h-12 rounded-lg object-cover shrink-0 border border-gray-200 dark:border-slate-700"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `/images/products/${it.productId}.jpg`;
+                              (e.target as HTMLImageElement).src = `/images/products/${it.productId}.webp`;
                             }}
                           />
                           <div className="min-w-0 flex-1">
@@ -671,7 +671,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <div key={prod.id} className="p-4 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-xs">
                   <div className="flex gap-3">
                     <img 
-                      src={prod.image || prod.imageUrl || `/images/products/${prod.id}.jpg`} 
+                      src={prod.image || prod.imageUrl || `/images/products/${prod.id}.webp`} 
                       alt={prod.name}
                       className="w-16 h-16 rounded-xl object-cover shrink-0 border border-gray-200"
                     />

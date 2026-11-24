@@ -71,7 +71,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'chicken',
     name: 'Chicken',
     categoryValue: 'Fresh Chicken',
-    image: '/images/products/prod_6.jpg',
+    image: '/images/products/prod_6.webp',
     subCategories: [
       { name: 'Curry Cuts', searchTerm: 'Curry Cut' },
       { name: 'Boneless & Breast Fillets', searchTerm: 'Boneless' },
@@ -84,7 +84,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'mutton',
     name: 'Mutton',
     categoryValue: 'Tender Mutton',
-    image: '/images/products/prod_4.jpg',
+    image: '/images/products/prod_4.webp',
     subCategories: [
       { name: 'Biryani & Curry Cut', searchTerm: 'Biryani' },
       { name: 'Rich Rogan Josh Cuts', searchTerm: 'Rogan Josh' },
@@ -97,7 +97,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'fish',
     name: 'Fish & Seafood',
     categoryValue: 'Fish & Seafood',
-    image: '/images/products/prod_1.jpg',
+    image: '/images/products/prod_1.webp',
     subCategories: [
       { name: 'Surmai (Seer Fish) Steaks', searchTerm: 'Surmai' },
       { name: 'White Pomfret (Whole Cleaned)', searchTerm: 'Pomfret' },
@@ -110,7 +110,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'ready_to_cook',
     name: 'Ready to Cook',
     categoryValue: 'Ready to Cook',
-    image: '/images/products/prod_7.jpg',
+    image: '/images/products/prod_7.webp',
     subCategories: [
       { name: 'Amritsari Crispy Fish Tikka', searchTerm: 'Tikka' },
       { name: 'Marinated Skillet Roasts', searchTerm: 'Roast' },
@@ -122,7 +122,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'combos',
     name: 'Combos & Feasts',
     categoryValue: 'Combo Box',
-    image: '/images/products/prod_8.jpg',
+    image: '/images/products/prod_8.webp',
     subCategories: [
       { name: 'Grand Coastal Seafood Feast', searchTerm: 'Feast' },
       { name: 'Weekend Family Value Packs', searchTerm: 'Box' },
@@ -134,7 +134,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     id: 'specials',
     name: 'BrisketBox Specials',
     categoryValue: 'All',
-    image: '/images/hero_banner_meat.jpg',
+    image: '/images/hero_banner_meat.webp',
     subCategories: [
       { name: 'Fresh Chilled Cuts', categoryFilter: 'All' },
       { name: 'Fresh Fish & Seafood', categoryFilter: 'Fish & Seafood' },
@@ -484,11 +484,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <img
-                          src={product.imageUrl || product.image || '/images/products/prod_1.jpg'}
+                          src={product.imageUrl || product.image || '/images/products/prod_1.webp'}
                           alt={product.name}
                           className="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-700 shrink-0"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/images/products/prod_1.jpg';
+                            (e.target as HTMLImageElement).src = '/images/products/prod_1.webp';
                           }}
                         />
                         <div className="min-w-0">
@@ -667,12 +667,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center cursor-pointer shrink-0 py-1"
             >
               <img 
-                src="/images/logo.png" 
+                src="/images/logo.webp" 
                 alt="BrisketBox - Freshness, Sealed with Flavour" 
                 className="h-7.5 sm:h-11 w-auto max-w-[145px] sm:max-w-[210px] object-contain hover:opacity-95 transition dark:hidden" 
               />
               <img 
-                src="/images/logo-dark.png" 
+                src="/images/logo-dark.webp" 
                 alt="BrisketBox - Freshness, Sealed with Flavour" 
                 className="h-7.5 sm:h-11 w-auto max-w-[145px] sm:max-w-[210px] object-contain hover:opacity-95 transition hidden dark:block" 
               />
@@ -1093,9 +1093,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart Button: ALWAYS ACCESSIBLE */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="h-8 sm:h-10 px-2 sm:px-3.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs flex items-center gap-1 sm:gap-2 cursor-pointer shadow-sm hover:shadow-md transition shrink-0 whitespace-nowrap active:scale-95"
+              aria-label="View Shopping Cart"
+              className="min-h-[44px] min-w-[44px] h-10 px-2 sm:px-3.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs flex items-center justify-center gap-1 sm:gap-2 cursor-pointer shadow-sm hover:shadow-md transition shrink-0 whitespace-nowrap active:scale-95 focus-visible:ring-2 focus-visible:ring-[#d11243]"
             >
-              <ShoppingBag className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" />
+              <ShoppingBag className="w-4 h-4 text-white" />
               <span className="hidden sm:inline">Cart</span>
               {totalItems > 0 && (
                 <span className="px-1.5 py-0.5 bg-white text-[#d11243] rounded-full text-[10px] sm:text-[11px] font-extrabold leading-none">
@@ -1112,9 +1113,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Menu Toggle (screens < sm) */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="sm:hidden h-8 w-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shrink-0"
+              aria-label="Toggle Navigation Menu"
+              className="sm:hidden min-h-[44px] min-w-[44px] h-10 w-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shrink-0 focus-visible:ring-2 focus-visible:ring-[#d11243]"
             >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
           </div>

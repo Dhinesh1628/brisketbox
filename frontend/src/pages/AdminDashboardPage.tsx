@@ -97,7 +97,7 @@ export const AdminDashboardPage: React.FC = () => {
     origin: '',
     cutStyle: 'Curry Cut Steaks',
     stock: '30',
-    image: '/images/products/prod_1.jpg'
+    image: '/images/products/prod_1.webp'
   });
 
   // Register New Cooler Modal

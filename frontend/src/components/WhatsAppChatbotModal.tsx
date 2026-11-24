@@ -268,12 +268,12 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
             <div className="relative">
               <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 p-1 flex items-center justify-center shadow-md">
                 <img 
-                  src="/images/logo.png" 
+                  src="/images/logo.webp" 
                   alt="BrisketBox" 
                   className="w-full h-full object-contain dark:hidden" 
                 />
                 <img 
-                  src="/images/logo-dark.png" 
+                  src="/images/logo-dark.webp" 
                   alt="BrisketBox" 
                   className="w-full h-full object-contain hidden dark:block" 
                 />
@@ -419,11 +419,11 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
                         >
                           <div className="flex items-center gap-2 overflow-hidden">
                             <img 
-                              src={prod.image || prod.imageUrl || `/images/products/${prod.id}.jpg`} 
+                              src={prod.image || prod.imageUrl || `/images/products/${prod.id}.webp`} 
                               alt={prod.name} 
                               className="w-11 h-11 rounded-lg object-cover shrink-0 border border-gray-200 dark:border-slate-700" 
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = `/images/products/${prod.id}.jpg`;
+                                (e.target as HTMLImageElement).src = `/images/products/${prod.id}.webp`;
                               }}
                             />
                             <div className="overflow-hidden">

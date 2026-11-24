@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Minus, Zap, ShieldCheck, Star, Award, CheckCircle2, ChevronRight, HelpCircle, Heart, MessageSquare, ThumbsUp, Send, Flame, ThermometerSnowflake, Package, ArrowRight, Clock } from 'lucide-react';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSound } from '../context/SoundContext';
 import { getProductWeightOptions } from '../utils/weightUtils';
 import { getProductVisual } from '../data/productVisuals';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -18,6 +19,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   initialWeight,
   onClose
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(Boolean(product), modalRef, onClose);
   const { items, addItem, updateQuantity } = useCart();
   const { user } = useAuth();
   const { playPopSound } = useSound();
@@ -202,7 +205,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-gray-900 dark:text-gray-100 z-10 max-h-[92vh] flex flex-col transition-colors">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-modal-title"
+        tabIndex={-1}
+        className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-gray-900 dark:text-gray-100 z-10 max-h-[92vh] flex flex-col transition-colors focus:outline-none"
+      >
         
         {/* Sticky Top Header */}
         <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sticky top-0 z-20">
@@ -219,16 +229,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={toggleWishlist}
-              className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-[#d11243] dark:hover:text-rose-400 transition cursor-pointer"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-[#d11243] dark:hover:text-rose-400 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
               title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              aria-label={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
             >
               <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#d11243] text-[#d11243]' : ''}`} />
             </button>
             <button 
               onClick={onClose} 
-              className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition cursor-pointer"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+              aria-label="Close product details dialog"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -273,7 +285,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   alt={product.name}
                   className="w-full h-full object-cover transition duration-300" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `/images/products/${product.id}.jpg`;
+                    (e.target as HTMLImageElement).src = `/images/products/${product.id}.webp`;
                   }}
                 />
 
@@ -327,7 +339,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       alt="" 
                       className="w-full h-full object-cover" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `/images/products/${product.id}.jpg`;
+                        (e.target as HTMLImageElement).src = `/images/products/${product.id}.webp`;
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-black/70 text-[9px] text-white text-center py-0.5 font-bold">
