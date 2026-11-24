@@ -2,6 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -148,14 +149,16 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
       NODE_ENV: 'test'
     };
 
+    const mockBootstrapUrl = pathToFileURL(path.resolve('backend/tests/helpers/mockRazorpayBootstrap.js')).href;
+
     console.log('[Test Setup] Spawning Node Process A on port', PORT_A);
-    procA = spawn(process.execPath, [serverPath], { cwd: backendCwd, env: envA, stdio: ['ignore', 'pipe', 'pipe'] });
+    procA = spawn(process.execPath, ['--import', mockBootstrapUrl, serverPath], { cwd: backendCwd, env: envA, stdio: ['ignore', 'pipe', 'pipe'] });
     procA.stdout.on('data', d => console.log('[Proc A stdout]', d.toString().trim()));
     procA.stderr.on('data', d => console.error('[Proc A stderr]', d.toString().trim()));
     procA.on('exit', (code, sig) => console.log('[Proc A exited with code]', code, sig));
 
     console.log('[Test Setup] Spawning Node Process B on port', PORT_B);
-    procB = spawn(process.execPath, [serverPath], { cwd: backendCwd, env: envB, stdio: ['ignore', 'pipe', 'pipe'] });
+    procB = spawn(process.execPath, ['--import', mockBootstrapUrl, serverPath], { cwd: backendCwd, env: envB, stdio: ['ignore', 'pipe', 'pipe'] });
     procB.stdout.on('data', d => console.log('[Proc B stdout]', d.toString().trim()));
     procB.stderr.on('data', d => console.error('[Proc B stderr]', d.toString().trim()));
     procB.on('exit', (code, sig) => console.log('[Proc B exited with code]', code, sig));
@@ -1473,7 +1476,7 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
   });
 
   // -------------------------------------------------------------------------
-  it('19. Admin-only refund action executes gateway refund, updates Refund record to PROCESSED, and marks order REFUNDED', async () => {
+  it('19. Admin refund amount: ₹500 order = ₹100 wallet + ₹400 Razorpay refunds ₹400 to Razorpay and ₹100 to wallet once', async () => {
     const adminUser = await User.create({
       id: `admin_rfnd_exec_${Date.now()}`,
       name: 'Admin Refund Exec',
@@ -1500,10 +1503,11 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
       customerName: custUser.name,
       customerEmail: custUser.email,
       customerPhone: '+919871112235',
-      subtotal: 649,
-      total: 649,
-      totalAmount: 649,
-      walletDeduction: 149,
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 500,
+      total: 500,
+      walletDeduction: 100,
+      totalAmount: 400, // order.totalAmount is already the Razorpay amount after wallet use
       paymentStatus: 'REFUND_REQUIRED',
       orderStatus: 'CANCELLED',
       razorpayPaymentId: 'pay_split_mock_19',
@@ -1531,118 +1535,215 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
     assert.strictEqual(updatedOrder.paymentStatus, 'REFUNDED');
     assert.strictEqual(updatedOrder.walletRefunded, true);
 
-    // 2. Customer wallet was credited ₹149 separately
+    // 2. Customer wallet was credited exactly ₹100 through WalletLedger once
     const updatedCust = await User.findOne({ id: custUser.id }).lean();
-    assert.strictEqual(updatedCust.walletBalance, 149);
+    assert.strictEqual(updatedCust.walletBalance, 100);
 
-    // 3. Persisted Refund record tracks PROCESSED with ₹500 (exact unrefunded gateway amount)
+    // 3. Persisted Refund record tracks PROCESSED with ₹400 (exact unrefunded gateway amount)
     const refundRec = await Refund.findOne({ orderId: updatedOrder.orderNumber }).lean();
     assert.ok(refundRec, 'Refund record must be persisted');
     assert.strictEqual(refundRec.status, 'PROCESSED');
-    assert.strictEqual(refundRec.amount, 500); // 649 - 149 = 500
+    assert.strictEqual(refundRec.amount, 400); // exactly 400
   });
 
   // -------------------------------------------------------------------------
-  it('20. Admin refund idempotency: duplicate clicks or replay return existing refund without refunding twice', async () => {
+  it('20. Refund retry: FAILED refund is retryable without duplicate-key error, and concurrent retries create only one gateway refund', async () => {
     const adminUser = await User.findOne({ role: 'admin' }).lean();
     const adminToken = createToken(adminUser);
 
-    const custUser = await User.create({
-      id: `cust_idem_rfnd_${Date.now()}`,
-      name: 'Idempotent Refund Customer',
-      email: `idem_rfnd_${Date.now()}@test.com`,
-      walletBalance: 0
-    });
-
-    const orderId = `ord_idem_rfnd_${Date.now()}`;
+    const orderId = `ord_retry_rfnd_${Date.now()}`;
     await Order.create({
       id: orderId,
       orderNumber: `BB-${orderId}`,
-      userId: custUser.id,
-      customerName: custUser.name,
-      customerEmail: custUser.email,
-      subtotal: 500,
-      total: 500,
-      totalAmount: 500,
-      walletDeduction: 0,
-      paymentStatus: 'REFUND_REQUIRED',
-      orderStatus: 'CANCELLED',
-      razorpayPaymentId: 'pay_idem_mock_20',
-      items: []
-    });
-
-    const customKey = `idem_key_${orderId}`;
-
-    // Click 1 on Process A
-    const res1 = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-        'idempotency-key': customKey
-      },
-      body: JSON.stringify({ reason: 'Initial refund' })
-    });
-    assert.strictEqual(res1.status, 200);
-
-    // Click 2 (duplicate click/replay) on Process B
-    const res2 = await fetch(`${URL_B}/api/admin/orders/${orderId}/refund`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-        'idempotency-key': customKey
-      },
-      body: JSON.stringify({ reason: 'Replay click' })
-    });
-    assert.strictEqual(res2.status, 200);
-    const data2 = await res2.json();
-    assert.strictEqual(data2.idempotent, true);
-
-    // Assert only 1 Refund record exists
-    const refundCount = await Refund.countDocuments({ idempotencyKey: customKey });
-    assert.strictEqual(refundCount, 1, 'Only one Refund record must exist');
-  });
-
-  // -------------------------------------------------------------------------
-  it('21. Admin refund failure: simulated gateway error marks Refund as FAILED and leaves order unrefunded', async () => {
-    const adminUser = await User.findOne({ role: 'admin' }).lean();
-    const adminToken = createToken(adminUser);
-
-    const orderId = `ord_fail_rfnd_${Date.now()}`;
-    await Order.create({
-      id: orderId,
-      orderNumber: `BB-${orderId}`,
-      userId: 'cust_fail_rfnd',
-      customerName: 'Fail Refund Cust',
-      customerEmail: 'failrfnd@test.com',
+      userId: 'cust_retry_test',
+      customerName: 'Retry Cust',
+      customerEmail: 'retry@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
       subtotal: 500,
       total: 500,
       totalAmount: 500,
       paymentStatus: 'REFUND_REQUIRED',
       orderStatus: 'CANCELLED',
-      razorpayPaymentId: 'pay_fail_mock_21',
+      razorpayPaymentId: 'pay_retry_mock_20',
       items: []
     });
 
-    const res = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
+    // 1. Initial attempt fails at gateway (simulated via force_fail in receipt)
+    const failRes = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
+        'idempotency-key': `force_fail_${orderId}`
       },
-      body: JSON.stringify({ reason: 'Customer refund [simulate_fail]' })
+      body: JSON.stringify({ reason: 'Initial attempt' })
     });
-    assert.strictEqual(res.status, 502);
+    assert.strictEqual(failRes.status, 502);
 
-    // Verify Refund record in MongoDB marked FAILED
-    const failedRefund = await Refund.findOne({ orderId: `BB-${orderId}` }).lean();
-    assert.ok(failedRefund, 'Refund document must be persisted on gateway failure');
-    assert.strictEqual(failedRefund.status, 'FAILED');
+    const failedDoc = await Refund.findOne({ orderId: `BB-${orderId}` }).lean();
+    assert.strictEqual(failedDoc.status, 'FAILED');
+    assert.strictEqual(failedDoc.attempts, 1);
 
-    // Verify Order is NOT marked REFUNDED
-    const finalOrder = await Order.findOne({ id: orderId }).lean();
-    assert.notStrictEqual(finalOrder.paymentStatus, 'REFUNDED');
+    // 2. Concurrent retries on Process A and Process B
+    const retryReq1 = fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ reason: 'Retry attempt A' })
+    });
+    const retryReq2 = fetch(`${URL_B}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ reason: 'Retry attempt B' })
+    });
+
+    const [res1, res2] = await Promise.all([retryReq1, retryReq2]);
+    const statuses = [res1.status, res2.status];
+    assert.ok(statuses.includes(200), 'At least one retry must succeed');
+
+    // Assert: Exactly ONE Refund record exists for this order (NEVER duplicate-key error)
+    const refundDocs = await Refund.find({ orderId: `BB-${orderId}` }).lean();
+    assert.strictEqual(refundDocs.length, 1, 'Only one Refund record must exist per order');
+    assert.strictEqual(refundDocs[0].status, 'PROCESSED');
+    assert.ok(refundDocs[0].attempts >= 2, 'attempts counter incremented on retry');
+
+    const updatedOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(updatedOrder.paymentStatus, 'REFUNDED');
+  });
+
+  // -------------------------------------------------------------------------
+  it('21. Refund confirmation: pending gateway refund keeps order REFUND_PENDING, verified webhook marks REFUNDED, and refund.failed allows retry', async () => {
+    const adminUser = await User.findOne({ role: 'admin' }).lean();
+    const adminToken = createToken(adminUser);
+
+    // Case A: Gateway returns pending
+    const orderIdPending = `ord_pending_rfnd_${Date.now()}`;
+    await Order.create({
+      id: orderIdPending,
+      orderNumber: `BB-${orderIdPending}`,
+      userId: 'cust_pend_test',
+      customerName: 'Pending Cust',
+      customerEmail: 'pend@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 500,
+      total: 500,
+      totalAmount: 500,
+      paymentStatus: 'REFUND_REQUIRED',
+      orderStatus: 'CANCELLED',
+      razorpayPaymentId: 'pay_pend_mock_21',
+      items: []
+    });
+
+    const pendRes = await fetch(`${URL_A}/api/admin/orders/${orderIdPending}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+        'idempotency-key': `force_pending_${orderIdPending}`
+      },
+      body: JSON.stringify({ reason: 'Initiate' })
+    });
+    assert.strictEqual(pendRes.status, 200);
+    const pendData = await pendRes.json();
+    assert.strictEqual(pendData.status, 'PENDING');
+
+    // Order must NOT be marked REFUNDED yet!
+    const midOrder = await Order.findOne({ id: orderIdPending }).lean();
+    assert.strictEqual(midOrder.paymentStatus, 'REFUND_PENDING');
+    assert.strictEqual(midOrder.orderStatus, 'REFUND_PENDING');
+
+    const midRefund = await Refund.findOne({ orderId: `BB-${orderIdPending}` }).lean();
+    assert.strictEqual(midRefund.status, 'PENDING');
+
+    // Webhook refund.processed arrives on Process B
+    const procPayload = JSON.stringify({
+      event: 'refund.processed',
+      payload: {
+        refund: {
+          entity: {
+            id: midRefund.refundId,
+            payment_id: 'pay_pend_mock_21',
+            amount: 50000,
+            currency: 'INR',
+            status: 'processed',
+            receipt: midRefund.idempotencyKey,
+            notes: { orderId: orderIdPending }
+          }
+        }
+      }
+    });
+
+    const whProcRes = await fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(procPayload) },
+      body: procPayload
+    });
+    assert.strictEqual(whProcRes.status, 200);
+
+    // Now order is marked REFUNDED
+    const finalOrder = await Order.findOne({ id: orderIdPending }).lean();
+    assert.strictEqual(finalOrder.paymentStatus, 'REFUNDED');
+    const finalRefund = await Refund.findOne({ orderId: `BB-${orderIdPending}` }).lean();
+    assert.strictEqual(finalRefund.status, 'PROCESSED');
+
+    // Case B: Webhook refund.failed arrives and allows retry
+    const orderIdFail = `ord_wh_fail_${Date.now()}`;
+    await Order.create({
+      id: orderIdFail,
+      orderNumber: `BB-${orderIdFail}`,
+      userId: 'cust_wh_fail',
+      customerName: 'WH Fail Cust',
+      customerEmail: 'whfail@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 500,
+      total: 500,
+      totalAmount: 500,
+      paymentStatus: 'REFUND_PENDING',
+      orderStatus: 'REFUND_PENDING',
+      razorpayPaymentId: 'pay_wh_fail_21',
+      items: []
+    });
+
+    const fakeRefundRec = await Refund.create({
+      id: `rfnd_fake_${Date.now()}`,
+      orderId: `BB-${orderIdFail}`,
+      paymentId: 'pay_wh_fail_21',
+      refundId: `rfnd_wh_fail_${Date.now()}`,
+      amount: 500,
+      currency: 'INR',
+      status: 'PENDING',
+      idempotencyKey: `idem_wh_fail_${orderIdFail}`
+    });
+
+    const failPayload = JSON.stringify({
+      event: 'refund.failed',
+      payload: {
+        refund: {
+          entity: {
+            id: fakeRefundRec.refundId,
+            payment_id: 'pay_wh_fail_21',
+            amount: 50000,
+            currency: 'INR',
+            status: 'failed',
+            receipt: fakeRefundRec.idempotencyKey,
+            error_description: 'Bank network failure',
+            notes: { orderId: orderIdFail }
+          }
+        }
+      }
+    });
+
+    const whFailRes = await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(failPayload) },
+      body: failPayload
+    });
+    assert.strictEqual(whFailRes.status, 200);
+
+    // Order must transition back to REFUND_REQUIRED and Refund marked FAILED
+    const afterFailOrder = await Order.findOne({ id: orderIdFail }).lean();
+    assert.strictEqual(afterFailOrder.paymentStatus, 'REFUND_REQUIRED');
+    const afterFailRefund = await Refund.findOne({ orderId: `BB-${orderIdFail}` }).lean();
+    assert.strictEqual(afterFailRefund.status, 'FAILED');
   });
 
   // -------------------------------------------------------------------------
@@ -1922,66 +2023,82 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
   });
 
   // -------------------------------------------------------------------------
-  it('26. PIN security: 3-attempt limit enforced atomically in MongoDB across processes, locked order rejects correct PIN with 429', async () => {
+  it('26. PIN security: 20 simultaneous guesses across two processes with correct PIN among them (tested 20 times)', { timeout: 60000 }, async () => {
     const rider = await User.findOne({ role: 'rider', approvalStatus: 'approved' }).lean();
     const riderToken = createToken(rider);
+    const validPin = '5432';
 
-    const orderId = `ord_pin_sec_${Date.now()}`;
-    await Order.create({
-      id: orderId,
-      orderNumber: `BB-${orderId}`,
-      userId: 'cust_pin_sec',
-      customerName: 'PIN Sec Cust',
-      customerEmail: 'pinsec@test.com',
-      deliveryAddress: '123 Test St, Bengaluru',
-      subtotal: 300,
-      total: 300,
-      totalAmount: 300,
-      paymentMethod: 'Razorpay Online (Prepaid)',
-      paymentStatus: 'PAID',
-      orderStatus: 'OUT_FOR_DELIVERY',
-      lifecycleStatus: 'OUT_FOR_DELIVERY',
-      riderId: rider.id,
-      deliveryPin: '7777',
-      items: []
-    });
+    for (let iter = 0; iter < 20; iter++) {
+      const orderId = `ord_pin_race_${iter}_${Date.now()}`;
+      await Order.create({
+        id: orderId,
+        orderNumber: `BB-${orderId}`,
+        userId: 'cust_pin_race',
+        customerName: 'PIN Race Cust',
+        customerEmail: 'pinrace@test.com',
+        deliveryAddress: '123 Test St, Bengaluru',
+        subtotal: 300,
+        total: 300,
+        totalAmount: 300,
+        paymentMethod: 'Razorpay Online (Prepaid)',
+        paymentStatus: 'PAID',
+        orderStatus: 'OUT_FOR_DELIVERY',
+        lifecycleStatus: 'OUT_FOR_DELIVERY',
+        riderId: rider.id,
+        deliveryPin: validPin,
+        items: []
+      });
 
-    // Send 3 wrong PIN attempts across Process A and Process B
-    const p1 = fetch(`${URL_A}/api/orders/${orderId}/handover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
-      body: JSON.stringify({ pin: '0001' })
-    });
-    const p2 = fetch(`${URL_B}/api/orders/${orderId}/handover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
-      body: JSON.stringify({ pin: '0002' })
-    });
-    const p3 = fetch(`${URL_A}/api/orders/${orderId}/handover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
-      body: JSON.stringify({ pin: '0003' })
-    });
+      // Prepare 20 guesses: 19 wrong, 1 correct, distributed across Process A and Process B
+      const guesses = [];
+      const correctIdx = Math.floor(Math.random() * 20);
 
-    const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
-    const statuses = [r1.status, r2.status, r3.status];
-    // At least one or more must report 400 or 429
-    assert.ok(statuses.includes(400) || statuses.includes(429));
+      for (let i = 0; i < 20; i++) {
+        const pinToTry = (i === correctIdx) ? validPin : String(1000 + i).padStart(4, '0');
+        const url = (i % 2 === 0) ? URL_A : URL_B;
+        guesses.push({ pin: pinToTry, isCorrect: (i === correctIdx), url });
+      }
 
-    // Verify order in MongoDB is now locked
-    const lockedOrder = await Order.findOne({ id: orderId }).lean();
-    assert.ok(lockedOrder.pinAttempts >= 3, 'pinAttempts must be >= 3');
-    assert.ok(lockedOrder.pinLockedUntil, 'pinLockedUntil must be set');
+      // Fire all 20 simultaneous guesses
+      const responses = await Promise.all(
+        guesses.map(g =>
+          fetch(`${g.url}/api/orders/${orderId}/handover`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+            body: JSON.stringify({ pin: g.pin })
+          }).then(async r => ({ status: r.status, data: await r.json(), isCorrect: g.isCorrect }))
+        )
+      );
 
-    // Attempting handover now with the CORRECT PIN ('7777') on Process B MUST be rejected with 429
-    const correctRes = await fetch(`${URL_B}/api/orders/${orderId}/handover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
-      body: JSON.stringify({ pin: '7777' })
-    });
-    assert.strictEqual(correctRes.status, 429, 'Locked order must reject even the correct PIN with 429');
-    const correctData = await correctRes.json();
-    assert.strictEqual(correctData.locked, true);
+      const successCount = responses.filter(r => r.status === 200).length;
+      assert.ok(successCount <= 1, 'At most 1 request can succeed in delivering');
+
+      const updatedOrder = await Order.findOne({ id: orderId }).lean();
+
+      if (successCount === 1) {
+        // Order was delivered! The winning request MUST have had the correct PIN
+        const winner = responses.find(r => r.status === 200);
+        assert.strictEqual(winner.isCorrect, true, 'Only the correct PIN can deliver');
+        assert.strictEqual(updatedOrder.orderStatus, 'DELIVERED');
+      } else {
+        // Correct PIN was NOT in the first 3 accepted attempts!
+        // The order MUST NOT be delivered!
+        assert.notStrictEqual(updatedOrder.orderStatus, 'DELIVERED');
+        assert.ok(updatedOrder.pinAttempts >= 3, 'pinAttempts must have reached at least 3');
+        assert.ok(updatedOrder.pinLockedUntil, 'pinLockedUntil must be set');
+        assert.ok(updatedOrder.pinLockedUntil instanceof Date, 'pinLockedUntil must be a Date object');
+
+        // Subsequent attempt even with the correct PIN MUST be rejected with 429
+        const lateCorrectRes = await fetch(`${URL_A}/api/orders/${orderId}/handover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+          body: JSON.stringify({ pin: validPin })
+        });
+        assert.strictEqual(lateCorrectRes.status, 429, 'Locked order must reject even the correct PIN with 429');
+        const lateData = await lateCorrectRes.json();
+        assert.strictEqual(lateData.locked, true);
+      }
+    }
   });
 
   // -------------------------------------------------------------------------

@@ -12,6 +12,7 @@ const refundSchema = new mongoose.Schema({
   reason: { type: String, default: 'Customer or operations refund' },
   gatewayResponse: { type: mongoose.Schema.Types.Mixed, default: {} },
   error: { type: String, default: null },
+  attempts: { type: Number, default: 1 },
   processedAt: { type: String, default: null }
 }, {
   timestamps: true,

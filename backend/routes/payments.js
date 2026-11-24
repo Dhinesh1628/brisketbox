@@ -6,6 +6,7 @@ import { db } from '../db.js';
 import { User, normalizePhone } from '../models/User.js';
 import { Order } from '../models/Order.js';
 import { Cooler } from '../models/Cooler.js';
+import { Refund } from '../models/Refund.js';
 import { authenticate, authenticateOptional, requireAdmin, getAuthTokenFromReq, verifyToken } from '../services/auth.js';
 import { calculateOrderPricing } from '../services/pricingService.js';
 import { recordCouponUsage } from '../services/couponService.js';
@@ -680,33 +681,117 @@ router.post('/webhook', async (req, res) => {
 
       return res.status(200).json({ status: 'ok', received: true });
     } else if (event === 'refund.processed') {
-      const refund = payload.refund.entity;
-      const paymentId = refund.payment_id;
+      const refundEntity = payload?.refund?.entity || {};
+      const paymentId = refundEntity.payment_id;
+      const refundId = refundEntity.id;
+      const receipt = refundEntity.receipt;
+      const refundAmount = refundEntity.amount ? refundEntity.amount / 100 : 0;
+      const noteOrderId = refundEntity.notes?.orderId || refundEntity.notes?.orderNumber;
 
-      let order = null;
       if (isMongo) {
-        order = await Order.findOne({ razorpayPaymentId: paymentId }).lean();
-        if (order && order.refundStatus !== 'REFUNDED') {
-          await Order.updateOne({ id: order.id }, {
+        // 1. Update persisted Refund record to PROCESSED
+        await Refund.updateOne(
+          {
+            $or: [
+              { refundId },
+              ...(receipt ? [{ idempotencyKey: receipt }] : []),
+              ...(paymentId ? [{ paymentId }] : [])
+            ]
+          },
+          {
             $set: {
-              refundStatus: 'REFUNDED',
-              refundId: refund.id,
-              refundAmount: refund.amount / 100,
-              refundProcessedAt: new Date().toISOString()
+              status: 'PROCESSED',
+              refundId,
+              gatewayResponse: refundEntity,
+              processedAt: new Date().toISOString(),
+              error: null
             }
-          });
+          }
+        );
+
+        // 2. Mark order as REFUNDED
+        const query = [];
+        if (paymentId) query.push({ razorpayPaymentId: paymentId });
+        if (refundId) query.push({ refundId });
+        if (noteOrderId) query.push({ id: noteOrderId }, { orderNumber: noteOrderId });
+
+        if (query.length > 0) {
+          const order = await Order.findOne({ $or: query });
+          if (order && order.paymentStatus !== 'REFUNDED') {
+            order.paymentStatus = 'REFUNDED';
+            order.orderStatus = 'REFUNDED';
+            order.lifecycleStatus = 'REFUNDED';
+            order.refundId = refundId || order.refundId;
+            order.refundAmount = refundAmount || order.totalAmount || order.total;
+            order.status = 'Refunded via Razorpay';
+            order.refundProcessedAt = new Date().toISOString();
+            await order.save();
+          }
         }
       } else {
-        order = (db.get('orders') || []).find(o => o.razorpayPaymentId === paymentId);
-        if (order && order.refundStatus !== 'REFUNDED') {
+        const order = (db.get('orders') || []).find(o => 
+          o.razorpayPaymentId === paymentId || (noteOrderId && (o.id === noteOrderId || o.orderNumber === noteOrderId))
+        );
+        if (order && order.paymentStatus !== 'REFUNDED') {
           db.update('orders', order.id, {
-            refundStatus: 'REFUNDED',
-            refundId: refund.id,
-            refundAmount: refund.amount / 100,
+            paymentStatus: 'REFUNDED',
+            orderStatus: 'REFUNDED',
+            lifecycleStatus: 'REFUNDED',
+            refundId: refundId || order.refundId,
+            refundAmount: refundAmount || order.totalAmount || order.total,
+            status: 'Refunded via Razorpay',
             refundProcessedAt: new Date().toISOString()
           });
         }
       }
+      return res.status(200).json({ status: 'ok', received: true });
+    } else if (event === 'refund.failed') {
+      const refundEntity = payload?.refund?.entity || {};
+      const paymentId = refundEntity.payment_id;
+      const refundId = refundEntity.id;
+      const receipt = refundEntity.receipt;
+      const errorMsg = refundEntity.error_description || refundEntity.error?.description || 'Gateway refund failed';
+      const noteOrderId = refundEntity.notes?.orderId || refundEntity.notes?.orderNumber;
+
+      if (isMongo) {
+        // Update Refund record to FAILED to allow retry
+        await Refund.updateOne(
+          {
+            $or: [
+              { refundId },
+              ...(receipt ? [{ idempotencyKey: receipt }] : []),
+              ...(paymentId ? [{ paymentId }] : [])
+            ]
+          },
+          {
+            $set: {
+              status: 'FAILED',
+              error: errorMsg,
+              gatewayResponse: refundEntity
+            }
+          }
+        );
+
+        // Keep order in REFUND_REQUIRED so operations admin can retry
+        const query = [];
+        if (paymentId) query.push({ razorpayPaymentId: paymentId });
+        if (refundId) query.push({ refundId });
+        if (noteOrderId) query.push({ id: noteOrderId }, { orderNumber: noteOrderId });
+
+        if (query.length > 0) {
+          await Order.updateOne(
+            { $or: query },
+            {
+              $set: {
+                paymentStatus: 'REFUND_REQUIRED',
+                orderStatus: 'REFUND_REQUIRED',
+                status: 'Refund Failed at Gateway (Retry Required)'
+              }
+            }
+          );
+        }
+      }
+      return res.status(200).json({ status: 'ok', received: true });
     }
 
     res.status(200).json({ status: 'ok' });

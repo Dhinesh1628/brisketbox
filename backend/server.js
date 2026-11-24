@@ -54,7 +54,7 @@ import { Cooler } from './models/Cooler.js';
 import { Product } from './models/Product.js';
 import { Refund } from './models/Refund.js';
 import { CashDeposit } from './models/CashDeposit.js';
-import { getRefundQueue, processOrderRefund } from './services/refundService.js';
+import { getRefundQueue, processOrderRefund, checkRefundStatus } from './services/refundService.js';
 import { debitWallet, creditWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
@@ -1298,113 +1298,7 @@ const handleOrderHandover = async (req, res) => {
     });
   }
 
-  const enteredPin = String(pin || deliveryPin || '').trim();
-  const validPin = String(order.deliveryPin || '').trim();
-  const nowTime = Date.now();
-  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
-
-  // 1. Check persistent DB lockout (using fresh query in MongoDB)
-  let currentOrderDoc = order;
-  if (isMongo) {
-    currentOrderDoc = await Order.findOne({ $or: [{ id: order.id }, { orderNumber: order.id }] }).lean() || order;
-  }
-
-  if (currentOrderDoc.pinLockedUntil && new Date(currentOrderDoc.pinLockedUntil).getTime() > nowTime) {
-    const remainingSec = Math.ceil((new Date(currentOrderDoc.pinLockedUntil).getTime() - nowTime) / 1000);
-    return res.status(429).json({
-      error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
-      locked: true,
-      remainingSec
-    });
-  }
-
-  // 2. If a PIN is configured, verify it with atomic attempt counting
-  if (validPin && enteredPin !== validPin) {
-    let attemptsCount = (currentOrderDoc.pinAttempts || 0) + 1;
-    let isLocked = false;
-    let lockedUntil = null;
-
-    if (isMongo) {
-      // Atomic increment in MongoDB across concurrent processes
-      const updated = await Order.findOneAndUpdate(
-        {
-          _id: currentOrderDoc._id,
-          $or: [
-            { pinLockedUntil: null },
-            { pinLockedUntil: { $lte: new Date(nowTime).toISOString() } }
-          ]
-        },
-        { $inc: { pinAttempts: 1 } },
-        { new: true }
-      );
-
-      if (!updated) {
-        return res.status(429).json({
-          error: 'Handover locked due to failed PIN attempts. Please wait before retrying.',
-          locked: true,
-          remainingSec: 300
-        });
-      }
-
-      attemptsCount = updated.pinAttempts;
-      if (attemptsCount >= 3) {
-        isLocked = true;
-        lockedUntil = new Date(nowTime + 300000).toISOString();
-        await Order.updateOne({ _id: currentOrderDoc._id }, { $set: { pinLockedUntil: lockedUntil } });
-      }
-    } else {
-      isLocked = attemptsCount >= 3;
-      lockedUntil = isLocked ? new Date(nowTime + 300000).toISOString() : null;
-      await updateOrder(order.id, {
-        pinAttempts: attemptsCount,
-        pinLockedUntil: lockedUntil
-      });
-    }
-
-    if (isLocked || attemptsCount >= 3) {
-      return res.status(429).json({
-        error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
-        locked: true,
-        remainingSec: 300
-      });
-    }
-
-    return res.status(400).json({
-      error: `Invalid 4-digit PIN. ${Math.max(0, 3 - attemptsCount)} attempt(s) remaining before security lockout.`,
-      remainingAttempts: Math.max(0, 3 - attemptsCount)
-    });
-  }
-
-  // 3. Entered PIN matches validPin! Reject even the correct PIN if the order is locked!
-  if (isMongo) {
-    const freshCheck = await Order.findOne({ _id: currentOrderDoc._id }).lean();
-    if (freshCheck?.pinLockedUntil && new Date(freshCheck.pinLockedUntil).getTime() > nowTime) {
-      const remainingSec = Math.ceil((new Date(freshCheck.pinLockedUntil).getTime() - nowTime) / 1000);
-      return res.status(429).json({
-        error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
-        locked: true,
-        remainingSec
-      });
-    }
-    await Order.updateOne({ _id: currentOrderDoc._id }, { $set: { pinAttempts: 0, pinLockedUntil: null } });
-  } else {
-    await updateOrder(order.id, {
-      pinAttempts: 0,
-      pinLockedUntil: null
-    });
-  }
-
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  const timestamps = { ...(order.lifecycleTimestamps || {}) };
-  timestamps.deliveredAt = timestamps.deliveredAt || nowIso;
-  if (coolerReturned) {
-    timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
-  }
-
-  // COD Cash Validation:
+  // COD Cash Validation (validate payload BEFORE consuming PIN attempts):
   // - A rider cannot choose a lower, partial, excessive, or negative cash amount.
   // - Delivery of a COD order must record exactly the server-calculated amount due.
   // - Never add cash for a prepaid order!
@@ -1432,6 +1326,125 @@ const handleOrderHandover = async (req, res) => {
       });
     }
     collectedCashNum = 0;
+  }
+
+  const enteredPin = String(pin || deliveryPin || '').trim();
+  const validPin = String(order.deliveryPin || '').trim();
+  const nowDate = new Date();
+  const nowMs = nowDate.getTime();
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+  if (validPin) {
+    if (isMongo) {
+      // 1. If previous lock has expired, reset pinAttempts and pinLockedUntil atomically
+      await Order.updateOne(
+        {
+          _id: order._id,
+          pinLockedUntil: { $ne: null, $lte: nowDate }
+        },
+        {
+          $set: { pinAttempts: 0, pinLockedUntil: null }
+        }
+      );
+
+      // 2. Reserve an attempt atomically BEFORE comparing the PIN
+      // Condition: pinAttempts < 3 and not locked (pinLockedUntil is null or <= nowDate)
+      // Only requests that win one of the 3 attempt slots may compare the PIN!
+      const reservation = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          pinAttempts: { $lt: 3 },
+          $or: [
+            { pinLockedUntil: null },
+            { pinLockedUntil: { $lte: nowDate } }
+          ]
+        },
+        {
+          $inc: { pinAttempts: 1 }
+        },
+        {
+          returnDocument: 'after'
+        }
+      );
+
+      // If no slot was won, order is locked or max attempts already reached!
+      if (!reservation) {
+        // Ensure lock timestamp is recorded if 3 attempts were consumed
+        const currentDoc = await Order.findById(order._id).lean();
+        if (currentDoc && (currentDoc.pinAttempts || 0) >= 3 && !currentDoc.pinLockedUntil) {
+          const lockUntilDate = new Date(nowMs + 300000);
+          await Order.updateOne({ _id: order._id }, { $set: { pinLockedUntil: lockUntilDate } });
+        }
+        const lockDate = currentDoc?.pinLockedUntil ? new Date(currentDoc.pinLockedUntil) : new Date(nowMs + 300000);
+        const remainingSec = Math.max(1, Math.ceil((lockDate.getTime() - nowMs) / 1000));
+        return res.status(429).json({
+          error: `Handover locked due to 3 failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+          locked: true,
+          remainingSec
+        });
+      }
+
+      // Slot won! Only NOW compare the PIN
+      const attemptNum = reservation.pinAttempts; // 1, 2, or 3
+      if (enteredPin !== validPin) {
+        if (attemptNum >= 3) {
+          const lockUntilDate = new Date(nowMs + 300000);
+          await Order.updateOne({ _id: order._id }, { $set: { pinLockedUntil: lockUntilDate } });
+          return res.status(429).json({
+            error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
+            locked: true,
+            remainingSec: 300
+          });
+        }
+        return res.status(400).json({
+          error: `Invalid 4-digit PIN. ${3 - attemptNum} attempt(s) remaining before security lockout.`,
+          remainingAttempts: 3 - attemptNum
+        });
+      }
+
+      // Correct PIN matched and won a valid slot! Handover proceeds.
+    } else {
+      // In-memory fallback
+      const currentDoc = await findOrderById(order.id);
+      const isLocked = currentDoc.pinLockedUntil && new Date(currentDoc.pinLockedUntil).getTime() > nowMs;
+      if (isLocked || (currentDoc.pinAttempts || 0) >= 3) {
+        const lockUntilDate = currentDoc.pinLockedUntil ? new Date(currentDoc.pinLockedUntil) : new Date(nowMs + 300000);
+        const remainingSec = Math.max(1, Math.ceil((lockUntilDate.getTime() - nowMs) / 1000));
+        return res.status(429).json({
+          error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+          locked: true,
+          remainingSec
+        });
+      }
+
+      const attemptNum = (currentDoc.pinAttempts || 0) + 1;
+      await updateOrder(order.id, { pinAttempts: attemptNum });
+
+      if (enteredPin !== validPin) {
+        if (attemptNum >= 3) {
+          await updateOrder(order.id, { pinLockedUntil: new Date(nowMs + 300000) });
+          return res.status(429).json({
+            error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
+            locked: true,
+            remainingSec: 300
+          });
+        }
+        return res.status(400).json({
+          error: `Invalid 4-digit PIN. ${3 - attemptNum} attempt(s) remaining before security lockout.`,
+          remainingAttempts: 3 - attemptNum
+        });
+      }
+    }
+  }
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const timestamps = { ...(order.lifecycleTimestamps || {}) };
+  timestamps.deliveredAt = timestamps.deliveredAt || nowIso;
+  if (coolerReturned) {
+    timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
   const depositPaid = Number(order.coolerDeposit || 0);
@@ -1690,6 +1703,24 @@ app.post('/api/admin/orders/:id/refund', authenticate, requireAdmin, async (req,
       reason,
       idempotencyKey
     });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
+});
+
+// Admin Check Refund Status
+app.post('/api/admin/orders/:id/refund/status', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await checkRefundStatus({ orderId: req.params.id });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
+});
+app.get('/api/admin/orders/:id/refund/status', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const result = await checkRefundStatus({ orderId: req.params.id });
     res.json(result);
   } catch (err) {
     res.status(err.statusCode || 400).json({ error: err.message });
