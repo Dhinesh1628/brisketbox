@@ -27,6 +27,8 @@ let Cooler;
 let WalletLedger;
 let CouponUsage;
 let PaymentEvent;
+let Refund;
+let CashDeposit;
 
 function createToken(user) {
   return jwt.sign(
@@ -77,6 +79,8 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
     WalletLedger = models.WalletLedger;
     CouponUsage = models.CouponUsage;
     PaymentEvent = models.PaymentEvent;
+    Refund = (await import('../models/Refund.js')).Refund;
+    CashDeposit = (await import('../models/CashDeposit.js')).CashDeposit;
 
     // Seed test products and cooler
     await Product.create([
@@ -1402,5 +1406,634 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
     const unassignedOrder = adminOrders.find(o => o.id === orderId);
     assert.ok(unassignedOrder, 'Unassigned order must appear in admin dispatch queue');
     assert.strictEqual(unassignedOrder.riderId, null);
+  });
+
+  // -------------------------------------------------------------------------
+  it('18. Admin refund queue returns REFUND_REQUIRED and REFUND_PENDING orders across Process A and B', async () => {
+    const adminUser = await User.create({
+      id: `admin_rfnd_q_${Date.now()}`,
+      name: 'Admin Refund Queue',
+      email: `admin_rq_${Date.now()}@test.com`,
+      role: 'admin',
+      approvalStatus: 'approved'
+    });
+    const adminToken = createToken(adminUser);
+
+    const orderReqId = `ord_q_req_${Date.now()}`;
+    const orderPendId = `ord_q_pend_${Date.now()}`;
+
+    await Order.create([
+      {
+        id: orderReqId,
+        orderNumber: `BB-${orderReqId}`,
+        userId: 'cust_rfnd_1',
+        customerName: 'Refund Cust 1',
+        customerEmail: 'rfnd1@test.com',
+        customerPhone: '+919871112233',
+        subtotal: 500,
+        total: 500,
+        totalAmount: 500,
+        paymentStatus: 'REFUND_REQUIRED',
+        orderStatus: 'CANCELLED',
+        items: []
+      },
+      {
+        id: orderPendId,
+        orderNumber: `BB-${orderPendId}`,
+        userId: 'cust_rfnd_2',
+        customerName: 'Refund Cust 2',
+        customerEmail: 'rfnd2@test.com',
+        customerPhone: '+919871112234',
+        subtotal: 600,
+        total: 600,
+        totalAmount: 600,
+        paymentStatus: 'REFUND_PENDING',
+        orderStatus: 'REFUND_PENDING',
+        items: []
+      }
+    ]);
+
+    // Query on Process A
+    const resA = await fetch(`${URL_A}/api/admin/refunds/queue`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(resA.status, 200);
+    const queueA = await resA.json();
+    assert.ok(queueA.some(o => o.id === orderReqId));
+    assert.ok(queueA.some(o => o.id === orderPendId));
+
+    // Query on Process B
+    const resB = await fetch(`${URL_B}/api/admin/refunds/queue`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(resB.status, 200);
+    const queueB = await resB.json();
+    assert.ok(queueB.some(o => o.id === orderReqId));
+    assert.ok(queueB.some(o => o.id === orderPendId));
+  });
+
+  // -------------------------------------------------------------------------
+  it('19. Admin-only refund action executes gateway refund, updates Refund record to PROCESSED, and marks order REFUNDED', async () => {
+    const adminUser = await User.create({
+      id: `admin_rfnd_exec_${Date.now()}`,
+      name: 'Admin Refund Exec',
+      email: `admin_rexec_${Date.now()}@test.com`,
+      role: 'admin',
+      approvalStatus: 'approved'
+    });
+    const adminToken = createToken(adminUser);
+
+    const custUser = await User.create({
+      id: `cust_split_rfnd_${Date.now()}`,
+      name: 'Split Refund Customer',
+      email: `split_rfnd_${Date.now()}@test.com`,
+      role: 'customer',
+      approvalStatus: 'approved',
+      walletBalance: 0
+    });
+
+    const orderId = `ord_split_rfnd_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: custUser.id,
+      customerName: custUser.name,
+      customerEmail: custUser.email,
+      customerPhone: '+919871112235',
+      subtotal: 649,
+      total: 649,
+      totalAmount: 649,
+      walletDeduction: 149,
+      paymentStatus: 'REFUND_REQUIRED',
+      orderStatus: 'CANCELLED',
+      razorpayPaymentId: 'pay_split_mock_19',
+      items: []
+    });
+
+    // Execute refund on Process A
+    const refundRes = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        reason: 'Order cancelled by customer. Split refund.'
+      })
+    });
+    assert.strictEqual(refundRes.status, 200);
+    const refundData = await refundRes.json();
+    assert.strictEqual(refundData.success, true);
+
+    // Verify MongoDB state:
+    // 1. Order paymentStatus is REFUNDED
+    const updatedOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(updatedOrder.paymentStatus, 'REFUNDED');
+    assert.strictEqual(updatedOrder.walletRefunded, true);
+
+    // 2. Customer wallet was credited ₹149 separately
+    const updatedCust = await User.findOne({ id: custUser.id }).lean();
+    assert.strictEqual(updatedCust.walletBalance, 149);
+
+    // 3. Persisted Refund record tracks PROCESSED with ₹500 (exact unrefunded gateway amount)
+    const refundRec = await Refund.findOne({ orderId: updatedOrder.orderNumber }).lean();
+    assert.ok(refundRec, 'Refund record must be persisted');
+    assert.strictEqual(refundRec.status, 'PROCESSED');
+    assert.strictEqual(refundRec.amount, 500); // 649 - 149 = 500
+  });
+
+  // -------------------------------------------------------------------------
+  it('20. Admin refund idempotency: duplicate clicks or replay return existing refund without refunding twice', async () => {
+    const adminUser = await User.findOne({ role: 'admin' }).lean();
+    const adminToken = createToken(adminUser);
+
+    const custUser = await User.create({
+      id: `cust_idem_rfnd_${Date.now()}`,
+      name: 'Idempotent Refund Customer',
+      email: `idem_rfnd_${Date.now()}@test.com`,
+      walletBalance: 0
+    });
+
+    const orderId = `ord_idem_rfnd_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: custUser.id,
+      customerName: custUser.name,
+      customerEmail: custUser.email,
+      subtotal: 500,
+      total: 500,
+      totalAmount: 500,
+      walletDeduction: 0,
+      paymentStatus: 'REFUND_REQUIRED',
+      orderStatus: 'CANCELLED',
+      razorpayPaymentId: 'pay_idem_mock_20',
+      items: []
+    });
+
+    const customKey = `idem_key_${orderId}`;
+
+    // Click 1 on Process A
+    const res1 = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+        'idempotency-key': customKey
+      },
+      body: JSON.stringify({ reason: 'Initial refund' })
+    });
+    assert.strictEqual(res1.status, 200);
+
+    // Click 2 (duplicate click/replay) on Process B
+    const res2 = await fetch(`${URL_B}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+        'idempotency-key': customKey
+      },
+      body: JSON.stringify({ reason: 'Replay click' })
+    });
+    assert.strictEqual(res2.status, 200);
+    const data2 = await res2.json();
+    assert.strictEqual(data2.idempotent, true);
+
+    // Assert only 1 Refund record exists
+    const refundCount = await Refund.countDocuments({ idempotencyKey: customKey });
+    assert.strictEqual(refundCount, 1, 'Only one Refund record must exist');
+  });
+
+  // -------------------------------------------------------------------------
+  it('21. Admin refund failure: simulated gateway error marks Refund as FAILED and leaves order unrefunded', async () => {
+    const adminUser = await User.findOne({ role: 'admin' }).lean();
+    const adminToken = createToken(adminUser);
+
+    const orderId = `ord_fail_rfnd_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: 'cust_fail_rfnd',
+      customerName: 'Fail Refund Cust',
+      customerEmail: 'failrfnd@test.com',
+      subtotal: 500,
+      total: 500,
+      totalAmount: 500,
+      paymentStatus: 'REFUND_REQUIRED',
+      orderStatus: 'CANCELLED',
+      razorpayPaymentId: 'pay_fail_mock_21',
+      items: []
+    });
+
+    const res = await fetch(`${URL_A}/api/admin/orders/${orderId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ reason: 'Customer refund [simulate_fail]' })
+    });
+    assert.strictEqual(res.status, 502);
+
+    // Verify Refund record in MongoDB marked FAILED
+    const failedRefund = await Refund.findOne({ orderId: `BB-${orderId}` }).lean();
+    assert.ok(failedRefund, 'Refund document must be persisted on gateway failure');
+    assert.strictEqual(failedRefund.status, 'FAILED');
+
+    // Verify Order is NOT marked REFUNDED
+    const finalOrder = await Order.findOne({ id: orderId }).lean();
+    assert.notStrictEqual(finalOrder.paymentStatus, 'REFUNDED');
+  });
+
+  // -------------------------------------------------------------------------
+  it('22. Paid retry with insufficient wallet balance records payment event, sets REFUND_REQUIRED, and does not deduct stock', async () => {
+    const cust = await User.create({
+      id: `cust_insuff_${Date.now()}`,
+      name: 'Insufficient Wallet User',
+      email: `insuff_${Date.now()}@test.com`,
+      walletBalance: 20 // Has ₹20, but order reserved ₹100
+    });
+
+    const initialProduct = await Product.findOne({ id: 'prod_seer_steak' }).lean();
+    const initialStock = initialProduct.stock;
+
+    const orderId = `ord_retry_insuff_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: cust.id,
+      customerName: cust.name,
+      customerEmail: cust.email,
+      subtotal: 649,
+      total: 549,
+      totalAmount: 549,
+      walletDeduction: 100,
+      walletRefunded: true, // Wallet was released after prior payment.failed
+      paymentStatus: 'PENDING',
+      orderStatus: 'PENDING_PAYMENT',
+      razorpayOrderId: `rzp_ord_${orderId}`,
+      stockDeducted: false,
+      items: [{
+        productId: 'prod_seer_steak',
+        name: 'Surmai Seer Fish Steaks',
+        price: 649,
+        quantity: 1
+      }]
+    });
+
+    // Captured webhook arrives on retry
+    const paymentId = `pay_retry_insuff_${Date.now()}`;
+    const capPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: `rzp_ord_${orderId}`,
+            amount: 54900,
+            currency: 'INR',
+            notes: { orderId }
+          }
+        }
+      }
+    });
+
+    const res = await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-razorpay-signature': makeWebhookSignature(capPayload)
+      },
+      body: capPayload
+    });
+    // Webhook must return 200
+    assert.strictEqual(res.status, 200);
+
+    // Verify MongoDB state:
+    const updatedOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(updatedOrder.paymentStatus, 'REFUND_REQUIRED');
+    assert.strictEqual(updatedOrder.orderStatus, 'REFUND_REQUIRED');
+    assert.strictEqual(updatedOrder.stockDeducted, false);
+
+    // Stock must NOT be deducted
+    const freshProd = await Product.findOne({ id: 'prod_seer_steak' }).lean();
+    assert.strictEqual(freshProd.stock, initialStock);
+
+    // PaymentEvent must be recorded
+    const event = await PaymentEvent.findOne({ paymentId }).lean();
+    assert.ok(event, 'PaymentEvent must be recorded');
+  });
+
+  // -------------------------------------------------------------------------
+  it('23. COD Cash enforcement: rejects lower/excessive cash, records exact server amount, rejects cash for prepaid order', async () => {
+    const rider = await User.create({
+      id: `rider_cod_${Date.now()}`,
+      name: 'COD Rider',
+      email: `rider_cod_${Date.now()}@test.com`,
+      role: 'rider',
+      approvalStatus: 'approved',
+      cashInHand: 0
+    });
+    const riderToken = createToken(rider);
+
+    // 1. COD Order with server amount 450
+    const codOrderId = `ord_cod_${Date.now()}`;
+    await Order.create({
+      id: codOrderId,
+      orderNumber: `BB-${codOrderId}`,
+      userId: 'cust_cod_test',
+      customerName: 'COD Cust',
+      customerEmail: 'cod@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 450,
+      total: 450,
+      totalAmount: 450,
+      paymentMethod: 'Cash on Delivery',
+      paymentStatus: 'PENDING',
+      orderStatus: 'OUT_FOR_DELIVERY',
+      lifecycleStatus: 'OUT_FOR_DELIVERY',
+      riderId: rider.id,
+      deliveryPin: '1234',
+      items: []
+    });
+
+    // Lower cash (300 instead of 450) -> Rejected 400
+    const lowerRes = await fetch(`${URL_A}/api/orders/${codOrderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '1234', cashAmount: 300 })
+    });
+    assert.strictEqual(lowerRes.status, 400);
+
+    // Negative cash -> Rejected 400
+    const negRes = await fetch(`${URL_A}/api/orders/${codOrderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '1234', cashAmount: -100 })
+    });
+    assert.strictEqual(negRes.status, 400);
+
+    // Excessive cash (500 instead of 450) -> Rejected 400
+    const excessRes = await fetch(`${URL_A}/api/orders/${codOrderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '1234', cashAmount: 500 })
+    });
+    assert.strictEqual(excessRes.status, 400);
+
+    // Exact cash (450) -> Accepted 200
+    const exactRes = await fetch(`${URL_A}/api/orders/${codOrderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '1234', cashAmount: 450 })
+    });
+    assert.strictEqual(exactRes.status, 200);
+
+    // Verify rider cashInHand incremented by exactly 450
+    const refreshedRider = await User.findOne({ id: rider.id }).lean();
+    assert.strictEqual(refreshedRider.cashInHand, 450);
+
+    // 2. Prepaid order: cashAmount > 0 must be rejected
+    const prepaidOrderId = `ord_prepaid_${Date.now()}`;
+    await Order.create({
+      id: prepaidOrderId,
+      orderNumber: `BB-${prepaidOrderId}`,
+      userId: 'cust_prepaid_test',
+      customerName: 'Prepaid Cust',
+      customerEmail: 'prepaid@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 500,
+      total: 500,
+      totalAmount: 500,
+      paymentMethod: 'Razorpay Online (Prepaid)',
+      paymentStatus: 'PAID',
+      orderStatus: 'OUT_FOR_DELIVERY',
+      lifecycleStatus: 'OUT_FOR_DELIVERY',
+      riderId: rider.id,
+      deliveryPin: '9999',
+      items: []
+    });
+
+    const prepCashRes = await fetch(`${URL_B}/api/orders/${prepaidOrderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '9999', cashAmount: 500 })
+    });
+    assert.strictEqual(prepCashRes.status, 400);
+
+    // Rider cashInHand remains 450
+    const finalRider = await User.findOne({ id: rider.id }).lean();
+    assert.strictEqual(finalRider.cashInHand, 450);
+  });
+
+  // -------------------------------------------------------------------------
+  it('24. Cash deposits: rider initiates PENDING deposit without balance drop, admin confirms with atomic decrement, double confirm rejected', async () => {
+    const rider = await User.create({
+      id: `rider_dep_${Date.now()}`,
+      name: 'Deposit Rider',
+      email: `dep_rider_${Date.now()}@test.com`,
+      role: 'rider',
+      approvalStatus: 'approved',
+      cashInHand: 500
+    });
+    const riderToken = createToken(rider);
+
+    const admin = await User.findOne({ role: 'admin' }).lean();
+    const adminToken = createToken(admin);
+
+    // Rider requests deposit of 300 on Process A
+    const depRes = await fetch(`${URL_A}/api/rider/cash-deposit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ amount: 300 })
+    });
+    assert.strictEqual(depRes.status, 200);
+    const depData = await depRes.json();
+    const depositId = depData.deposit.id;
+
+    // Verify status is PENDING and rider cashInHand is STILL 500
+    const midRider = await User.findOne({ id: rider.id }).lean();
+    assert.strictEqual(midRider.cashInHand, 500, 'cashInHand must NOT change until admin confirms');
+
+    // Admin confirms deposit on Process B
+    const confRes = await fetch(`${URL_B}/api/admin/cash-deposits/${depositId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(confRes.status, 200);
+
+    // Verify rider cashInHand decremented to 200 (500 - 300)
+    const afterRider = await User.findOne({ id: rider.id }).lean();
+    assert.strictEqual(afterRider.cashInHand, 200);
+
+    // Second confirmation attempt on Process A must fail
+    const doubleConfRes = await fetch(`${URL_A}/api/admin/cash-deposits/${depositId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(doubleConfRes.status, 400, 'Double confirmation must be rejected');
+  });
+
+  // -------------------------------------------------------------------------
+  it('25. Cooler refund: uses actual deposit paid, ₹0 deposit credits ₹0, and prevents duplicate refund', async () => {
+    const cust = await User.create({
+      id: `cust_cooler_zero_${Date.now()}`,
+      name: 'Zero Deposit Customer',
+      email: `zero_dep_${Date.now()}@test.com`,
+      walletBalance: 100
+    });
+
+    const rider = await User.findOne({ role: 'rider', approvalStatus: 'approved' }).lean();
+    const riderToken = createToken(rider);
+
+    const orderId = `ord_cooler_zero_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: cust.id,
+      customerName: cust.name,
+      customerEmail: cust.email,
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 300,
+      total: 300,
+      totalAmount: 300,
+      coolerDeposit: 0, // ₹0 deposit paid!
+      paymentMethod: 'Razorpay Online (Prepaid)',
+      paymentStatus: 'PAID',
+      orderStatus: 'OUT_FOR_DELIVERY',
+      lifecycleStatus: 'OUT_FOR_DELIVERY',
+      riderId: rider.id,
+      deliveryPin: '3333',
+      coolerId: 'BOX-TEST-001',
+      items: []
+    });
+
+    // Handover with coolerReturned: true
+    const handRes = await fetch(`${URL_A}/api/orders/${orderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '3333', coolerReturned: true })
+    });
+    assert.strictEqual(handRes.status, 200);
+
+    // Verify customer wallet balance is STILL exactly 100 (₹0 credited, not ₹250!)
+    const refreshedCust = await User.findOne({ id: cust.id }).lean();
+    assert.strictEqual(refreshedCust.walletBalance, 100, '₹0 deposit must credit ₹0, never ₹250');
+  });
+
+  // -------------------------------------------------------------------------
+  it('26. PIN security: 3-attempt limit enforced atomically in MongoDB across processes, locked order rejects correct PIN with 429', async () => {
+    const rider = await User.findOne({ role: 'rider', approvalStatus: 'approved' }).lean();
+    const riderToken = createToken(rider);
+
+    const orderId = `ord_pin_sec_${Date.now()}`;
+    await Order.create({
+      id: orderId,
+      orderNumber: `BB-${orderId}`,
+      userId: 'cust_pin_sec',
+      customerName: 'PIN Sec Cust',
+      customerEmail: 'pinsec@test.com',
+      deliveryAddress: '123 Test St, Bengaluru',
+      subtotal: 300,
+      total: 300,
+      totalAmount: 300,
+      paymentMethod: 'Razorpay Online (Prepaid)',
+      paymentStatus: 'PAID',
+      orderStatus: 'OUT_FOR_DELIVERY',
+      lifecycleStatus: 'OUT_FOR_DELIVERY',
+      riderId: rider.id,
+      deliveryPin: '7777',
+      items: []
+    });
+
+    // Send 3 wrong PIN attempts across Process A and Process B
+    const p1 = fetch(`${URL_A}/api/orders/${orderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '0001' })
+    });
+    const p2 = fetch(`${URL_B}/api/orders/${orderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '0002' })
+    });
+    const p3 = fetch(`${URL_A}/api/orders/${orderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '0003' })
+    });
+
+    const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+    const statuses = [r1.status, r2.status, r3.status];
+    // At least one or more must report 400 or 429
+    assert.ok(statuses.includes(400) || statuses.includes(429));
+
+    // Verify order in MongoDB is now locked
+    const lockedOrder = await Order.findOne({ id: orderId }).lean();
+    assert.ok(lockedOrder.pinAttempts >= 3, 'pinAttempts must be >= 3');
+    assert.ok(lockedOrder.pinLockedUntil, 'pinLockedUntil must be set');
+
+    // Attempting handover now with the CORRECT PIN ('7777') on Process B MUST be rejected with 429
+    const correctRes = await fetch(`${URL_B}/api/orders/${orderId}/handover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+      body: JSON.stringify({ pin: '7777' })
+    });
+    assert.strictEqual(correctRes.status, 429, 'Locked order must reject even the correct PIN with 429');
+    const correctData = await correctRes.json();
+    assert.strictEqual(correctData.locked, true);
+  });
+
+  // -------------------------------------------------------------------------
+  it('27. Phone identity: normalizes phone numbers, enforces partial unique index, and preserves empty string for missing phones', async () => {
+    const { normalizePhone } = await import('../models/User.js');
+    assert.strictEqual(normalizePhone('9888877777'), '+919888877777');
+    assert.strictEqual(normalizePhone('+91 98888 77777'), '+919888877777');
+    assert.strictEqual(normalizePhone(''), '');
+    assert.strictEqual(normalizePhone(null), '');
+
+    // Partial unique index test:
+    const phoneNum = `+919911${Math.floor(100000 + Math.random() * 900000)}`;
+    await User.create({
+      id: `usr_phone_uniq_1_${Date.now()}`,
+      name: 'Phone User 1',
+      email: `phone1_${Date.now()}@test.com`,
+      phone: phoneNum
+    });
+
+    // Duplicate non-empty phone must be rejected
+    await assert.rejects(async () => {
+      await User.create({
+        id: `usr_phone_uniq_2_${Date.now()}`,
+        name: 'Phone User 2',
+        email: `phone2_${Date.now()}@test.com`,
+        phone: phoneNum
+      });
+    }, /E11000.*duplicate key/);
+
+    // Empty phone must NOT collide
+    const empty1 = await User.create({
+      id: `usr_empty_1_${Date.now()}`,
+      name: 'Empty Phone 1',
+      email: `empty1_${Date.now()}@test.com`,
+      phone: ''
+    });
+    const empty2 = await User.create({
+      id: `usr_empty_2_${Date.now()}`,
+      name: 'Empty Phone 2',
+      email: `empty2_${Date.now()}@test.com`,
+      phone: ''
+    });
+    assert.strictEqual(empty1.phone, '');
+    assert.strictEqual(empty2.phone, '');
+  });
+
+  // -------------------------------------------------------------------------
+  it('28. Migration script: detects demo records and aborts before writing', async () => {
+    const { isDemoRecord } = await import('../scripts/migrateToMongo.js');
+    assert.strictEqual(isDemoRecord({ phone: '+91 98765 43210' }), true);
+    assert.strictEqual(isDemoRecord({ email: 'test@example.com' }), true);
+    assert.strictEqual(isDemoRecord({ id: 'ord-demo-123' }), true);
+    assert.strictEqual(isDemoRecord({ name: 'Real Customer', email: 'real@domain.in', phone: '+919876599999' }), false);
   });
 });

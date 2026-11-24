@@ -1613,7 +1613,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-4">{c.currentUserName || 'In Central Depot'}</td>
                       <td className="py-2.5 px-4 font-mono">{c.cyclesUsed || 0} trips</td>
-                      <td className="py-2.5 px-4 font-mono text-emerald-700 dark:text-emerald-400 font-bold">₹{c.depositAmount || 250}</td>
+                      <td className="py-2.5 px-4 font-mono text-emerald-700 dark:text-emerald-400 font-bold">₹{c.depositAmount ?? 0}</td>
                       <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
@@ -1816,7 +1816,7 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="text-gray-400 text-[10px] font-mono">{cust.email}</div>
                           </td>
                           <td className="py-3 px-4">
-                            <div>{cust.phone || '9876543210'}</div>
+                            <div>{cust.phone || '—'}</div>
                             <div className="text-gray-400 text-[10px]">{cust.city || 'Bangalore'}</div>
                           </td>
                           <td className="py-3 px-4">
@@ -1920,7 +1920,7 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="text-gray-400 text-[10px] font-mono">{r.email}</div>
                           </td>
                           <td className="py-3 px-4">
-                            <div>{r.phone || '+91 97412 •••01'}</div>
+                            <div>{r.phone || '—'}</div>
                             <div className="text-gray-400 text-[10px]">{r.city || 'Bengaluru'}</div>
                           </td>
                           <td className="py-3 px-4">

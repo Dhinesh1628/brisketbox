@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import mongoose from 'mongoose';
 import { db } from '../db.js';
-import { User } from '../models/User.js';
+import { User, normalizePhone } from '../models/User.js';
 import { Order } from '../models/Order.js';
 import { Cooler } from '../models/Cooler.js';
 import { authenticate, authenticateOptional, requireAdmin, getAuthTokenFromReq, verifyToken } from '../services/auth.js';
@@ -82,7 +82,7 @@ router.post('/create-order', async (req, res) => {
       id: guestId, 
       name: addressDetails?.fullName || 'Valued Customer', 
       email: addressDetails?.email || 'customer@brisketbox.in', 
-      phone: addressDetails?.phone || '+91 98765 43210',
+      phone: addressDetails?.phone ? normalizePhone(addressDetails.phone) : '',
       walletBalance: 0
     };
 
@@ -598,12 +598,19 @@ router.post('/webhook', async (req, res) => {
     if (event === 'payment.captured') {
       const payment = payload.payment.entity;
       const orderId = payment.order_id;
+      const noteOrderId = payment.notes?.orderId || payment.notes?.orderNumber;
 
       let order = null;
       if (isMongo) {
-        order = await Order.findOne({ razorpayOrderId: orderId }).lean();
+        const query = [{ razorpayOrderId: orderId }];
+        if (noteOrderId) {
+          query.push({ id: noteOrderId }, { orderNumber: noteOrderId });
+        }
+        order = await Order.findOne({ $or: query }).lean();
       } else {
-        order = (db.get('orders') || []).find(o => o.razorpayOrderId === orderId);
+        order = (db.get('orders') || []).find(o => 
+          o.razorpayOrderId === orderId || (noteOrderId && (o.id === noteOrderId || o.orderNumber === noteOrderId))
+        );
       }
 
       if (!order) {
@@ -881,19 +888,19 @@ async function assignFleetRiderForOrder() {
       riderId: selected.id,
       riderName: selected.name ? selected.name.split(' ')[0] : 'Rider',
       riderFullName: selected.name || 'Fleet Delivery Executive',
-      riderPhone: selected.phone || '+91 97412 88301',
+      riderPhone: selected.phone || '',
       riderVehicle: selected.vehicleType ? `${selected.vehicleType} (${selected.vehicleNumber || 'KA-04-EV'})` : 'EV 2-Wheeler',
-      deliveryExecutive: `${selected.name || 'Fleet Executive'} (${selected.phone || '+91 97412 88301'})`
+      deliveryExecutive: `${selected.name || 'Fleet Executive'}${selected.phone ? ` (${selected.phone})` : ''}`
     };
   }
 
   return {
-    riderId: 'usr_rider_1',
-    riderName: 'Suresh',
-    riderFullName: 'Suresh Patil',
-    riderPhone: '+91 97412 88301',
-    riderVehicle: 'EV 2-Wheeler (KA-04-EV-819)',
-    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)'
+    riderId: null,
+    riderName: null,
+    riderFullName: null,
+    riderPhone: null,
+    riderVehicle: null,
+    deliveryExecutive: null
   };
 }
 
@@ -970,7 +977,7 @@ async function createOrderRecord(params) {
     userId: user.id,
     customerName: user.name,
     customerEmail: user.email,
-    customerPhone: user.phone || '+91 98765 43210',
+    customerPhone: user.phone ? normalizePhone(user.phone) : '',
     deliveryAddress,
     addressDetails,
     city: city || 'Bengaluru',

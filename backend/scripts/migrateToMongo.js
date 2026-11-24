@@ -56,6 +56,26 @@ export async function runMigration(options = {}) {
     process.exit(1);
   }
 
+  // UPFRONT SAFETY CHECK: Migration must abort before writing if any demo record exists.
+  const allRecords = [
+    ...(sourceData.users || []),
+    ...(sourceData.orders || []),
+    ...(sourceData.coolerReturns || []),
+    ...(sourceData.coolers || []),
+    ...(sourceData.products || [])
+  ];
+
+  for (const doc of allRecords) {
+    if (isDemoRecord(doc)) {
+      console.error(`[Migration Aborted] Demo or mock record detected: ${doc.id || doc.name || doc.email}. Migration cannot proceed.`);
+      await mongoose.disconnect();
+      if (options.throwOnError) {
+        throw new Error(`Migration aborted: Demo record detected (${doc.id || doc.name || doc.email})`);
+      }
+      process.exit(1);
+    }
+  }
+
   const stats = {
     users: { valid: 0, invalid: 0, inserted: 0, skipped: 0 },
     products: { valid: 0, invalid: 0, inserted: 0, skipped: 0 },
@@ -64,12 +84,12 @@ export async function runMigration(options = {}) {
     coolerReturns: { valid: 0, invalid: 0, inserted: 0, skipped: 0 }
   };
 
-  // 1. Migrate Users
+  // 1. Migrate Users (Staff/Admin accounts are never imported from data.json)
   if (Array.isArray(sourceData.users)) {
     for (const u of sourceData.users) {
-      if (isDemoRecord(u)) {
-        console.warn(`[Migration Refused] Demo user record refused: ${u.id || u.email}`);
-        stats.users.refused = (stats.users.refused || 0) + 1;
+      if (['admin', 'staff'].includes(u.role)) {
+        console.warn(`[Migration Skipped] Staff/Admin account ${u.id || u.email} excluded from data.json migration. Use createAdmin script.`);
+        stats.users.skipped++;
         continue;
       }
       const { _id, ...cleanUser } = u;
@@ -222,6 +242,7 @@ export async function runMigration(options = {}) {
   }
   console.log('--- MIGRATION FINISHED SUCCESSFULLY ---');
 
+  await mongoose.disconnect();
   return stats;
 }
 

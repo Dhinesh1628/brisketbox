@@ -262,7 +262,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {user?.email} • {user?.phone || '+91 98765 43210'}
+                {user?.email}{user?.phone ? ` • ${user.phone}` : ''}
               </p>
               <div className="flex items-center gap-2 mt-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -1098,7 +1098,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               </div>
               <div className="flex justify-between text-emerald-700">
                 <span>insulated packaging Cooler Deposit:</span>
-                <span className="font-bold">+₹{selectedOrder.coolerDeposit || 250} (Refundable)</span>
+                <span className="font-bold">+₹{selectedOrder.coolerDeposit ?? 0} (Refundable)</span>
               </div>
               {selectedOrder.discountAmount ? (
                 <div className="flex justify-between text-emerald-700">

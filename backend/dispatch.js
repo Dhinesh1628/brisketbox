@@ -75,8 +75,8 @@ export async function assignFleetRiderForOrder(session = null) {
     riderId: selected.id,
     riderFullName: selected.name,
     riderName: selected.name.split(' ')[0],
-    riderPhone: selected.phone || '+91 97412 88301',
+    riderPhone: selected.phone || '',
     riderVehicle: vehicleInfo,
-    deliveryExecutive: `${selected.name} (${selected.vehicleType || 'EV Fleet'}, ${selected.phone || '+91 97412 88301'})`
+    deliveryExecutive: `${selected.name}${selected.vehicleType ? ` (${selected.vehicleType})` : ''}${selected.phone ? ` (${selected.phone})` : ''}`
   };
 }

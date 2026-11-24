@@ -25,7 +25,7 @@ const orderSchema = new mongoose.Schema({
   guestToken: { type: String, default: null, index: true },
   customerName: { type: String, required: true },
   customerEmail: { type: String, required: true },
-  customerPhone: { type: String, required: true },
+  customerPhone: { type: String, default: '' },
   items: [orderItemSchema],
   
   // Pricing breakdown strictly verified on server
@@ -49,7 +49,7 @@ const orderSchema = new mongoose.Schema({
   coolerDepositRefunded: { type: Boolean, default: false },
 
   // Delivery & Location details
-  deliveryAddress: { type: String, required: true },
+  deliveryAddress: { type: String, default: 'Indiranagar, Bengaluru' },
   addressDetails: {
     fullName: { type: String },
     phone: { type: String },

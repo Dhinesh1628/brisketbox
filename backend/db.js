@@ -51,7 +51,7 @@ const getInitialUsers = () => {
       email: "customer@brisketbox.in",
       password: demoHash,
       role: "customer",
-      phone: "+91 98765 00000",
+      phone: "",
       city: "Bengaluru",
       address: "Indiranagar, Bengaluru 560038",
       depositBalance: 0,
@@ -65,7 +65,7 @@ const getInitialUsers = () => {
       password: demoHash,
       role: "rider",
       approvalStatus: "approved",
-      phone: "+91 97412 00000",
+      phone: "",
       city: "Bengaluru",
       address: "Indiranagar, Bengaluru 560008",
       vehicleType: "EV 2-Wheeler",
@@ -450,225 +450,8 @@ const INITIAL_DATA = {
       assignedHub: "Wash & UV Sanitization Bay"
     }
   ],
-  orders: [
-    {
-      id: "ORD-9281",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      items: [
-        {
-          productId: "prod_1",
-          name: "Seer Fish / Surmai (Large Steaks)",
-          price: 799,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_4",
-          name: "Rich Tender Goat (Biryani & Rogan Josh Cut)",
-          price: 549,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C Temperature Regulated"
-        }
-      ],
-      subtotal: 1348,
-      coolerDeposit: 250,
-      shippingFee: 0,
-      total: 1598,
-      status: "Out for Delivery",
-      lifecycleStatus: "OUT_FOR_DELIVERY",
-      partnerId: "shop_central_butcher",
-      partnerName: "Halal Cuts & Coastal Harbor Station #14",
-      riderId: "usr_rider_1",
-      riderName: "Suresh",
-      riderFullName: "Suresh Patil",
-      riderPhone: "+91 97412 •••01",
-      riderVehicle: "EV 2-Wheeler (KA-04-EV-819)",
-      riderEta: "20–30 minutes",
-      coolerId: "BOX-BLR-103",
-      coolerModel: "insulated bag 24L - Dual Phase ColdGel Box",
-      liveTemp: 1.2,
-      deliveryExecutive: "Suresh Patil (EV Fleet #14, +91 97412 88301)",
-      tempLog: [
-        { time: "06:15", temp: 0.2, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" },
-        { time: "07:00", temp: 0.8, event: "Loaded onto insulated delivery electric vehicle" },
-        { time: "07:45", temp: 1.2, event: "Delivery partner Suresh en route near Marathahalli" }
-      ],
-      deliverySlot: "Today, Express in 90 Mins",
-      trackingCode: "BRISKETBOX-TRK-4412",
-      deliveryPin: "6314",
-      paymentMethod: "UPI (Google Pay)",
-      createdAt: "2026-10-30T01:30:00.000Z",
-      deliveryNotes: "Leave at security desk or ring Flat 402 doorbell."
-    },
-    {
-      id: "ORD-417-DELIVERED",
-      orderNumber: "ORD-417-DELIVERED",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      coolerId: "BOX-BLR-417",
-      coolerModel: "Insulated Cold Bag",
-      status: "Delivered",
-      orderStatus: "DELIVERED",
-      lifecycleStatus: "DELIVERED",
-      items: [
-        {
-          productId: "prod_1",
-          name: "Seer Fish / Surmai (Large Steaks)",
-          price: 799,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_3",
-          name: "Tender Curry Cut Broiler Chicken (Skinless)",
-          price: 249,
-          quantity: 2,
-          unit: "500g",
-          netWeight: "900g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      total: 1299,
-      coolerDeposit: 250,
-      createdAt: "2026-11-11T12:00:00.000Z",
-      deliveredAt: "2026-11-11T14:30:00.000Z",
-      tempLog: [
-        { time: "08:00 AM", temp: 0.8, event: "Sealed with chilled ice-gel packs at Mahadevapura Dark Hub" },
-        { time: "08:30 AM", temp: 1.2, event: "Dispatched with EV Cold-Chain Courier" },
-        { time: "09:15 AM", temp: 1.8, event: "Delivered at customer doorstep (Sub-4C guaranteed)" }
-      ]
-    },
-    {
-      id: "ORD-7740",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Bengaluru 560037",
-      city: "Bengaluru",
-      items: [
-        {
-          productId: "prod_3",
-          name: "Tender Curry Cut Broiler Chicken (Skinless)",
-          price: 249,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      subtotal: 249,
-      coolerDeposit: 250,
-      shippingFee: 40,
-      total: 539,
-      status: "Preparing",
-      lifecycleStatus: "PREPARING",
-      partnerId: "shop_central_butcher",
-      partnerName: "Halal Cuts & Coastal Harbor Station #14",
-      riderId: "usr_rider_1",
-      riderName: "Suresh",
-      riderFullName: "Suresh Patil",
-      riderPhone: "+91 97412 •••01",
-      riderVehicle: "EV 2-Wheeler (KA-04-EV-819)",
-      riderEta: "Pending butcher packing",
-      coolerId: "BOX-BLR-774",
-      coolerModel: "Insulated Cold Bag",
-      liveTemp: 1.0,
-      tempLog: [
-        { time: "06:15 AM", temp: 0.2, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" }
-      ],
-      deliveryExecutive: "Suresh Patil (EV Fleet #14)",
-      deliverySlot: "Today, Evening 5:00 PM - 7:00 PM",
-      trackingCode: "BRISKETBOX-TRK-7740",
-      deliveryPin: "4918",
-      paymentMethod: "Razorpay (Credit Card)",
-      createdAt: new Date().toISOString(),
-      deliveryNotes: "Fresh cuts only. Please make medium bone-in pieces."
-    },
-    {
-      id: "ORD-103-BREACH",
-      orderNumber: "ORD-103-BREACH",
-      userId: "usr_customer",
-      customerName: "Pooja Sundaram",
-      customerEmail: "pooja.sundaram@gmail.com",
-      customerPhone: "+91 98765 43210",
-      deliveryAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      city: "Bengaluru",
-      coolerId: "BOX-BLR-103",
-      coolerModel: "insulated bag 24L - Dual Phase ColdGel Box",
-      status: "Delivered",
-      orderStatus: "DELIVERED",
-      lifecycleStatus: "DELIVERED",
-      items: [
-        {
-          productId: "prod_2",
-          name: "Young Goat / Mutton Biryani Cut (Tender)",
-          price: 549,
-          quantity: 2,
-          unit: "500g",
-          netWeight: "1000g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        },
-        {
-          productId: "prod_4",
-          name: "White Prawns / Jhinga (Cleaned & Deveined)",
-          price: 499,
-          quantity: 1,
-          unit: "500g",
-          netWeight: "450g",
-          chillingMethod: "0°C to 4°C chilled pack Cold Chain"
-        }
-      ],
-      total: 1598,
-      totalAmount: 1598,
-      createdAt: "2026-11-08T09:00:00.000Z",
-      deliveredAt: "2026-11-08T10:45:00.000Z",
-      coolerReturned: false,
-      deliveryExecutive: "Suresh Patil (EV Fleet #14, +91 97412 88301)",
-      riderFullName: "Suresh Patil",
-      riderId: "usr_rider_1",
-      paymentMethod: "UPI (Google Pay)",
-      tempLog: [
-        { time: "09:00", temp: 1.4, event: "Cuts packed with chilled gel bricks at Halal Cuts Station" },
-        { time: "09:30", temp: 3.2, event: "Dispatched with EV Chilled Courier" },
-        { time: "10:15", temp: 5.4, event: "ALERT: Sensor rose above 4C safe threshold" },
-        { time: "10:45", temp: 5.8, event: "Delivered at doorstep - Gasket seal compromised (5.8C)" }
-      ]
-    }
-  ],
-  coolerReturns: [
-    {
-      id: "RET-702",
-      coolerId: "BOX-BLR-102",
-      orderId: "ORD-8890",
-      userId: "usr_customer",
-      userName: "Pooja Sundaram",
-      userPhone: "+91 98765 43210",
-      userAddress: "Flat 402, Alpine Eco Apartments, Doddanekkundi, Marathahalli, Bengaluru 560037",
-      status: "pickup_requested",
-      requestDate: "2026-10-29T16:00:00.000Z",
-      scheduledPickupSlot: "Tomorrow Morning, 7:00 AM - 10:00 AM",
-      refundAmount: 250,
-      refundMode: "UPI (pooja@okhdfcbank)",
-      notes: "Empty box rinsed with gel packs kept inside the building security reception.",
-      courierAssigned: "Return Partner Chetan (+91 99002 11842)"
-    }
-  ]
+  orders: [],
+  coolerReturns: []
 };
 
 class Database {

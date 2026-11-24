@@ -13,6 +13,15 @@ const walletTransactionSchema = new mongoose.Schema({
   timestamp: { type: String, default: () => new Date().toISOString() }
 }, { _id: false });
 
+export function normalizePhone(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+  return `+${digits}`;
+}
+
 const userSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true, trim: true },
@@ -30,7 +39,7 @@ const userSchema = new mongoose.Schema({
     default: 'approved',
     index: true
   },
-  phone: { type: String, default: '', trim: true, index: true },
+  phone: { type: String, default: '', trim: true },
   city: { type: String, default: 'Bengaluru' },
   address: { type: String, default: '' },
   walletBalance: { type: Number, default: 0, min: 0 },
@@ -70,6 +79,16 @@ const userSchema = new mongoose.Schema({
   strict: true
 });
 
+userSchema.pre('validate', function() {
+  if (this.phone) {
+    this.phone = normalizePhone(this.phone);
+  }
+});
+
+userSchema.index(
+  { phone: 1 },
+  { unique: true, partialFilterExpression: { phone: { $type: 'string', $gt: '' } } }
+);
 userSchema.index({ role: 1, approvalStatus: 1 });
 userSchema.index({ createdAt: -1 });
 

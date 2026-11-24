@@ -90,7 +90,7 @@ router.post('/chatbot/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message text is required' });
     }
 
-    const botResponse = await processCustomerMessage(message, phone || '+91 98765 00000', cartSummary);
+    const botResponse = await processCustomerMessage(message, phone || '', cartSummary);
     res.json({
       success: true,
       timestamp: new Date().toISOString(),

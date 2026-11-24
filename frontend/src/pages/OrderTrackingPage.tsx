@@ -39,10 +39,10 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
   const [liveTemp, setLiveTemp] = useState<number>(2.3);
   const [isDemoOrder, setIsDemoOrder] = useState<boolean>(false);
 
-  // Synchronized Customer & Rider Profiles matching database records
-  const activeCustomerName = user?.name || 'Pooja Sundaram';
-  const activeCustomerPhone = user?.phone || '+91 98765 43210';
-  const activeCustomerEmail = user?.email || 'pooja.sundaram@gmail.com';
+  // Customer Profile matching database records
+  const activeCustomerName = user?.name || '';
+  const activeCustomerPhone = user?.phone || '';
+  const activeCustomerEmail = user?.email || '';
 
   // Fallback demo order for previewing when database has 0 customer orders
   const demoOrder: Order = {
@@ -91,23 +91,13 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
     coolerId: 'BOX-BLR-417',
     coolerModel: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
     liveTemp: 2.3,
-    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)',
-    riderId: 'usr_rider_1',
-    riderFullName: 'Suresh Patil',
-    riderName: 'Suresh',
-    riderPhone: '+91 97412 88301',
-    riderVehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
-    assignedRider: {
-      fullName: 'Suresh Patil',
-      firstName: 'Suresh',
-      riderId: 'RD-819',
-      vehicle: 'EV 2-Wheeler (Ather 450X - KA-04-EV-819)',
-      status: 'Out for Delivery',
-      estimatedArrival: '18–25 mins',
-      maskedPhone: '+91 97412 •••01',
-      secureCall: true,
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-    },
+    deliveryExecutive: '',
+    riderId: '',
+    riderFullName: '',
+    riderName: '',
+    riderPhone: '',
+    riderVehicle: '',
+    assignedRider: undefined,
     tempLog: [
       { time: '07:15 AM', temp: 0.8, event: 'Order confirmed & cut inspected at Bio-Secure Dark Depot' },
       { time: '07:30 AM', temp: 1.2, event: 'Packed inside sanitized ThermalVault box with fresh cold gel bricks' },
@@ -654,7 +644,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   </div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || currentOrder.assignedRider?.maskedPhone || '+91 97412 88301'}</strong></span>
+                    <span>Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || currentOrder.assignedRider?.maskedPhone || 'Pending'}</strong></span>
                   </div>
                 </div>
               </div>
@@ -662,7 +652,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               <div className="flex items-center gap-2">
                 <button 
                   type="button"
-                  onClick={() => alert(`Secure call connected to Delivery Partner ${currentOrder.assignedRider?.fullName || currentOrder.riderFullName || 'Suresh Patil'}`)}
+                  onClick={() => alert(`Secure call connected to Delivery Partner ${currentOrder.assignedRider?.fullName || currentOrder.riderFullName || 'Assigned Partner'}`)}
                   className="flex-1 sm:flex-none px-3.5 py-2 bg-gray-900 dark:bg-slate-800 hover:bg-black dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
                 >
                   <Phone className="w-3.5 h-3.5 text-emerald-400" />
@@ -690,10 +680,10 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                     YOUR DELIVERY PARTNER
                   </span>
                   <div className="font-black text-sm text-gray-950 dark:text-white">
-                    {currentOrder.riderFullName || (currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Suresh Patil')}
+                    {currentOrder.riderFullName || (currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Assigned Rider')}
                   </div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                    Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || 'EV Fleet 2-Wheeler'}</strong> • Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || '+91 97412 88301'}</strong>
+                    Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || 'EV Fleet 2-Wheeler'}</strong> • Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || 'Pending'}</strong>
                   </div>
                   <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 mt-0.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />

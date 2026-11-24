@@ -207,6 +207,21 @@ export async function finalizePayment({
 
         // RE-DEBIT WALLET ON RETRY: If wallet money was released on failure/expiry, re-debit it before accepting payment
         if (claimed.walletDeduction > 0 && claimed.walletRefunded) {
+          const userBefore = await User.findOne({ id: claimed.userId }).session(session);
+          if (!userBefore || (userBefore.walletBalance || 0) < claimed.walletDeduction) {
+            console.warn(`[PaymentFinalizer] User has insufficient wallet balance on payment retry (${userBefore?.walletBalance || 0} < ${claimed.walletDeduction}). Order moved to REFUND_REQUIRED.`);
+            claimed.orderStatus = 'REFUND_REQUIRED';
+            claimed.paymentStatus = 'REFUND_REQUIRED';
+            claimed.lifecycleStatus = 'REFUND_REQUIRED';
+            claimed.status = 'Refund Required (Insufficient wallet balance on retry)';
+            claimed.stockDeducted = false;
+            await claimed.save({ session });
+
+            finalOrder = claimed.toObject();
+            refundRequired = true;
+            return;
+          }
+
           await debitWallet({
             userId: claimed.userId,
             amount: claimed.walletDeduction,

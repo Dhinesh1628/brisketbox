@@ -932,7 +932,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                       </span>
                       <div className="flex items-baseline gap-2 mt-0.5">
                         <span className="text-xl font-extrabold text-gray-900 dark:text-white">
-                          ₹{inspectionData.refundAssessment?.depositAmount || 250}
+                          ₹{inspectionData.refundAssessment?.depositAmount ?? 0}
                         </span>
                         <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">
                           100% Refundable

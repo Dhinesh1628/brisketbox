@@ -234,7 +234,7 @@ export function getTemperatureCheck(cooler, data = {}) {
 export function getFleetDetails(cooler, data = {}) {
   const cid = cooler.id;
   const limit = cooler.maxHoldingHours || 36;
-  const deposit = cooler.depositAmount || 250;
+  const deposit = Number(cooler.depositAmount) || 0;
 
   const isDepotStock = cooler.status === 'available' || cooler.status === 'sanitized' || cid.includes('633');
   if (isDepotStock) {

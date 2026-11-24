@@ -49,9 +49,12 @@ import { calculateOrderPricing } from './services/pricingService.js';
 import { recordCouponUsage } from './services/couponService.js';
 import { deductStock, releaseStock } from './services/stockService.js';
 import { Order } from './models/Order.js';
-import { User } from './models/User.js';
+import { User, normalizePhone } from './models/User.js';
 import { Cooler } from './models/Cooler.js';
 import { Product } from './models/Product.js';
+import { Refund } from './models/Refund.js';
+import { CashDeposit } from './models/CashDeposit.js';
+import { getRefundQueue, processOrderRefund } from './services/refundService.js';
 import { debitWallet, creditWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
@@ -324,7 +327,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       email: cleanEmail,
       password: bcrypt.hashSync(String(password), 10),
       role: 'customer',
-      phone: typeof phone === 'string' ? phone : '+91 98765 00000',
+      phone: typeof phone === 'string' && phone.trim() ? normalizePhone(phone) : '',
       city: typeof city === 'string' ? city : 'Bengaluru',
       address: typeof address === 'string' ? address : '1st Cross, Indiranagar, Bengaluru, Karnataka 560038',
       depositBalance: 0,
@@ -585,7 +588,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
     userId: req.user.id,
     customerName: req.user.name,
     customerEmail: req.user.email,
-    customerPhone: req.user.phone || '+91 98765 43210',
+    customerPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     deliveryAddress: deliveryAddress || req.user.address || 'Address provided at checkout',
     city: city || req.user.city || 'Bengaluru',
     items: processedItems,
@@ -639,29 +642,29 @@ app.post('/api/orders', authenticate, async (req, res) => {
 function sanitizeAssignedRider(order) {
   if (!order) return null;
   if (order.riderId) {
-    const fullName = order.riderFullName || 'Suresh Patil';
+    const fullName = order.riderFullName || order.riderName || 'Assigned Fleet Rider';
     return {
       fullName,
       firstName: fullName.split(' ')[0],
       riderId: order.riderId ? `RD-${order.riderId.slice(-4).toUpperCase()}` : 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler (Ather 450X)',
+      vehicle: order.riderVehicle || 'EV 2-Wheeler',
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
       estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || '+91 97412 •••01',
+      maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
       profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     };
   } else if (order.riderName || order.riderFullName || order.deliveryExecutive) {
     const cleanExec = order.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : '';
-    const fullName = order.riderFullName || cleanExec || 'Suresh Patil';
+    const fullName = order.riderFullName || cleanExec || order.riderName || 'Assigned Fleet Rider';
     return {
       fullName,
       firstName: fullName.split(' ')[0],
       riderId: 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler (Ather 450X)',
+      vehicle: order.riderVehicle || 'EV 2-Wheeler',
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
       estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || '+91 97412 •••01',
+      maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
       profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     };
@@ -907,7 +910,7 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     riderId: req.user.id,
     riderName: req.user.name.split(' ')[0],
     riderFullName: req.user.name,
-    riderPhone: req.user.phone || '+91 97412 •••01',
+    riderPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     riderVehicle: req.user.vehicleType ? `${req.user.vehicleType} (${req.user.vehicleNumber || ''})` : 'EV 2-Wheeler',
     lifecycleTimestamps: timestamps
   };
@@ -950,7 +953,8 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
 
   const stage = isColdChainMaintained ? 'GOOD' : 'CRITICAL';
   const refundApproved = isColdChainMaintained;
-  const refundAmount = refundApproved ? 250 : 0;
+  const actualDeposit = Number(order?.coolerDeposit || 0);
+  const refundAmount = refundApproved ? actualDeposit : 0;
 
   res.json({
     coolerId,
@@ -962,7 +966,7 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
     refundApproved,
     refundAmount,
     message: refundApproved
-      ? `Cold-chain maintained at ${finalTemp}°C (Safe Range: 0°C - 4°C). ₹250 security deposit approved for instant refund.`
+      ? `Cold-chain maintained at ${finalTemp}°C (Safe Range: 0°C - 4°C). ₹${refundAmount} security deposit approved for instant refund.`
       : `Temperature breach detected (${outOfRange.map(o => `${o.temp}°C at ${o.time}`).join(', ')}). Retained for hub audit.`
   });
 });
@@ -1297,10 +1301,16 @@ const handleOrderHandover = async (req, res) => {
   const enteredPin = String(pin || deliveryPin || '').trim();
   const validPin = String(order.deliveryPin || '').trim();
   const nowTime = Date.now();
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-  // Check persistent DB lockout
-  if (order.pinLockedUntil && new Date(order.pinLockedUntil).getTime() > nowTime) {
-    const remainingSec = Math.ceil((new Date(order.pinLockedUntil).getTime() - nowTime) / 1000);
+  // 1. Check persistent DB lockout (using fresh query in MongoDB)
+  let currentOrderDoc = order;
+  if (isMongo) {
+    currentOrderDoc = await Order.findOne({ $or: [{ id: order.id }, { orderNumber: order.id }] }).lean() || order;
+  }
+
+  if (currentOrderDoc.pinLockedUntil && new Date(currentOrderDoc.pinLockedUntil).getTime() > nowTime) {
+    const remainingSec = Math.ceil((new Date(currentOrderDoc.pinLockedUntil).getTime() - nowTime) / 1000);
     return res.status(429).json({
       error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
       locked: true,
@@ -1308,18 +1318,50 @@ const handleOrderHandover = async (req, res) => {
     });
   }
 
-  // If a PIN is configured, verify it
+  // 2. If a PIN is configured, verify it with atomic attempt counting
   if (validPin && enteredPin !== validPin) {
-    const currentAttempts = (order.pinAttempts || 0) + 1;
-    const isLocked = currentAttempts >= 3;
-    const lockedUntil = isLocked ? new Date(nowTime + 300000).toISOString() : null;
+    let attemptsCount = (currentOrderDoc.pinAttempts || 0) + 1;
+    let isLocked = false;
+    let lockedUntil = null;
 
-    await updateOrder(order.id, {
-      pinAttempts: currentAttempts,
-      pinLockedUntil: lockedUntil
-    });
+    if (isMongo) {
+      // Atomic increment in MongoDB across concurrent processes
+      const updated = await Order.findOneAndUpdate(
+        {
+          _id: currentOrderDoc._id,
+          $or: [
+            { pinLockedUntil: null },
+            { pinLockedUntil: { $lte: new Date(nowTime).toISOString() } }
+          ]
+        },
+        { $inc: { pinAttempts: 1 } },
+        { new: true }
+      );
 
-    if (isLocked) {
+      if (!updated) {
+        return res.status(429).json({
+          error: 'Handover locked due to failed PIN attempts. Please wait before retrying.',
+          locked: true,
+          remainingSec: 300
+        });
+      }
+
+      attemptsCount = updated.pinAttempts;
+      if (attemptsCount >= 3) {
+        isLocked = true;
+        lockedUntil = new Date(nowTime + 300000).toISOString();
+        await Order.updateOne({ _id: currentOrderDoc._id }, { $set: { pinLockedUntil: lockedUntil } });
+      }
+    } else {
+      isLocked = attemptsCount >= 3;
+      lockedUntil = isLocked ? new Date(nowTime + 300000).toISOString() : null;
+      await updateOrder(order.id, {
+        pinAttempts: attemptsCount,
+        pinLockedUntil: lockedUntil
+      });
+    }
+
+    if (isLocked || attemptsCount >= 3) {
       return res.status(429).json({
         error: '3 incorrect PIN attempts. Security lockout active for 5 minutes. Customer must verify in person.',
         locked: true,
@@ -1328,16 +1370,29 @@ const handleOrderHandover = async (req, res) => {
     }
 
     return res.status(400).json({
-      error: `Invalid 4-digit PIN. ${3 - currentAttempts} attempt(s) remaining before security lockout.`,
-      remainingAttempts: 3 - currentAttempts
+      error: `Invalid 4-digit PIN. ${Math.max(0, 3 - attemptsCount)} attempt(s) remaining before security lockout.`,
+      remainingAttempts: Math.max(0, 3 - attemptsCount)
     });
   }
 
-  // PIN verified successfully: reset security tracker in database
-  await updateOrder(order.id, {
-    pinAttempts: 0,
-    pinLockedUntil: null
-  });
+  // 3. Entered PIN matches validPin! Reject even the correct PIN if the order is locked!
+  if (isMongo) {
+    const freshCheck = await Order.findOne({ _id: currentOrderDoc._id }).lean();
+    if (freshCheck?.pinLockedUntil && new Date(freshCheck.pinLockedUntil).getTime() > nowTime) {
+      const remainingSec = Math.ceil((new Date(freshCheck.pinLockedUntil).getTime() - nowTime) / 1000);
+      return res.status(429).json({
+        error: `Handover locked due to failed PIN attempts. Please wait ${remainingSec}s before retrying.`,
+        locked: true,
+        remainingSec
+      });
+    }
+    await Order.updateOne({ _id: currentOrderDoc._id }, { $set: { pinAttempts: 0, pinLockedUntil: null } });
+  } else {
+    await updateOrder(order.id, {
+      pinAttempts: 0,
+      pinLockedUntil: null
+    });
+  }
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -1349,8 +1404,36 @@ const handleOrderHandover = async (req, res) => {
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
-  const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
-  const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
+  // COD Cash Validation:
+  // - A rider cannot choose a lower, partial, excessive, or negative cash amount.
+  // - Delivery of a COD order must record exactly the server-calculated amount due.
+  // - Never add cash for a prepaid order!
+  const isCod = Boolean(order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod'));
+  const serverAmountDue = Math.round(Number(order.totalAmount || order.total || 0));
+
+  let collectedCashNum = 0;
+
+  if (isCod) {
+    const rawCash = cashAmount !== undefined ? cashAmount : (req.body.cashCollected !== undefined ? req.body.cashCollected : serverAmountDue);
+    const parsedCash = Number(rawCash);
+
+    if (isNaN(parsedCash) || parsedCash <= 0 || Math.round(parsedCash) !== serverAmountDue) {
+      return res.status(400).json({
+        error: `Invalid cash amount for Cash on Delivery. Exactly the server-calculated amount due (₹${serverAmountDue}) must be recorded. Received: ${rawCash}`
+      });
+    }
+
+    collectedCashNum = serverAmountDue;
+  } else {
+    // Prepaid orders: Never collect cash!
+    if (cashAmount !== undefined && Number(cashAmount) > 0) {
+      return res.status(400).json({
+        error: 'Cash collection is not permitted for prepaid orders.'
+      });
+    }
+    collectedCashNum = 0;
+  }
+
   const depositPaid = Number(order.coolerDeposit || 0);
 
   const updatedLog = [
@@ -1363,7 +1446,6 @@ const handleOrderHandover = async (req, res) => {
   ];
 
   let updatedOrder = null;
-  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
   if (isMongo) {
     const session = await mongoose.startSession();
@@ -1387,7 +1469,7 @@ const handleOrderHandover = async (req, res) => {
               handoverNotes: notes || order.handoverNotes,
               deliveredAt: nowIso,
               cashCollected: collectedCashNum,
-              paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
+              paymentStatus: isCod ? 'PAID' : order.paymentStatus,
               liveTemp: 1.8,
               tempLog: updatedLog,
               pinAttempts: 0,
@@ -1403,8 +1485,8 @@ const handleOrderHandover = async (req, res) => {
           throw err;
         }
 
-        // ONLY THE WINNER MAY RECORD CASH, USING $inc:
-        if (collectedCashNum > 0 && req.user && req.user.id) {
+        // ONLY THE WINNER MAY RECORD CASH FOR COD ORDERS, USING $inc:
+        if (isCod && collectedCashNum > 0 && req.user && req.user.id) {
           await User.updateOne(
             { id: req.user.id },
             { $inc: { cashInHand: collectedCashNum } },
@@ -1460,7 +1542,7 @@ const handleOrderHandover = async (req, res) => {
       pinLockedUntil: null
     });
 
-    if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
+    if (isCod && collectedCashNum > 0 && req.user && req.user.role === 'rider') {
       const rider = await findUserById(req.user.id);
       if (rider) {
         await updateUser(rider.id, { cashInHand: (rider.cashInHand || 0) + collectedCashNum });
@@ -1484,20 +1566,134 @@ const handleOrderHandover = async (req, res) => {
   });
 };
 
+// Rider Cash Deposit Request: Rider creates a PENDING request.
+// cashInHand changes ONLY after an operations admin confirms it.
 app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
-  const { amount, depotId } = req.body;
+  const { amount, depotId, notes } = req.body;
+  const depositAmt = Math.round(Number(amount));
+  if (isNaN(depositAmt) || depositAmt <= 0) {
+    return res.status(400).json({ error: 'Please specify a valid positive cash deposit amount' });
+  }
+
   const rider = await findUserById(req.user.id);
-  const currentCash = rider?.cashInHand || 0;
-  const depositAmt = Math.min(Number(amount) || currentCash, currentCash);
-  const updatedRider = await updateUser(req.user.id, {
-    cashInHand: Math.max(0, currentCash - depositAmt)
+  const currentCash = Number(rider?.cashInHand || 0);
+  if (depositAmt > currentCash) {
+    return res.status(400).json({
+      error: `Deposit amount (₹${depositAmt}) exceeds current cash in hand (₹${currentCash}).`
+    });
+  }
+
+  const depositId = `DEP-${Date.now()}-${uuidv4().slice(0, 6)}`;
+  const receiptNo = `DEP-RCP-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const deposit = await CashDeposit.create({
+    id: depositId,
+    riderId: req.user.id,
+    riderName: req.user.name,
+    amount: depositAmt,
+    status: 'PENDING',
+    depotId: depotId || 'DEPOT-BLR-CENTRAL',
+    receiptNo,
+    notes: notes || 'Rider cash handover at depot counter'
   });
+
   res.json({
     success: true,
-    depositedAmount: depositAmt,
-    remainingCashInHand: updatedRider.cashInHand || 0,
-    receiptNo: `DEP-RCP-${Math.floor(10000 + Math.random() * 90000)}`
+    message: 'Cash deposit request submitted. Awaiting operations admin verification and confirmation.',
+    deposit,
+    currentCashInHand: currentCash,
+    receiptNo
   });
+});
+
+// Admin Cash Deposits Queue
+app.get('/api/admin/cash-deposits', authenticate, requireAdmin, async (req, res) => {
+  const { status } = req.query;
+  const query = {};
+  if (status) query.status = status;
+  const deposits = await CashDeposit.find(query).sort({ createdAt: -1 }).lean();
+  res.json(deposits);
+});
+
+// Admin Confirm Cash Deposit: Atomic update and audit record; prevents double confirmation
+app.post('/api/admin/cash-deposits/:id/confirm', authenticate, requireAdmin, async (req, res) => {
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+  if (!isMongo) {
+    return res.status(503).json({ error: 'Database unavailable' });
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    let result = null;
+    await session.withTransaction(async () => {
+      // Atomic claim: only transition from PENDING to CONFIRMED
+      const deposit = await CashDeposit.findOneAndUpdate(
+        { id: req.params.id, status: 'PENDING' },
+        {
+          $set: {
+            status: 'CONFIRMED',
+            confirmedBy: req.user.id,
+            confirmedAt: new Date().toISOString()
+          }
+        },
+        { new: true, session }
+      );
+
+      if (!deposit) {
+        const err = new Error('Deposit request not found, or has already been confirmed/rejected.');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Atomically decrement rider's cashInHand
+      await User.updateOne(
+        { id: deposit.riderId },
+        { $inc: { cashInHand: -deposit.amount } },
+        { session }
+      );
+
+      result = deposit.toObject();
+    });
+
+    const refreshedRider = await User.findOne({ id: result.riderId }).lean();
+    res.json({
+      success: true,
+      message: `Cash deposit of ₹${result.amount} confirmed for rider ${result.riderName}`,
+      deposit: result,
+      riderRemainingCash: refreshedRider?.cashInHand || 0
+    });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  } finally {
+    await session.endSession();
+  }
+});
+
+// Admin Refund Queue for REFUND_REQUIRED and REFUND_PENDING orders
+app.get('/api/admin/refunds/queue', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const queue = await getRefundQueue(req.query);
+    res.json(queue);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+// Admin-Only Idempotent Order Refund Action
+app.post('/api/admin/orders/:id/refund', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const idempotencyKey = req.headers['idempotency-key'] || req.body?.idempotencyKey;
+    const reason = req.body?.reason || 'Operations admin initiated refund';
+    const result = await processOrderRefund({
+      orderId: req.params.id,
+      adminUser: req.user,
+      reason,
+      idempotencyKey
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message });
+  }
 });
 
 app.post('/api/orders/:id/handover', authenticate, handleOrderHandover);
@@ -1753,22 +1949,25 @@ app.post('/api/coolers/request-return', authenticate, async (req, res) => {
     ? 'BrisketBox Wallet (Instant Store Credit)'
     : (upiId ? `Direct UPI / Bank (${upiId})` : (req.user.upiId ? `Direct UPI (${req.user.upiId})` : 'Direct Bank Transfer'));
 
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const actualDeposit = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
+
   const returnRecord = {
     id: `RET-${Math.floor(100 + Math.random() * 900)}`,
     coolerId: cooler.id,
     orderId: cooler.currentOrderId || 'N/A',
     userId: req.user.id,
     userName: req.user.name,
-    userPhone: req.user.phone || '+91 98765 43210',
+    userPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     userAddress: address || req.user.address,
     status: 'pickup_requested',
     requestDate: new Date().toISOString(),
     scheduledPickupSlot: pickupSlot || 'Tomorrow Morning, 7:00 AM - 10:00 AM',
-    refundAmount: cooler.depositAmount || 250,
+    refundAmount: actualDeposit,
     refundPreference: refundPreference || 'wallet',
     refundMode: refundMethodLabel,
     notes: notes || 'Rinsed with gel packs kept inside box for doorstep pickup.',
-    courierAssigned: 'Hub Return Partner Chetan (+91 99002 11842)'
+    courierAssigned: 'Hub Return Partner Chetan'
   };
 
   await createCoolerReturn(returnRecord);
@@ -1817,8 +2016,8 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, async (req, res
 
     const user = await findUserById(returnItem.userId);
     if (user) {
-      const refundAmt = returnItem.refundAmount || 250;
-      if (resolvedPreference === 'wallet') {
+      const refundAmt = Number(returnItem.refundAmount) || 0;
+      if (refundAmt > 0 && resolvedPreference === 'wallet') {
         try {
           await creditWallet({
             userId: user.id,
@@ -1830,7 +2029,7 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, async (req, res
         } catch (wErr) {
           console.warn('[Return Status] Wallet credit error:', wErr.message);
         }
-      } else {
+      } else if (refundAmt > 0) {
         await updateUser(user.id, {
           depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
         });
@@ -1997,7 +2196,8 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req
   const tatStatus = tatHours <= 48 ? 'OPTIMAL_UNDER_48H' : (tatHours <= 72 ? 'STANDARD_WINDOW' : 'OVERDUE');
 
   const isEligible = cooler.status === 'with_customer' || cooler.status === 'return_requested' || cooler.status === 'in_transit';
-  const refundAmount = cooler.depositAmount || 250;
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const refundAmount = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
 
   const dbData = { coolers, orders, coolerReturns: returns };
   const tempCheck = getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, dbData);
@@ -2014,7 +2214,7 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req
       id: order.id,
       orderNumber: order.orderNumber || order.id,
       customerName: order.customerName,
-      customerPhone: order.customerPhone || '+91 98765 43210',
+      customerPhone: order.customerPhone || '',
       customerEmail: order.customerEmail,
       deliveryAddress: order.deliveryAddress,
       totalAmount: order.totalAmount || order.total,
@@ -2078,9 +2278,10 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireA
 
   const { refundPreference = 'wallet', upiId, inspectorNotes = 'QR Inward Inspection: EPP foam walls intact, gel bricks sanitized.' } = req.body;
 
-  const userId = cooler.currentUserId || 'usr_customer';
-  const user = await findUserById(userId);
-  const refundAmt = cooler.depositAmount || 250;
+  const userId = cooler.currentUserId;
+  const user = userId ? await findUserById(userId) : null;
+  const linkedOrder = cooler.currentOrderId ? await findOrderById(cooler.currentOrderId) : null;
+  const refundAmt = Number(linkedOrder?.coolerDeposit ?? cooler.depositAmount ?? 0);
 
   const returns = await findCoolerReturns();
   let returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded');
@@ -2090,25 +2291,25 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireA
       status: 'refunded',
       conditionNotes: inspectorNotes,
       completedAt: new Date().toISOString(),
-      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || ''})`
     });
   } else {
     returnRecord = {
       id: `RET-${Math.floor(100 + Math.random() * 900)}`,
       coolerId: cooler.id,
       orderId: cooler.currentOrderId || 'ORD-AUTO',
-      userId: userId,
+      userId: userId || 'customer',
       userName: cooler.currentUserName || user?.name || 'Valued Customer',
-      userPhone: user?.phone || '+91 98765 43210',
+      userPhone: user?.phone ? normalizePhone(user.phone) : '',
       userAddress: user?.address || 'Customer Registered Address',
       status: 'refunded',
       requestDate: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       refundAmount: refundAmt,
       refundPreference,
-      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || 'pooja@okhdfcbank'})`,
+      refundMode: refundPreference === 'wallet' ? 'BrisketBox Wallet (Instant Store Credit)' : `Direct UPI (${upiId || user?.upiId || ''})`,
       conditionNotes: inspectorNotes,
-      courierAssigned: 'Hub Inward Specialist Rajeshwar Rao'
+      courierAssigned: 'Hub Inward Specialist'
     };
     await createCoolerReturn(returnRecord);
   }
@@ -2193,8 +2394,8 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, r
   const available = coolers.filter(c => c.status === 'available').length;
   const inMaintenance = coolers.filter(c => c.status === 'maintenance' || c.status === 'sanitizing').length;
 
-  const totalRefunded = returns.filter(r => r.status === 'refunded').reduce((sum, r) => sum + (r.refundAmount || 250), 0);
-  const totalHeld = (withCustomer + returnRequested) * 250;
+  const totalRefunded = returns.filter(r => r.status === 'refunded').reduce((sum, r) => sum + (Number(r.refundAmount) || 0), 0);
+  const totalHeld = coolers.filter(c => ['with_customer', 'return_requested'].includes(c.status)).reduce((sum, c) => sum + (Number(c.depositAmount) || 0), 0);
   const totalDepositsCollected = totalRefunded + totalHeld;
 
   const avgTatHours = 32.4;
@@ -2325,7 +2526,7 @@ app.post('/api/coolers', authenticate, requireAdmin, async (req, res) => {
     currentUserName: null,
     cyclesUsed: 0,
     lastSanitizedDate: new Date().toISOString().split('T')[0],
-    depositAmount: depositAmount || 250,
+    depositAmount: Number(depositAmount) || 0,
     maxHoldingHours: 36,
     assignedHub: assignedHub || 'Bengaluru Central Hub Depot'
   };
