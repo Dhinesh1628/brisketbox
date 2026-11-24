@@ -15,7 +15,9 @@ const orderItemSchema = new mongoose.Schema({
 const tempLogSchema = new mongoose.Schema({
   time: { type: String, required: true },
   temp: { type: Number, required: true },
-  event: { type: String, default: '' }
+  event: { type: String, default: '' },
+  source: { type: String, enum: ['STAFF_CHECK', 'SENSOR'], default: 'STAFF_CHECK' },
+  recordedBy: { type: String, default: null }
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
@@ -62,7 +64,7 @@ const orderSchema = new mongoose.Schema({
     pincode: { type: String },
     instructions: { type: String }
   },
-  deliverySlot: { type: String, default: 'Today, Express in 90 Mins' },
+  deliverySlot: { type: String, default: 'Today, Express Delivery' },
   city: { type: String, default: 'Bengaluru', index: true },
   deliveryNotes: { type: String, default: '' },
 
@@ -172,9 +174,9 @@ const orderSchema = new mongoose.Schema({
   sealTag: { type: String, default: null },
   butcherName: { type: String, default: null },
 
-  // Cold Chain Telemetry
-  liveTemp: { type: Number, default: 0.8 },
-  tempLog: [tempLogSchema],
+  // Cold Chain Telemetry (real recorded values only - null when unrecorded)
+  liveTemp: { type: Number, default: null },
+  tempLog: { type: [tempLogSchema], default: [] },
   trackingCode: { type: String, default: '' },
   lifecycleTimestamps: {
     confirmedAt: { type: String, default: null },

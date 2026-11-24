@@ -16,7 +16,7 @@ export const CATEGORIES: CategoryCircleItem[] = [
     name: 'Chicken',
     value: 'Fresh Chicken',
     image: '/images/products/prod_6.jpg',
-    badge: 'Farm Fresh',
+    badge: 'Fresh Cuts',
     badgeColor: 'bg-emerald-600'
   },
   {
@@ -79,7 +79,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
             Explore by Category
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Hand-trimmed, vacuum-sealed cuts chilled strictly at 0°C to 4°C
+            Fresh chicken, mutton and seafood delivered chilled
           </p>
         </div>
 
@@ -106,10 +106,10 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                 className="flex flex-col items-center flex-1 min-w-[85px] sm:min-w-[100px] cursor-pointer group text-center select-none transition-transform focus:outline-none"
               >
                 {/* Circular Platter Plate Container */}
-                <div className="relative pt-3.5 pb-0.5">
+                <div className="relative pt-4 pb-0.5">
                   {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without clipping or ripping */}
                   {cat.badge && (
-                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap leading-tight ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap leading-tight ${cat.badgeColor || 'bg-[#d11243]'}`}>
                       {cat.badge}
                     </span>
                   )}

@@ -3,19 +3,14 @@ import {
   RefreshCw, 
   MapPin, 
   CheckCircle2, 
-  Zap, 
   Thermometer, 
   ShieldCheck, 
   Phone, 
   MessageSquare, 
-  RotateCcw, 
   Clock, 
   Package, 
-  Activity, 
   AlertCircle,
   Truck,
-  Box,
-  CreditCard,
   FileText,
   Lock,
   Bike
@@ -35,81 +30,10 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [simulatingSensor, setSimulatingSensor] = useState(false);
-  const [liveTemp, setLiveTemp] = useState<number>(2.3);
-  const [isDemoOrder, setIsDemoOrder] = useState<boolean>(false);
 
-  // Customer Profile matching database records
+  // Customer Profile
   const activeCustomerName = user?.name || '';
   const activeCustomerPhone = user?.phone || '';
-  const activeCustomerEmail = user?.email || '';
-
-  // Fallback demo order for previewing when database has 0 customer orders
-  const demoOrder: Order = {
-    id: 'ORD-1406',
-    orderNumber: 'BB-20261118-1406',
-    userId: user?.id || 'usr_customer',
-    customerName: activeCustomerName,
-    customerEmail: activeCustomerEmail,
-    customerPhone: activeCustomerPhone,
-    deliveryAddress: user?.address || 'Flat 402, Alpine Eco Apartments, Outer Ring Road, Doddanekkundi, Bengaluru - 560037',
-    city: user?.city || 'Bengaluru',
-    items: [
-      {
-        productId: 'prod_chicken_curry',
-        name: 'Fresh Farm Chicken Curry Cut (Skinless)',
-        price: 249,
-        quantity: 2,
-        unit: '500g',
-        netWeight: '450g',
-        chillingMethod: '0°C to 4°C chilled Cold Chain',
-        cutStyle: 'Curry Cut (Medium Bone-in)',
-        image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=800&q=80'
-      },
-      {
-        productId: 'prod_mutton_biryani',
-        name: 'Tender Lamb Biryani Cut (Rich Marrow)',
-        price: 499,
-        quantity: 1,
-        unit: '500g',
-        netWeight: '500g',
-        chillingMethod: '0°C to 4°C chilled Cold Chain',
-        cutStyle: 'Biryani Cut (Large Pieces)',
-        image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
-      }
-    ],
-    subtotal: 997,
-    coolerDeposit: 250,
-    shippingFee: 0,
-    total: 1247,
-    orderStatus: 'OUT_FOR_DELIVERY',
-    status: 'Out for Delivery',
-    lifecycleStatus: 'OUT_FOR_DELIVERY',
-    paymentStatus: 'PAID',
-    paymentMethod: 'Razorpay Online (UPI)',
-    razorpayPaymentId: 'pay_P1r9demo84920',
-    coolerId: 'BOX-BLR-417',
-    coolerModel: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
-    liveTemp: 2.3,
-    deliveryExecutive: '',
-    riderId: '',
-    riderFullName: '',
-    riderName: '',
-    riderPhone: '',
-    riderVehicle: '',
-    assignedRider: undefined,
-    tempLog: [
-      { time: '07:15 AM', temp: 0.8, event: 'Order confirmed & cut inspected at Bio-Secure Dark Depot' },
-      { time: '07:30 AM', temp: 1.2, event: 'Packed inside sanitized ThermalVault box with fresh cold gel bricks' },
-      { time: '07:45 AM', temp: 1.8, event: 'Assigned to Fleet Partner Suresh Patil (Ather 450X)' },
-      { time: '08:05 AM', temp: 2.3, event: 'Suresh Patil is in transit on Outer Ring Road (1.8 km away)' }
-    ],
-    deliverySlot: 'Express Delivery in 90 Mins (Live EV Courier)',
-    trackingCode: 'BRISKETBOX-TRK-84920',
-    deliveryPin: '4291',
-    createdAt: new Date().toISOString(),
-    deliveryNotes: 'Leave with building security or ring Flat 402 doorbell.'
-  };
 
   const fetchOrders = async () => {
     try {
@@ -118,20 +42,14 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       if (data && data.length > 0) {
         setOrders(data);
         setSelectedOrder(data[0]);
-        setLiveTemp(data[0].liveTemp || 2.1);
-        setIsDemoOrder(false);
       } else {
-        setOrders([demoOrder]);
-        setSelectedOrder(demoOrder);
-        setLiveTemp(demoOrder.liveTemp);
-        setIsDemoOrder(true);
+        setOrders([]);
+        setSelectedOrder(null);
       }
     } catch (err) {
-      console.error('Failed to fetch orders, using interactive demo:', err);
-      setOrders([demoOrder]);
-      setSelectedOrder(demoOrder);
-      setLiveTemp(demoOrder.liveTemp);
-      setIsDemoOrder(true);
+      console.error('Failed to fetch orders:', err);
+      setOrders([]);
+      setSelectedOrder(null);
     } finally {
       setLoading(false);
     }
@@ -146,9 +64,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
           setOrders(data);
           setSelectedOrder(prev => {
             if (!prev) return data[0];
-            const updated = data.find(o => o.id === prev.id) || data[0];
-            if (updated.liveTemp) setLiveTemp(updated.liveTemp);
-            return updated;
+            return data.find(o => o.id === prev.id) || data[0];
           });
         }
       } catch {
@@ -158,85 +74,73 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
     return () => clearInterval(interval);
   }, []);
 
-  // Simulate probe ping
-  const handleSimulateProbe = async () => {
-    setSimulatingSensor(true);
-    try {
-      if (isDemoOrder || !selectedOrder) {
-        setTimeout(() => {
-          const newT = Number((1.5 + Math.random() * 1.4).toFixed(1));
-          setLiveTemp(newT);
-          if (selectedOrder) {
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
-            const updatedOrder = {
-              ...selectedOrder,
-              liveTemp: newT,
-              tempLog: [
-                ...selectedOrder.tempLog,
-                { time: timeStr, temp: newT, event: `IoT Sensor Telemetry Ping: insulated cold bag internal temp confirmed at ${newT}°C` }
-              ]
-            };
-            setSelectedOrder(updatedOrder);
-          }
-          setSimulatingSensor(false);
-        }, 600);
-      } else {
-        const updated = await api.simulateTemp(selectedOrder.id);
-        setSelectedOrder(updated);
-        setLiveTemp(updated.liveTemp);
-        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-        setSimulatingSensor(false);
-      }
-    } catch (err) {
-      console.error('Probe simulation error:', err);
-      setSimulatingSensor(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3">
+        <RefreshCw className="w-8 h-8 text-[#d11243] animate-spin" />
+        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Loading your orders...</p>
+      </div>
+    );
+  }
 
-  // 6-stage delivery status per UX guidelines:
-  // 1. Order Confirmed -> 2. We're Preparing Your Order -> 3. Quality Check Done -> 4. Packed and Ready -> 5. Out for Delivery -> 6. Delivered!
+  if (orders.length === 0 || !selectedOrder) {
+    return (
+      <div className="space-y-6 pb-20 max-w-xl mx-auto pt-8">
+        <div className="bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-3xl border border-gray-200 dark:border-slate-800 text-center shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-[#d11243] flex items-center justify-center mx-auto">
+            <Package className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-black text-gray-900 dark:text-white">No Active Orders Found</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            You do not have any placed orders yet. Place an order to track transit and delivery status.
+          </p>
+          <button
+            onClick={onNavigateToReturns}
+            className="px-5 py-2.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs transition shadow-sm cursor-pointer"
+          >
+            Explore Cold-Box Services
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentOrder = selectedOrder;
+  const orderPin = getOrderDeliveryPin(currentOrder);
+
+  // 6-stage delivery status
   const timelineStages = [
     { 
       key: 'CONFIRMED', 
       title: 'Order Confirmed', 
-      timeEst: '0 - 10 mins',
-      desc: 'Your order is confirmed and sent to the preparation team.' 
+      desc: 'Your order is confirmed and sent to preparation.' 
     },
     { 
       key: 'PREPARING', 
-      title: "We're Preparing Your Order", 
-      timeEst: '10 - 25 mins',
-      desc: 'Fresh cuts are freshly sliced and cleaned for your order.' 
+      title: "Preparing Your Order", 
+      desc: 'Fresh cuts are sliced and prepared for your order.' 
     },
     { 
       key: 'QUALITY_CHECK', 
       title: 'Quality Check Done', 
-      timeEst: '25 - 35 mins',
-      desc: 'Checked for freshness, hygiene, and safe chilling.' 
+      desc: 'Checked for cut specifications and chilling compliance.' 
     },
     { 
       key: 'PACKED', 
       title: 'Packed and Ready', 
-      timeEst: '35 - 50 mins',
-      desc: 'Packed in a cold box with ice gel packs to stay fresh.' 
+      desc: 'Packed in a cold box with ice gel packs.' 
     },
     { 
       key: 'OUT_FOR_DELIVERY', 
       title: 'Out for Delivery', 
-      timeEst: '50 - 75 mins',
-      desc: 'Your delivery partner is on the way to your home.' 
+      desc: 'Your delivery partner is on the way to your door.' 
     },
     { 
       key: 'DELIVERED', 
-      title: 'Delivered!', 
-      timeEst: 'Within 90 mins',
-      desc: 'Delivered fresh to your door. Enjoy your meal!' 
+      title: 'Delivered', 
+      desc: 'Handed over at your doorstep.' 
     }
   ];
-
-  const currentOrder = selectedOrder || demoOrder;
-  const orderPin = getOrderDeliveryPin(currentOrder);
 
   const getStageIndex = (order: Order): number => {
     const rawStatus = (order.orderStatus || order.status || '').toUpperCase().replace(/[\s-]/g, '_');
@@ -257,7 +161,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       return {
         badge: 'Order Cancelled',
         color: 'rose',
-        message: 'This order was cancelled. Payment cancelled. Your refund of ₹' + order.total + ' will be credited back to your account.'
+        message: 'This order was cancelled. Payment refunded or queued for refund per policy.'
       };
     }
     switch (currentStageIndex) {
@@ -265,59 +169,94 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
         return {
           badge: 'Order Confirmed',
           color: 'blue',
-          message: 'Your order is confirmed and sent to our team.'
+          message: 'Your order is confirmed and scheduled for prep.'
         };
       case 1:
         return {
-          badge: "We're Preparing Your Order",
+          badge: 'Preparing Your Order',
           color: 'amber',
-          message: 'Your meat is being freshly cut and cleaned.'
+          message: 'Your cuts are being prepared at the station.'
         };
       case 2:
         return {
           badge: 'Quality Check Done',
           color: 'amber',
-          message: 'Passed our freshness and temperature check.'
+          message: 'Passed cold-chain inspection.'
         };
       case 3:
         return {
           badge: 'Packed and Ready',
           color: 'emerald',
-          message: 'Packed in a cold box with ice gel packs to stay fresh at 0°C - 4°C.'
+          message: 'Packed in an insulated cold box with gel packs.'
         };
       case 4:
         return {
           badge: 'Out for Delivery',
           color: 'emerald',
-          message: 'Your delivery partner is on the way to your door.'
+          message: 'Your delivery partner is on the way to your address.'
         };
       case 5:
         return {
-          badge: 'Delivered!',
+          badge: 'Delivered',
           color: 'emerald',
-          message: "Delivered fresh to your door. Enjoy your meal!"
+          message: 'Delivered to your doorstep.'
         };
       default:
         return {
-          badge: 'Preparing Your Order',
+          badge: 'Processing',
           color: 'gray',
-          message: 'We are working on your order.'
+          message: 'Your order is being processed.'
         };
     }
   };
 
   const notification = getStatusNotification(currentOrder);
 
-  // Calculate delivery ETA
-  const calculateEta = (createdAt?: string) => {
-    const start = createdAt ? new Date(createdAt) : new Date();
-    const etaDate = new Date(start.getTime() + 90 * 60 * 1000);
-    const hours = etaDate.getHours();
-    const mins = String(etaDate.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    return `Today by ${formattedHours}:${mins} ${ampm} (Within 90 mins)`;
-  };
+  // Freshness Passport, Part 1: Only real recorded events
+  const freshnessEvents: Array<{ title: string; time: string; desc: string }> = [];
+
+  if (currentOrder.createdAt) {
+    freshnessEvents.push({
+      title: 'Order Placed & Confirmed',
+      time: new Date(currentOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      desc: 'Order confirmed and registered in production.'
+    });
+  }
+
+  if (currentOrder.lifecycleTimestamps?.preparingAt) {
+    freshnessEvents.push({
+      title: 'Butcher Preparation',
+      time: new Date(currentOrder.lifecycleTimestamps.preparingAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      desc: 'Order prepped at partner station.'
+    });
+  }
+
+  if (currentOrder.lifecycleTimestamps?.packedAt || currentOrder.packedAt) {
+    const pTime = currentOrder.lifecycleTimestamps?.packedAt || currentOrder.packedAt;
+    freshnessEvents.push({
+      title: 'Cold-Box Packaging',
+      time: new Date(pTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      desc: `Sealed in insulated box #${currentOrder.coolerId || 'vault'}.`
+    });
+  }
+
+  if (currentOrder.lifecycleTimestamps?.outForDeliveryAt || currentOrder.outForDeliveryAt) {
+    const dTime = currentOrder.lifecycleTimestamps?.outForDeliveryAt || currentOrder.outForDeliveryAt;
+    freshnessEvents.push({
+      title: 'Dispatched for Delivery',
+      time: new Date(dTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      desc: 'Assigned to delivery partner for courier transit.'
+    });
+  }
+
+  if (currentOrder.lifecycleTimestamps?.deliveredAt || currentOrder.deliveredAt) {
+    const delTime = currentOrder.lifecycleTimestamps?.deliveredAt || currentOrder.deliveredAt;
+    freshnessEvents.push({
+      title: 'Delivered at Doorstep',
+      time: new Date(delTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      desc: 'Customer PIN verified and package handed over.'
+    });
+  }
 
   return (
     <div className="space-y-6 pb-20 max-w-6xl mx-auto">
@@ -332,24 +271,15 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             </h1>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-black border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Chilled at 0°C - 4°C</span>
+              <span>Chilled Packaging</span>
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Follow your order status and cold box temperature in real-time
+            Follow your order status and cold box temperature readings
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleSimulateProbe}
-            disabled={simulatingSensor}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 transition shadow-xs disabled:opacity-50"
-          >
-            <Activity className={`w-3.5 h-3.5 ${simulatingSensor ? 'animate-spin' : ''}`} />
-            <span>{simulatingSensor ? 'Checking...' : 'Check Temperature'}</span>
-          </button>
-          
           <button
             onClick={fetchOrders}
             className="px-3.5 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 transition"
@@ -363,13 +293,13 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
       {/* Main Grid: Orders Selector & Detailed Tracking View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Orders List (Desktop 4 cols) */}
+        {/* Left Column: Orders List */}
         <div className="lg:col-span-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
               My Orders ({orders.length})
             </h3>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">Chilled & Fresh</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">Cold Chain</span>
           </div>
 
           <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
@@ -379,10 +309,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               return (
                 <div
                   key={ord.id}
-                  onClick={() => {
-                    setSelectedOrder(ord);
-                    setLiveTemp(ord.liveTemp || 2.2);
-                  }}
+                  onClick={() => setSelectedOrder(ord)}
                   className={`p-4 rounded-2xl border text-xs cursor-pointer transition relative ${
                     isSelected
                       ? 'bg-rose-50/70 dark:bg-rose-950/40 border-[#d11243] ring-1 ring-[#d11243] shadow-sm'
@@ -391,18 +318,11 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-sm text-gray-950 dark:text-white">
-                          #{ord.orderNumber || ord.id}
-                        </span>
-                        {(ord.id === 'ORD-84920' || ord.id === 'ORD-1406') && isDemoOrder && (
-                          <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 rounded text-[9px] font-bold border border-amber-200 dark:border-amber-800">
-                            Demo
-                          </span>
-                        )}
-                      </div>
+                      <span className="font-black text-sm text-gray-950 dark:text-white">
+                        #{ord.orderNumber || ord.id}
+                      </span>
                       <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
-                        {(ord.items || []).length} Fresh Cut(s) • ₹{ord.total}
+                        {(ord.items || []).length} Cut(s) • ₹{ord.total}
                       </span>
                     </div>
 
@@ -420,7 +340,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                   <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                       <span>Box:</span>
-                      <strong className="text-gray-900 dark:text-gray-200 font-mono">{ord.coolerId}</strong>
+                      <strong className="text-gray-900 dark:text-gray-200 font-mono">{ord.coolerId || 'Pending'}</strong>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -429,7 +349,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                       </span>
                       <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-black">
                         <Thermometer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>{ord.liveTemp || 2.1}°C</span>
+                        <span>{ord.liveTemp !== null && ord.liveTemp !== undefined ? `${ord.liveTemp}°C` : 'Not recorded'}</span>
                       </div>
                     </div>
                   </div>
@@ -437,11 +357,9 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               );
             })}
           </div>
-
-          
         </div>
 
-        {/* Right Column: Visual Timeline, Status Notifications & Full Order Details */}
+        {/* Right Column: Visual Timeline & Full Order Details */}
         <div className="lg:col-span-8 space-y-5">
           
           {/* Delivery Status Notification Banner */}
@@ -466,23 +384,25 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             </div>
 
             <div className="bg-gray-50 dark:bg-slate-800 px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-slate-700 shrink-0 text-right">
-              <span className="text-[10px] text-gray-400 uppercase font-bold block">Arrives By</span>
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Status</span>
               <span className="text-xs font-black text-gray-950 dark:text-white">
-                {calculateEta(currentOrder.createdAt)}
+                {currentOrder.assignedRider?.estimatedArrival 
+                  ? `ETA: ${currentOrder.assignedRider.estimatedArrival}` 
+                  : (currentOrder.orderStatus || currentOrder.status || 'Active').replace(/_/g, ' ')}
               </span>
             </div>
           </div>
 
-          {/* Module 5: Exact 6-Stage Visual Timeline */}
+          {/* 6-Stage Visual Stepper */}
           <div className="bg-white dark:bg-slate-900 p-6 sm:p-7 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-black text-gray-950 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#d11243]" />
-                  <span>Order Status</span>
+                  <span>Order Pipeline</span>
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Follow each step as your fresh meat is prepped and delivered
+                  Follow each step as your cuts are prepared and delivered
                 </p>
               </div>
 
@@ -491,13 +411,12 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                 className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-200 hover:text-black hover:border-gray-400 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <FileText className="w-3.5 h-3.5 text-[#d11243]" />
-                <span>Download Bill</span>
+                <span>Invoice</span>
               </button>
             </div>
 
             {/* Stepper Grid */}
             <div className="relative">
-              {/* Progress Line */}
               <div className="hidden sm:block absolute top-5 left-8 right-8 h-1 bg-gray-200 dark:bg-slate-800 -z-0">
                 <div 
                   className="h-full bg-emerald-500 transition-all duration-500"
@@ -540,9 +459,6 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                         }`}>
                           {st.title}
                         </div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                          {st.timeEst}
-                        </div>
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight hidden lg:block mt-1">
                           {st.desc}
                         </div>
@@ -556,32 +472,81 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             {isCancelled && (
               <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 rounded-2xl flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-200">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>This order was cancelled. Payment refund initiated to your bank account.</span>
+                <span>This order was cancelled. Payment refund processed per policy.</span>
               </div>
             )}
           </div>
 
-          {/* Cold-Chain IoT Telemetry Card */}
-          <div className="bg-slate-950 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl space-y-5">
+          {/* Freshness Passport, Part 1: Real Recorded Events Only */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-gray-950 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Freshness Passport</span>
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Verified timestamps and custody log. Only actual recorded events are shown.
+                </p>
+              </div>
+              <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                Recorded Log
+              </span>
+            </div>
+
+            {freshnessEvents.length > 0 ? (
+              <div className="space-y-2.5">
+                {freshnessEvents.map((ev, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-150 dark:border-slate-800">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">{ev.title}</span>
+                        <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400">{ev.time}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">{ev.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic text-center py-2">
+                Order pending confirmation. Event log will update as steps are completed.
+              </p>
+            )}
+          </div>
+
+          {/* Cold-Chain Telemetry Card */}
+          <div className="bg-slate-950 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                  Cold Box Temperature • Box #{currentOrder.coolerId}
+                  Cold Box #{currentOrder.coolerId || 'Pending'}
                 </span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-extrabold">
-                0°C - 4°C Fresh & Chilled
+                Chilled Packaging
               </span>
             </div>
 
-            {/* Readout Gauges */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Recorded Live Temperature</span>
+                <div className="text-xl font-black text-emerald-400 mt-0.5">
+                  {currentOrder.liveTemp !== null && currentOrder.liveTemp !== undefined ? `${currentOrder.liveTemp}°C` : 'Temperature not recorded'}
+                </div>
+              </div>
+              <div className="text-right text-[11px] text-slate-400">
+                <span>Storage: </span>
+                <strong className="text-slate-200">Chilled</strong>
+              </div>
             </div>
           </div>
 
-          {/* Swiggy Style 4-Digit Handover PIN Card */}
+          {/* Handover PIN Card */}
           <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/70 dark:from-slate-850 dark:to-slate-800 border-2 border-amber-300 dark:border-amber-700/80 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-amber-500 dark:bg-amber-600 text-white flex items-center justify-center shadow-md shrink-0">
@@ -590,14 +555,14 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-amber-950 dark:text-amber-200 uppercase tracking-wider">
-                    Cold Box Handover PIN
+                    Handover PIN
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900/80 text-amber-950 dark:text-amber-200 text-[10px] font-black">
                     Required on Arrival
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-900/90 dark:text-amber-300/90 mt-0.5">
-                  Share this 4-digit PIN with your delivery partner to verify your identity and safely receive your insulated cold box.
+                  Share this 4-digit PIN with your delivery partner to verify handover.
                 </p>
               </div>
             </div>
@@ -610,110 +575,53 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             </div>
           </div>
 
-          {/* YOUR DELIVERY PARTNER (Sanitized Privacy-Preserving Rider Card) */}
-          {currentOrder.assignedRider ? (
-            <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                {currentOrder.assignedRider.profilePhoto ? (
-                  <img
-                    src={currentOrder.assignedRider.profilePhoto}
-                    alt={currentOrder.assignedRider.firstName}
-                    className="w-12 h-12 rounded-2xl object-cover border border-gray-200 dark:border-slate-700 shadow-2xs shrink-0"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950 text-[#d11243] border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0">
-                    <Bike className="w-5 h-5 text-[#d11243]" />
-                  </div>
-                )}
-                <div>
-                  <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">
-                    YOUR DELIVERY PARTNER
-                  </span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-black text-sm text-gray-950 dark:text-white">
-                      Rider: {currentOrder.riderFullName || currentOrder.assignedRider?.fullName || 'Suresh Patil'}
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-[#d11243] dark:text-rose-300 text-[10px] font-bold font-mono">
-                      {currentOrder.riderId || currentOrder.assignedRider?.riderId || 'FLEET'}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
-                    <span>Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || currentOrder.assignedRider?.vehicle || 'EV 2-Wheeler'}</strong></span>
-                    <span>•</span>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">Express 90-Min Dispatch</span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || currentOrder.assignedRider?.maskedPhone || 'Pending'}</strong></span>
-                  </div>
-                </div>
+          {/* Delivery Partner Details (Only Real Assigned Data) */}
+          <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                <Bike className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </div>
-
-              <div className="flex items-center gap-2">
-                <button 
-                  type="button"
-                  onClick={() => alert(`Secure call connected to Delivery Partner ${currentOrder.assignedRider?.fullName || currentOrder.riderFullName || 'Assigned Partner'}`)}
-                  className="flex-1 sm:flex-none px-3.5 py-2 bg-gray-900 dark:bg-slate-800 hover:bg-black dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
-                >
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Secure Call Option</span>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => alert('Opening WhatsApp chat with customer support...')}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Chat with Us</span>
-                </button>
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">
+                  Delivery Partner
+                </span>
+                <div className="font-black text-sm text-gray-950 dark:text-white mt-0.5">
+                  {currentOrder.assignedRider?.fullName || currentOrder.riderFullName || 'Pending Assignment'}
+                </div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  {currentOrder.assignedRider?.vehicle || currentOrder.riderVehicle ? (
+                    <span>Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.assignedRider?.vehicle || currentOrder.riderVehicle}</strong></span>
+                  ) : (
+                    <span>Assigned upon dispatch</span>
+                  )}
+                  {currentOrder.assignedRider?.maskedPhone && (
+                    <span> • Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.assignedRider.maskedPhone}</strong></span>
+                  )}
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center shrink-0">
-                  <Bike className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">
-                    YOUR DELIVERY PARTNER
-                  </span>
-                  <div className="font-black text-sm text-gray-950 dark:text-white">
-                    {currentOrder.riderFullName || (currentOrder.deliveryExecutive ? currentOrder.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : 'Assigned Rider')}
-                  </div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                    Vehicle: <strong className="text-gray-800 dark:text-gray-200">{currentOrder.riderVehicle || 'EV Fleet 2-Wheeler'}</strong> • Contact: <strong className="font-mono text-gray-700 dark:text-gray-300">{currentOrder.riderPhone || 'Pending'}</strong>
-                  </div>
-                  <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Cold-chain verified • 0°C to 4°C express dispatch</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => alert('Opening WhatsApp chat with customer support...')}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Chat with Us</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => alert('Support line available via Contact Us.')}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Support</span>
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Order Details & Summary */}
           <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3">
               <h4 className="text-xs font-black uppercase tracking-wider text-gray-950 dark:text-white flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-[#d11243] dark:text-rose-500" />
                 <span>Your Items ({(currentOrder.items || []).length})</span>
               </h4>
               <span className="text-xs font-extrabold text-[#d11243] dark:text-rose-400">
-                Paid: ₹{currentOrder.total} ({currentOrder.paymentMethod || 'Online'})
+                Total: ₹{currentOrder.total} ({currentOrder.paymentMethod || 'Online'})
               </span>
             </div>
 
@@ -737,9 +645,8 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
               ))}
             </div>
 
-            {/* Financial Ledger & Address */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
-              {/* Delivery Address Details */}
+            {/* Address & Payment Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-150 dark:border-slate-800 text-xs">
               <div className="p-3.5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-700 space-y-1">
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-[#d11243]" />
@@ -747,7 +654,9 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                 </span>
                 <p className="font-bold text-gray-900 dark:text-white">{currentOrder.customerName || activeCustomerName}</p>
                 <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
-                  {typeof currentOrder.deliveryAddress === 'object' && currentOrder.deliveryAddress !== null ? `${(currentOrder.deliveryAddress as any).flatNo || (currentOrder.deliveryAddress as any).line1 || ''} ${(currentOrder.deliveryAddress as any).street || ''}, ${(currentOrder.deliveryAddress as any).city || ''}` : String(currentOrder.deliveryAddress || '')}
+                  {typeof currentOrder.deliveryAddress === 'object' && currentOrder.deliveryAddress !== null 
+                    ? `${(currentOrder.deliveryAddress as any).flatNo || (currentOrder.deliveryAddress as any).line1 || ''} ${(currentOrder.deliveryAddress as any).street || ''}, ${(currentOrder.deliveryAddress as any).city || ''}` 
+                    : String(currentOrder.deliveryAddress || '')}
                 </p>
                 <p className="text-gray-500 dark:text-gray-400 font-mono text-[11px]">
                   Contact: <strong className="text-gray-700 dark:text-gray-300">{currentOrder.customerPhone || activeCustomerPhone}</strong>
@@ -759,7 +668,6 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
                 )}
               </div>
 
-              {/* Price Breakdown */}
               <div className="p-3.5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-700 space-y-1.5">
                 <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
                   <span>Item Total:</span>
@@ -785,36 +693,50 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             </div>
           </div>
 
-          {/* Temperature Log */}
+          {/* Temperature Log: Real Staff / Sensor Checks */}
           <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black uppercase tracking-wider text-gray-950 dark:text-white flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                <span>Temperature Log</span>
+                <span>Recorded Temperature Checks</span>
               </h4>
-              <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">Always Chilled</span>
+              <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">Audit Trail</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700 text-[11px] uppercase">
-                  <tr>
-                    <th className="py-2.5 px-3">Time</th>
-                    <th className="py-2.5 px-3">IoT Probe</th>
-                    <th className="py-2.5 px-3">Event / Location</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-[11px]">
-                  {currentOrder.tempLog?.map((l, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                      <td className="py-2.5 px-3 font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">{l.time}</td>
-                      <td className="py-2.5 px-3 font-mono text-emerald-700 dark:text-emerald-400 font-bold whitespace-nowrap">{l.temp}°C</td>
-                      <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 font-medium">{l.event}</td>
+            {currentOrder.tempLog && currentOrder.tempLog.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700 text-[11px] uppercase">
+                    <tr>
+                      <th className="py-2.5 px-3">Time</th>
+                      <th className="py-2.5 px-3">Reading</th>
+                      <th className="py-2.5 px-3">Source</th>
+                      <th className="py-2.5 px-3">Details / Staff</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-[11px]">
+                    {currentOrder.tempLog.map((l, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                        <td className="py-2.5 px-3 font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">{l.time}</td>
+                        <td className="py-2.5 px-3 font-mono text-emerald-700 dark:text-emerald-400 font-bold whitespace-nowrap">
+                          {l.temp !== null && l.temp !== undefined ? `${l.temp}°C` : 'Not recorded'}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {l.source === 'STAFF_CHECK' ? 'Staff Check' : l.source === 'SENSOR' ? 'Sensor' : 'Recorded Check'}
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 font-medium">
+                          {l.event} {l.recordedBy ? `(by ${l.recordedBy})` : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl text-center text-xs text-gray-500 dark:text-gray-400">
+                Temperature not recorded yet. Staff checks are logged upon prep, packing, and dispatch.
+              </div>
+            )}
           </div>
 
         </div>

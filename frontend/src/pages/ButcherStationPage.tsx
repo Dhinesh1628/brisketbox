@@ -73,10 +73,10 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
     email: '',
     phone: '',
     password: '',
-    address: 'Road No. 36, Jubilee Hills, Hyderabad',
-    fssaiNumber: 'FSSAI-112243300',
+    address: 'Partner Butcher Hub, Hyderabad',
+    fssaiNumber: '',
     operatingHours: '05:30 AM - 09:30 PM',
-    description: 'Specialist artisanal butchering, chilled meat & poultry station'
+    description: 'Partner station for fresh meat & poultry'
   });
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
 
@@ -273,14 +273,14 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   const [newProductForm, setNewProductForm] = useState({
     name: '',
     category: 'Chicken & Poultry',
-    description: 'Fresh dressed cut, cleaned and chilled under 0°C to 4°C.',
+    description: 'Fresh dressed cut, cleaned and chilled.',
     price: 340,
     mrp: 380,
     unit: '1kg',
     netWeight: '1000g',
     pieces: 'Whole Bird Cut (12-14 pcs)',
     serves: 'Serves 4',
-    origin: 'Telangana Farm Verified Batch',
+    origin: 'Local sourcing',
     cutStyle: 'Curry Cut',
     stock: 25
   });
@@ -293,31 +293,31 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   const rawBatches = [
     {
       id: 'LOT-SURMAI-0400AM-MNG',
-      label: 'Surmai / Kingfish — Coastal Harbor Daily Catch',
-      origin: 'Deep Sea Catch, Chilled at Harbor Cold Deck',
+      label: 'Surmai / Kingfish — Daily Catch',
+      origin: 'Cleaned and chilled for delivery',
       catchTime: '04:00 AM Today',
-      temp: '0.8°C'
+      temp: 'Chilled'
     },
     {
       id: 'LOT-MUTTON-BLR-892',
-      label: 'Free-Range Goat — Pasture Raised',
-      origin: 'Pasture Raised, 100% Halal Hand-Cut & Chilled',
+      label: 'Goat Curry Cut',
+      origin: 'Cleaned and chilled for delivery',
       catchTime: '05:30 AM Today',
-      temp: '1.4°C'
+      temp: 'Chilled'
     },
     {
       id: 'LOT-CHICKEN-FARM-201',
-      label: 'Farm Fresh Chicken — Organic Farm Batch',
-      origin: 'Hormone-Free Broiler Batch #201',
+      label: 'Fresh Chicken Curry Cut',
+      origin: 'Cleaned and chilled for delivery',
       catchTime: '06:00 AM Today',
-      temp: '1.1°C'
+      temp: 'Chilled'
     },
     {
       id: 'LOT-PRAWNS-CR-112',
-      label: 'Sea Tiger Prawns — Coastal Harbor',
-      origin: 'Wild Sea Catch, Deveined at Harbor Cold Deck',
+      label: 'Sea Tiger Prawns',
+      origin: 'Cleaned and chilled for delivery',
       catchTime: '03:45 AM Today',
-      temp: '0.6°C'
+      temp: 'Chilled'
     }
   ];
 
@@ -702,7 +702,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
             <h1 className="text-xl font-black text-[#0f172a]">Butcher & Partner Shop Portal</h1>
-            <p className="text-xs text-gray-400">Artisanal Fresh Cuts, Live KDS Terminal & Inventory</p>
+            <p className="text-xs text-gray-400">Fresh Cuts, Live KDS Terminal & Inventory</p>
           </div>
 
           
@@ -784,7 +784,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   required
                   value={regForm.shopName}
                   onChange={(e) => setRegForm({ ...regForm, shopName: e.target.value })}
-                  placeholder="GoMeat Artisanal Cuts & Poultry Hub"
+                  placeholder="Partner Butcher Shop & Poultry Hub"
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -822,7 +822,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     required
                     value={regForm.email}
                     onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                    placeholder="shop@gomeat.in"
+                    placeholder="shop@partner.in"
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
@@ -846,7 +846,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   required
                   value={regForm.address}
                   onChange={(e) => setRegForm({ ...regForm, address: e.target.value })}
-                  placeholder="Road No. 36, Jubilee Hills, Hyderabad"
+                  placeholder="Partner Station Address, Hyderabad"
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a] focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -859,7 +859,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     required
                     value={regForm.fssaiNumber}
                     onChange={(e) => setRegForm({ ...regForm, fssaiNumber: e.target.value })}
-                    placeholder="11224330000491"
+                    placeholder="License Number"
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-slate-900 font-mono focus:outline-none focus:border-[#d11243] focus:bg-white"
                   />
                 </div>
@@ -920,7 +920,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           <div className="space-y-1.5">
             <h2 className="text-lg font-black text-white">Shop Verification in Progress</h2>
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              Hello <strong className="text-white">{user.name}</strong>, your partner application for <strong className="text-amber-300">{user.shopName || 'your butcher station'}</strong> is being audited by GoMeat Central Operations.
+              Hello <strong className="text-white">{user.name}</strong>, your partner application for <strong className="text-amber-300">{user.shopName || 'your butcher station'}</strong> is being audited by Central Operations.
             </p>
           </div>
 
@@ -986,11 +986,11 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   {user.shopName || user.name || 'BrisketBox Master Station'}
                 </span>
                 <span className="hidden lg:inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider shrink-0">
-                  FSSAI Certified
+                  Verified Station
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-gray-500 truncate max-w-[220px] sm:max-w-md">
-                {user.address || 'Road No. 36, Jubilee Hills, Hyderabad'} • 90 Mins Dispatch
+                {user.address || 'Partner Butcher Station'} • Dispatch
               </p>
             </div>
           </div>
@@ -1186,7 +1186,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   <span className="truncate">Good morning, {user.name ? user.name.split(' ')[0] : 'Master Butcher'}!</span>
                 </h1>
                 <p className="text-xs text-gray-500">
-                  {user.address || 'Road No. 36, Jubilee Hills, Hyderabad'}
+                  {user.address || 'Partner Butcher Station'}
                 </p>
               </div>
 
@@ -1606,7 +1606,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
         {partnerTab === 'orders' && (
           <div className="space-y-4 animate-in fade-in">
             
-            {/* SLA Pulse & Audio Alert Banner (Figma Node: 1165:1184) */}
+            {/* Order Pulse & Audio Alert Banner (Figma Node: 1165:1184) */}
             <div className="bg-[#d11243] text-white p-3.5 rounded-xl shadow-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -1618,7 +1618,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     {newIncomingOrders.length} Incoming Cut Orders
                   </div>
                   <p className="text-[11px] text-rose-100 font-medium">
-                    Accept within 5 mins to maintain 99% SLA
+                    Accept order to begin preparation
                   </p>
                 </div>
               </div>
@@ -1796,7 +1796,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                             CUSTOM BUTCHER KNIFE SPEC
                           </span>
                           <span className="font-medium text-blue-950">
-                            "Thick cut, bone trimmed, 0°C to 4°C chilled dry tray"
+                            "Thick cut, bone trimmed, chilled dry tray"
                           </span>
                         </div>
                       </div>
@@ -2055,7 +2055,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                       {/* Product Thumbnail */}
                       <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden relative shrink-0 border border-gray-100">
                         <img 
-                          src={prod.imageUrl || prod.image || 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=400&q=80'} 
+                          src={prod.imageUrl || prod.image || '/images/products/prod_1.jpg'} 
                           alt={prod.name} 
                           className="w-full h-full object-cover"
                         />
@@ -2077,7 +2077,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
 
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                              0°C to 4°C Fresh
+                              Chilled Fresh
                             </span>
                           </div>
                         </div>
@@ -2315,7 +2315,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-[#0f172a]">Station Calibration Center</h2>
-                  <p className="text-xs text-gray-500">Digital Weighing Scale, Cold Chain Telemetry & Carcass Yield</p>
+                  <p className="text-xs text-gray-500">Digital Weighing Scale & Carcass Yield</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
                   <Scale className="w-5 h-5" />
@@ -2358,11 +2358,11 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-gray-500">FSSAI Number:</span>
-                  <span className="font-mono text-emerald-700 font-bold">{user.fssaiNumber || '11224330000491'}</span>
+                  <span className="font-mono text-emerald-700 font-bold">{user.fssaiNumber || 'Verified'}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-gray-500">Cold Chain Storage:</span>
-                  <span className="text-emerald-700 font-bold">0°C to 4°C Blast Chilled</span>
+                  <span className="text-emerald-700 font-bold">Chilled Storage</span>
                 </div>
               </div>
             </div>
@@ -2464,7 +2464,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Declining impacts your <strong className="text-gray-800">98.4% SLA</strong> rating. Select verified reason:
+                  Declining impacts station metrics. Select verified reason:
                 </p>
               </div>
             </div>
@@ -2542,7 +2542,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                     <span>Peak Load Queue Backlog</span>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    Station cutting load exceeds courier SLA turnaround timeline.
+                    Station cutting load exceeds courier turnaround timeline.
                   </p>
                 </div>
               </label>
@@ -2578,12 +2578,12 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               </label>
             </div>
 
-            {/* SLA Warning Card (Figma Node: 1132:3004) */}
+            {/* Pause Warning Card (Figma Node: 1132:3004) */}
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2 text-xs text-rose-900">
               <AlertCircle className="w-4 h-4 text-[#d11243] shrink-0 mt-0.5" />
               <div>
                 <strong className="font-bold">WARNING: </strong>
-                <span>3 declines within 1 hour will trigger temporary store auto-pause for 30 minutes.</span>
+                <span>3 declines within 1 hour will trigger temporary store auto-pause.</span>
               </div>
             </div>
 
@@ -2652,7 +2652,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-sm text-[#0f172a] truncate">
-                    {handoverTarget.assignedRider?.fullName || handoverTarget.assignedRider?.firstName || 'Suresh Patil'}
+                    {handoverTarget.assignedRider?.fullName || handoverTarget.assignedRider?.firstName || 'Assigned Courier Partner'}
                   </h4>
                   <p className="text-xs text-gray-500">
                     {handoverTarget.assignedRider?.vehicle || 'Ather 450X (KA-04-EV-819)'}
@@ -2678,10 +2678,10 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               <div className="bg-white rounded-xl p-2.5 border border-gray-200 text-xs space-y-1">
                 <div className="flex items-center gap-2 text-emerald-700 font-bold">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Approved for Safe Cold Delivery (0°C to 4°C Chilled)</span>
+                  <span>Approved for Safe Cold Delivery</span>
                 </div>
                 <p className="text-[11px] text-gray-500">
-                  Insulated carrier bag certified with temperature retention seal.
+                  Insulated carrier bag with temperature retention seal.
                 </p>
               </div>
             </div>
@@ -2886,7 +2886,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   <span>Calibrated Bench Tare (Default Mode Active)</span>
                 </span>
                 <p className="text-[11px] text-emerald-800">
-                  Station operating with pre-calibrated zero tare and ±5% certified culinary tolerance.
+                  Station operating with pre-calibrated zero tare.
                 </p>
               </div>
 
@@ -3002,8 +3002,8 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
           <div className="bg-white text-black w-full max-w-xs rounded-2xl p-5 shadow-2xl border border-gray-200 space-y-3 font-mono text-xs">
             
             <div className="text-center border-b pb-2">
-              <h4 className="font-black text-sm uppercase">GOMEAT ARTISANAL CUTS</h4>
-              <p className="text-[10px] text-gray-600">0°C to 4°C Blast Chilled Chain</p>
+              <h4 className="font-black text-sm uppercase">BRISKETBOX CUTS</h4>
+              <p className="text-[10px] text-gray-600">Chilled Delivery</p>
             </div>
 
             <div className="space-y-1">
@@ -3074,7 +3074,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
                   required
                   value={newProductForm.name}
                   onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
-                  placeholder="e.g. Free-Range Chicken Breast Fillets"
+                  placeholder="e.g. Fresh Chicken Breast Fillets"
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 text-[#0f172a]"
                 />
               </div>
@@ -3129,7 +3129,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
               </div>
 
               <div>
-                <label className="text-gray-700 font-bold block mb-1">Artisanal Cut Style</label>
+                <label className="text-gray-700 font-bold block mb-1">Cut Style</label>
                 <input
                   type="text"
                   value={newProductForm.cutStyle}

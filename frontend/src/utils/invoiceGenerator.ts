@@ -56,10 +56,7 @@ export function generateAndPrintInvoice(order: Order) {
         <div class="header">
           <div>
             <div class="logo-text">BrisketBox</div>
-            <div class="tagline">Freshness, Sealed with Flavour • 0°C to 4°C Cold Chain</div>
-            <div style="font-size: 10px; color: #64748b; margin-top: 6px;">
-              FSSAI Central Lic: 11224333000491 | GSTIN: 29AAECS4912J1Z8
-            </div>
+            <div class="tagline">Freshness, Sealed with Flavour • Chilled Cold Chain</div>
           </div>
           <div class="invoice-title">
             <h2>Tax Invoice</h2>
@@ -73,10 +70,9 @@ export function generateAndPrintInvoice(order: Order) {
         <div class="parties">
           <div class="party">
             <h4>Billed By:</h4>
-            <strong>BrisketBox Technologies Pvt. Ltd.</strong><br>
-            Central Cold Depot, Outer Ring Road,<br>
-            Mahadevapura, Bengaluru, Karnataka 560048<br>
-            Support: concierge@brisketbox.in | +91 97412 88301
+            <strong>BrisketBox Fresh Meats & Seafood</strong><br>
+            Cold-Chain Operations & Delivery<br>
+            Support: concierge@brisketbox.in
           </div>
           <div class="party">
             <h4>Billed To:</h4>

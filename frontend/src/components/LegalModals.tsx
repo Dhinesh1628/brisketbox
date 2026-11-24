@@ -26,13 +26,13 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
         {type === 'tos' ? (
           <div className="mt-4 space-y-4 text-xs leading-relaxed text-slate-300">
             <p>
-              <strong>1. Fresh Delivery & Quality:</strong> Every order is cut fresh and packed with ice packs to stay chilled between 0°C and 4°C until delivery. If your order arrives damaged or warm, contact us within 2 hours for an immediate refund or replacement.
+              <strong>1. Fresh Delivery & Quality:</strong> Every order is cut fresh and packed in insulated thermal packaging with gel ice packs. If your order arrives damaged, contact customer support promptly for resolution or replacement.
             </p>
             <p>
-              <strong>2. Delivery Timing:</strong> Orders are prepared and delivered in about 90 minutes during operational hours. Delivery times may vary slightly based on traffic and local weather.
+              <strong>2. Delivery Timing:</strong> Orders are prepared and scheduled for your selected delivery window. Times may vary based on route conditions and local weather.
             </p>
             <p>
-              <strong>3. Freshness & Cold-Chain SLA:</strong> All coastal fish and meats are dispatched in ice-slurry or chilled temperature ranges between 0°C and 3°C. In the event of cold-chain breakage or packaging compromise, customers are entitled to an immediate replacement or full refund under our FSSAI food safety compliance.
+              <strong>3. Product Quality Support:</strong> Products are packaged with ice packs designed to keep meat and fish chilled during local delivery. If you have any packaging concerns upon arrival, reach out to our support team.
             </p>
             <p>
               <strong>4. Order Cancellations & Delivery Slots:</strong> Morning orders (7:00 AM – 9:00 AM) can be rescheduled up to 10:00 PM the previous evening. Evening orders can be modified up to 2:00 PM on the delivery date.

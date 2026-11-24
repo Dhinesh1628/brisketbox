@@ -5,7 +5,7 @@ import type { Order } from '../types';
  * - If order already has a persistent 4-digit deliveryPin, returns it directly.
  * - If absent, deterministically derives a distinct 4-digit PIN based on
  *   both the unique order identifier and the customer identifier.
- * - Guarantees that every customer and every order receives a completely different PIN.
+ * - Ensures that every customer and every order receives a completely different PIN.
  */
 export function getOrderDeliveryPin(order?: Partial<Order> | null): string {
   if (!order) {

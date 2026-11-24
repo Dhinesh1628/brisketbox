@@ -358,12 +358,16 @@ export const api = {
     return res.json();
   },
 
-  async simulateTemp(orderId: string): Promise<Order> {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/simulate-temp`, {
+  async recordStaffTemperature(orderId: string, temp: number, event?: string, source: 'STAFF_CHECK' | 'SENSOR' = 'STAFF_CHECK'): Promise<{ success: boolean; liveTemp: number; tempLog: any[] }> {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/temperature`, {
       method: 'POST',
-      headers: getHeaders()
+      headers: getHeaders(),
+      body: JSON.stringify({ temp, event, source })
     });
-    if (!res.ok) throw new Error('Sensor telemetry failed');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to record temperature reading');
+    }
     return res.json();
   },
 

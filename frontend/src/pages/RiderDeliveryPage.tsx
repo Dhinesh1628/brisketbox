@@ -580,7 +580,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
             <h1 className="text-xl font-black text-slate-900">Delivery Partner Portal</h1>
-            <p className="text-xs text-slate-500">0°C to 4°C ThermalVault Cold-Chain Express Logistics</p>
+            <p className="text-xs text-slate-500">ThermalVault Cold-Chain Express Logistics</p>
           </div>
 
           
@@ -628,7 +628,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="rider@brisketbox.in or +91 97412 88301"
+                  placeholder="rider@brisketbox.in"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -663,7 +663,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                   required
                   value={regForm.name}
                   onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
-                  placeholder="Suresh Patil"
+                  placeholder="Full Name"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-[#d11243] focus:bg-white"
                 />
               </div>
@@ -826,7 +826,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
           </div>
 
           <p className="text-[11px] text-gray-500">
-            For urgent dispatch inquiries, contact Central Hub Ops at <strong className="text-slate-700">+91 97412 88301</strong>.
+            For urgent dispatch inquiries, contact Central Hub Operations via operations support.
           </p>
 
           <div className="flex gap-2 w-full pt-2">
@@ -1374,7 +1374,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                         className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700 text-xs font-bold text-sky-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                       >
                         <Thermometer className="w-3.5 h-3.5 text-sky-400" />
-                        <span>{isCheckingCooler ? 'Analyzing Cold Chain Data...' : 'Audit Cold-Chain (0°C - 4°C Rule)'}</span>
+                        <span>{isCheckingCooler ? 'Analyzing Cold Chain Data...' : 'Audit Cold-Chain Box'}</span>
                       </button>
 
                       {coolerCheckResult && (

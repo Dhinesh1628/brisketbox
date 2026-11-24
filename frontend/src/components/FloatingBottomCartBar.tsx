@@ -34,7 +34,7 @@ export const FloatingBottomCartBar: React.FC<FloatingBottomCartBarProps> = ({
               {totalItems} {totalItems === 1 ? 'ITEM' : 'ITEMS'} &nbsp;|&nbsp; ₹{subtotal}
             </div>
             <div className="text-[10px] text-rose-100 font-medium leading-none mt-0.5">
-              Delivered fresh in about 90 mins
+              Delivered fresh in chilled packaging
             </div>
           </div>
         </div>

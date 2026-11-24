@@ -229,7 +229,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
       const errorMsg: Message = {
         id: `concierge_err_${Date.now()}`,
         sender: 'concierge',
-        text: "I am synchronizing cuts with our 0°C harbor cold hub. You can also message our master butcher directly on WhatsApp!",
+        text: "I am synchronizing cuts with our catalog. You can also message our support team on WhatsApp!",
         time: getCurrentTime(),
         suggestedReplies: ["Today's seafood catch", "Mutton cuts", "Apply 20% coupon"]
       };
@@ -319,10 +319,10 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
         <div className="bg-[#128C7E] dark:bg-slate-800 px-4 py-1.5 flex items-center justify-between text-xs text-emerald-100 dark:text-emerald-300 border-t border-emerald-600/40 shrink-0 font-medium">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="text-[11px]">0°C to 4°C Blast-Chilled • 1-Tap Cart Execution Active</span>
+            <span className="text-[11px]">Fresh Cuts • 1-Tap Cart Execution Active</span>
           </div>
           <span className="text-[10px] bg-emerald-950/40 px-2 py-0.5 rounded-md font-bold">
-            90-Min Dispatch
+            Express Dispatch
           </span>
         </div>
 

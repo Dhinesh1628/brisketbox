@@ -206,7 +206,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultRo
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
+                placeholder="+91 98XXXXXXXX"
                 className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
               />
             </div>

@@ -221,7 +221,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           {/* Cooked Dish Warm Sizzle Vignette */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
-          {/* Layer 2: Fresh 0°C Raw Cut with Smooth Cross-Fade */}
+          {/* Layer 2: Fresh Raw Cut with Smooth Cross-Fade */}
           <img
             src={product.image || visual.rawImage}
             alt={product.name}
@@ -256,7 +256,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 {visual.cookedDishName}
               </span>
               <span className={`group-hover:hidden ${isCookedActive ? 'text-amber-300 font-semibold' : 'text-cyan-200'}`}>
-                {isCookedActive ? visual.cookedDishName : '0°C Raw Cut'}
+                {isCookedActive ? visual.cookedDishName : 'Raw Cut'}
               </span>
             </button>
           </div>
@@ -264,7 +264,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           {/* Delivery time tag */}
           <div className="absolute top-2.5 right-11 z-20 bg-black/60 dark:bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold text-amber-300 shadow-xs flex items-center gap-1 border border-white/10">
             <Zap className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-            <span>90 mins</span>
+            <span>Express</span>
           </div>
 
           {/* Save for Later Heart Button */}
@@ -462,23 +462,23 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           onViewAllSpecs={handleScrollToCatalog}
         />
 
-        {/* Always Chilled 0°C to 4°C Assurance Strip */}
+        {/* Chilled Packaging Assurance Strip */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-3 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4 transition-colors">
           <div className="flex items-center gap-2.5 sm:gap-3.5">
             <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-100 dark:border-rose-900 flex items-center justify-center text-[#d11243] dark:text-rose-400 font-black text-xs sm:text-sm shrink-0 shadow-xs">
-              0°C
+              <ThermometerSnowflake className="w-5 h-5 text-[#d11243] dark:text-rose-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xs sm:text-sm text-gray-950 dark:text-white">
-                  Always Chilled at 0°C to 4°C
+                  Fresh Chilled Packaging
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[9px] sm:text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
-                  Never Frozen
+                  Chilled
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Delivered fresh in temperature-controlled packaging across {selectedCity}. Express 90-min delivery.
+                Delivered fresh in temperature-controlled packaging across {selectedCity || 'your city'}.
               </p>
             </div>
           </div>
@@ -631,7 +631,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                0°C to 4°C chilled • Delivered fresh in 90 minutes across {selectedCity}
+                Chilled packaging • Delivered fresh across {selectedCity || 'your city'}
               </p>
             </div>
             <button
@@ -668,7 +668,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Most ordered cuts • Delivered in about 90 minutes
+                  Most ordered cuts • Delivered cold to your doorstep
                 </p>
               </div>
               <button 
@@ -729,7 +729,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 FLAT 20% OFF ON ORDERS ABOVE ₹799
               </h3>
               <p className="text-xs sm:text-sm text-rose-100 font-medium">
-                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">BRISKET20</span> at checkout. Hand-cut, 0°C chilled & delivered in 90 mins.
+                Use code <span className="font-black text-amber-300 tracking-wider bg-black/30 px-2 py-0.5 rounded-md">BRISKET20</span> at checkout. Fresh cuts in chilled packaging.
               </p>
             </div>
 
@@ -764,11 +764,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     Customer Favourites
                   </h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
-                    ⭐ 4.9+ Rated
+                    Customer Loved
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Highest customer satisfaction cuts verified by 50,000+ Bangalore households
+                  Popular customer-selected cuts delivered cold to your doorstep
                 </p>
               </div>
               <button 
@@ -797,7 +797,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     Fresh Picks
                   </h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-900">
-                    Harbor Catch 4 AM
+                    Daily Selection
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -808,7 +808,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                 onClick={handleScrollToCatalog}
                 className="text-xs font-bold text-[#d11243] dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer self-start sm:self-auto"
               >
-                <span>See Catch Origin</span>
+                <span>See Selection Details</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -829,7 +829,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               Fresh cuts, prepared daily
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              All our meat and seafood is cut and cleaned fresh every morning. Packed on ice and delivered to your door in about 90 minutes.
+              All our meat and seafood is cut and cleaned fresh every morning. Packed on ice and delivered cold to your door.
             </p>
           </div>
         </div>

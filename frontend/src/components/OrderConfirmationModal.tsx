@@ -21,7 +21,7 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
 
   const estimatedDeliveryTime = order.deliverySlot 
     ? order.deliverySlot 
-    : '25 – 35 Mins (Express Cold-Chain Delivery)';
+    : 'Express Cold-Chain Delivery';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

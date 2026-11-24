@@ -112,7 +112,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
                 <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
-                <span>Express 90-Min Delivery</span>
+                <span>Express Chilled Delivery</span>
               </div>
             </div>
             <button
@@ -404,7 +404,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
               <div className="flex items-center justify-between text-[11px] text-gray-400 pt-0.5 border-t border-gray-100 dark:border-slate-800">
                 <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Chilled 0°C–4°C Safe Delivery</span>
+                  <span>Chilled Safe Delivery</span>
                 </div>
                 <button
                   onClick={clearCart}

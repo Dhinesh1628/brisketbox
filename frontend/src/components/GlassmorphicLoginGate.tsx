@@ -218,7 +218,7 @@ export const GlassmorphicLoginGate: React.FC<GlassmorphicLoginGateProps> = ({
               <img src="/images/logo-dark.png" alt="BrisketBox" className="h-7 w-auto object-contain drop-shadow-md" />
             </div>
             <p className="text-[11px] text-slate-300/90 font-medium">
-              Freshness, sealed with flavour. • 0°C to 4°C Cold Chain
+              Freshness, sealed with flavour. • Chilled Cold Chain
             </p>
           </div>
 

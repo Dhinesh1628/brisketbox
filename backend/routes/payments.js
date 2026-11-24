@@ -1053,7 +1053,6 @@ async function createOrderRecord(params) {
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const initialTemp = 0.8;
 
   const order = {
     id: orderNumber,
@@ -1065,7 +1064,7 @@ async function createOrderRecord(params) {
     customerPhone: user.phone ? normalizePhone(user.phone) : '',
     deliveryAddress,
     addressDetails,
-    city: city || 'Bengaluru',
+    city: city || user.city || '',
     items: processedItems,
     subtotal,
     discountAmount: discount || 0,
@@ -1083,8 +1082,8 @@ async function createOrderRecord(params) {
     status: orderStatus === 'CONFIRMED' ? 'Order Confirmed' : 'Pending Payment',
     orderStatus: orderStatus || 'PENDING_PAYMENT',
     lifecycleStatus: orderStatus || 'PENDING_PAYMENT',
-    partnerId: 'shop_central_butcher',
-    partnerName: 'Halal Cuts & Coastal Harbor Station #14',
+    partnerId: null,
+    partnerName: null,
     paymentMethod,
     paymentStatus: paymentStatus || 'PENDING',
     razorpayOrderId,
@@ -1093,17 +1092,15 @@ async function createOrderRecord(params) {
     coolerId: assignedCooler?.id || null,
     coolerModel: assignedCooler?.model || null,
     coldBoxRefundStatus: 'NOT_REQUESTED',
-    liveTemp: initialTemp,
+    liveTemp: null,
     riderId: assignedRider?.riderId || null,
     riderFullName: assignedRider?.riderFullName || null,
     riderName: assignedRider?.riderName || null,
     riderPhone: assignedRider?.riderPhone || null,
     riderVehicle: assignedRider?.riderVehicle || null,
     deliveryExecutive: assignedRider?.deliveryExecutive || null,
-    tempLog: [
-      { time: timeStr, temp: initialTemp, event: orderStatus === 'CONFIRMED' ? 'Order Confirmed. Queued for butchery.' : 'Order initiated. Awaiting payment confirmation.' }
-    ],
-    deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
+    tempLog: [],
+    deliverySlot: deliverySlot || 'Scheduled Delivery',
     trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     pinAttempts: 0,
     pinLockedUntil: null,

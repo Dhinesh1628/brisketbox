@@ -46,7 +46,7 @@ interface NavbarProps {
   setSelectedCity: (city: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  currentAddress?: DeliveryAddress;
+  currentAddress?: DeliveryAddress | null;
   onOpenLocationModal?: () => void;
   selectedCategory?: string;
   onSelectCategory?: (category: string) => void;
@@ -103,7 +103,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
       { name: 'White Pomfret (Whole Cleaned)', searchTerm: 'Pomfret' },
       { name: 'Jumbo Sea Prawns (Deveined)', searchTerm: 'Prawns' },
       { name: 'Center-Cut Round Steaks', searchTerm: 'Steaks' },
-      { name: 'Coastal Harbor Fresh Catch', categoryFilter: 'Fish & Seafood' }
+      { name: 'Fresh Seafood Selection', categoryFilter: 'Fish & Seafood' }
     ]
   },
   {
@@ -115,7 +115,7 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
       { name: 'Amritsari Crispy Fish Tikka', searchTerm: 'Tikka' },
       { name: 'Marinated Skillet Roasts', searchTerm: 'Roast' },
       { name: 'Herb Butter Sizzlers', searchTerm: 'Butter' },
-      { name: 'Quick 8-Min Pan Fries', searchTerm: 'Fry' }
+      { name: 'Quick Pan Fries', searchTerm: 'Fry' }
     ]
   },
   {
@@ -136,9 +136,9 @@ export const CATEGORY_NAV_DATA: CategoryNavGroup[] = [
     categoryValue: 'All',
     image: '/images/hero_banner_meat.jpg',
     subCategories: [
-      { name: '0°C to 4°C Fresh Certified', categoryFilter: 'All' },
-      { name: 'Daily Harbor Landings', categoryFilter: 'Fish & Seafood' },
-      { name: 'Antibiotic-Free Farm Cuts', categoryFilter: 'Fresh Chicken' },
+      { name: 'Fresh Chilled Cuts', categoryFilter: 'All' },
+      { name: 'Fresh Fish & Seafood', categoryFilter: 'Fish & Seafood' },
+      { name: 'Fresh Poultry Cuts', categoryFilter: 'Fresh Chicken' },
       { name: 'All Master Cuts', categoryFilter: 'All' }
     ]
   }
@@ -429,9 +429,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Trust badge */}
             <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                <Zap className="w-3.5 h-3.5" /> Express 90-Min Delivery
+                <Zap className="w-3.5 h-3.5" /> Express Chilled Delivery
               </span>
-              <span>Chilled fresh at 0°C to 4°C</span>
+              <span>Chilled fresh delivery</span>
             </div>
           </div>
         ) : (
@@ -570,7 +570,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const indianCities = [
     { name: 'Bengaluru', locality: 'Indiranagar, 560038' },
     { name: 'Mumbai', locality: 'Bandra West, 400050' },
-    { name: 'Hyderabad', locality: 'Jubilee Hills, 500033' },
+    { name: 'Hyderabad', locality: 'Banjara Hills, 500034' },
     { name: 'Delhi NCR', locality: 'Gurugram CyberCity, 122002' },
     { name: 'Pune', locality: 'Koregaon Park, 411001' },
     { name: 'Chennai', locality: 'Adyar, 600020' }
@@ -580,10 +580,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Smart, clean location display logic (Swiggy / Zepto standard)
   const getLocationHeading = () => {
-    if (!currentAddress) return selectedCity || 'Hyderabad';
+    if (!currentAddress) return selectedCity || 'Select Location';
     
     if (currentAddress.tag === 'Home' || currentAddress.tag === 'Work') {
-      return `${currentAddress.tag} • ${currentAddress.city || selectedCity}`;
+      return `${currentAddress.tag} • ${currentAddress.city || selectedCity || 'Select Location'}`;
     }
     
     // For GPS or other locations: show area or city
@@ -591,7 +591,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return `${currentAddress.area}, ${currentAddress.city}`;
     }
     
-    return currentAddress.area || currentAddress.city || selectedCity || 'Hyderabad';
+    return currentAddress.area || currentAddress.city || selectedCity || 'Select Location';
   };
 
   const getLocationSubtitle = () => {
@@ -636,22 +636,23 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0 truncate">
             <span className="font-extrabold text-[#d11243] dark:text-rose-400 shrink-0 text-[10px] sm:text-[11px]">Fresh delivery:</span>
-            <span className="truncate text-gray-800 dark:text-gray-200 font-medium">Daily fresh cuts delivered in about 90 minutes</span>
+            <span className="truncate text-gray-800 dark:text-gray-200 font-medium">Daily fresh cuts delivered cold to your door</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 text-gray-600 dark:text-gray-300 shrink-0">
-            <a 
-              href="https://wa.me/919741288301?text=Hello%20BrisketBox%2C%20I%20need%20assistance%20with%20my%20order"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors text-gray-700 dark:text-gray-200"
-              title="Chat with BrisketBox Customer Support"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Support: +91 97412 88301</span>
-            </a>
-            
-          </div>
+          {((import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim()) && (
+            <div className="hidden sm:flex items-center gap-3 text-gray-600 dark:text-gray-300 shrink-0">
+              <a 
+                href={`https://wa.me/${(import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim().replace(/\D/g, '')}?text=Hello%20BrisketBox%2C%20I%20need%20assistance%20with%20my%20order`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer transition-colors text-gray-700 dark:text-gray-200"
+                title="Chat with BrisketBox Customer Support"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Support: {(import.meta.env.VITE_SUPPORT_PHONE || import.meta.env.SUPPORT_PHONE || '').trim()}</span>
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -697,7 +698,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {getLocationSubtitle()}
                   </span>
                   <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">About 90 minutes</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">Express Dispatch</span>
                 </div>
               </div>
             </button>
@@ -809,7 +810,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} Cuts
                         </span>
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                          0°C - 4°C Fresh
+                          Chilled Fresh
                         </span>
                       </div>
 
@@ -1144,7 +1145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
         <div className="flex items-center gap-1 shrink-0 pl-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>About 90 mins</span>
+          <span>Express Chilled</span>
         </div>
       </div>
 
@@ -1204,7 +1205,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div>
                   <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
                     <span>Delivering to {getLocationHeading()}</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">• About 90 mins</span>
                   </div>
                   <div className="text-[11px] text-gray-600 dark:text-gray-300 truncate max-w-[240px]">
                     {getLocationSubtitle()}

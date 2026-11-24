@@ -54,47 +54,39 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
   const scanLoopRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 4 Core Operational Scenarios (Ashik's Supply Chain Analysis Suite)
+  // Fleet Boxes Available for Inspection
   const sampleScenarios = [
     {
       id: 'BOX-BLR-417',
       title: 'Standard Customer Return',
-      subtitle: 'Doorstep pickup completed • 24h TAT',
-      temp: '1.8°C',
-      tempStatus: 'Normal (0°C to 4°C)',
-      statusBadge: 'Box Verified for Reuse',
+      subtitle: 'Doorstep pickup completed',
+      statusBadge: 'Delivered',
       badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-      description: 'Hermetic seals intact, blast-chilled temperature maintained within FSSC-22000 safe limits.'
+      description: 'Hermetic seals intact. Reversible cold box return.'
     },
     {
       id: 'BOX-BLR-103',
-      title: 'Thermal Breach Anomaly',
-      subtitle: 'Worn gasket seal • Temp breach alert',
-      temp: '5.8°C',
-      tempStatus: 'Breach (>4.0°C)',
-      statusBadge: 'Maintenance Required',
+      title: 'Depot Inspection Unit',
+      subtitle: 'Depot maintenance queue',
+      statusBadge: 'Maintenance',
       badgeClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-      description: 'Internal temperature rose above 4°C safe limit. Gasket seal compromised. Box routed to depot maintenance bay.'
+      description: 'Cooler box registered in depot inventory.'
     },
     {
       id: 'BOX-BLR-182',
       title: 'Active Delivery In-Transit',
-      subtitle: 'Assigned to EV Partner Suresh Patil',
-      temp: '0.6°C',
-      tempStatus: 'Actively Chilled',
+      subtitle: 'Assigned to Delivery Fleet Partner',
       statusBadge: 'In Transit',
       badgeClass: 'bg-sky-50 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 border-sky-200 dark:border-sky-800',
-      description: 'Currently out for delivery in Mahadevapura corridor. Live Bluetooth temperature logging active.'
+      description: 'Currently out for delivery with fleet partner.'
     },
     {
       id: 'BOX-BLR-633',
       title: 'Central Depot Stock',
-      subtitle: 'Indiranagar Hub • Available for packing',
-      temp: '1.8°C',
-      tempStatus: 'Depot Reserve',
-      statusBadge: 'UV Sanitized & Ready',
+      subtitle: 'Regional Depot Hub',
+      statusBadge: 'Sanitized & Ready',
       badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-      description: 'Cleaned, sanitized with UV-C cycle, and packed with sub-zero gel bricks ready for next dispatch.'
+      description: 'Cleaned and sanitized for next dispatch.'
     }
   ];
 
@@ -303,98 +295,8 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
         setUpiIdInput(data.returnRecord.upiId);
       }
     } catch (err: any) {
-      // Resilient Fallback to Sample Fleet Scenario if network or server unavailable
-      const matchSample = sampleScenarios.find(s => s.id.toLowerCase() === id.toLowerCase() || id.toLowerCase().includes(s.id.toLowerCase()));
-      if (matchSample) {
-        const isDamaged = matchSample.id.includes('103');
-        const isInTransit = matchSample.id.includes('182');
-        const isDepot = matchSample.id.includes('633');
-        setInspectionData({
-          success: true,
-          cooler: {
-            id: matchSample.id,
-            qrCode: `BRISKETBOX-${matchSample.id}`,
-            model: 'ThermalVault 18L - Reusable EPP Cold-Gel Box',
-            status: isDamaged ? 'with_customer' : (isInTransit ? 'assigned' : (isDepot ? 'available' : 'with_customer')),
-            cyclesUsed: 14,
-            depositAmount: 250,
-            assignedHub: 'Mahadevapura Dark Hub'
-          },
-          telemetry: {
-            liveTemp: parseFloat(matchSample.temp),
-            status: isDamaged ? 'BREACH' : 'OPTIMAL_COLD_CHAIN',
-            isCompliant: !isDamaged,
-            complianceRate: isDamaged ? 62 : 100,
-            thermalHealthScore: isDamaged ? 54.2 : 98.6,
-            tatHours: isDamaged ? 91.2 : (isDepot ? 0 : 24.2),
-            tatStatus: isDamaged ? 'OVERDUE' : 'ON_TIME',
-            cyclesUsed: isDepot ? 22 : 14,
-            singleUsePlasticBoxesSaved: isDepot ? 44 : 28,
-            tempLog: isDamaged ? [
-              { time: '09:00 AM', temp: 1.4, event: 'Sealed at Indiranagar Fulfillment Center' },
-              { time: '09:30 AM', temp: 3.2, event: 'Dispatched with Cold-Chain Courier' },
-              { time: '10:15 AM', temp: 5.4, event: 'ALERT: Gasket seal leaked in transit' },
-              { time: '10:45 AM', temp: 5.8, event: 'ALERT: Customer doorstep delivery temp breach' }
-            ] : isDepot ? [
-              { time: '06:30 AM', temp: 1.2, event: 'Sanitized with automated UV-C sterilization cycle' },
-              { time: '07:15 AM', temp: 1.4, event: 'Sub-zero PCM gel packs loaded at Indiranagar Dark Hub' },
-              { time: '08:00 AM', temp: 1.8, event: 'Stored in Depot cold-staging bay. Ready for next order.' }
-            ] : [
-              { time: '07:15 AM', temp: 0.8, event: 'Sealed at Mahadevapura Dark Hub' },
-              { time: '07:30 AM', temp: 1.2, event: 'Dispatched with EV Chilled Courier' },
-              { time: '08:15 AM', temp: parseFloat(matchSample.temp), event: 'Delivered at customer doorstep' }
-            ]
-          },
-          tempCheck: {
-            found: true,
-            coolerId: matchSample.id,
-            requiredMin: 0,
-            requiredMax: 4,
-            verdict: isDamaged ? {
-              status: 'DEFECTIVE - STAYED ABOVE THE TEMPERATURE',
-              reason: '2 of 4 readings were above 4°C. The highest was 5.8°C at 10:45. Thermal seal compromised.'
-            } : isDepot ? {
-              status: 'DEPOT_READY',
-              reason: 'Cooler is UV-C sanitized and pre-chilled in depot reserve (1.8°C). Ready for next customer dispatch.'
-            } : {
-              status: 'CORRECT',
-              reason: 'All readings stayed within 0°C to 4°C FreshSeal safe limit.'
-            }
-          },
-          fleetDetails: {
-            decision: isDamaged ? {
-              status: 'NOT_ELIGIBLE',
-              reason: 'Exceeded 36-hour customer return limit (91.2h elapsed) and breached cold-chain temperature.'
-            } : isDepot ? {
-              status: 'IN_DEPOT',
-              reason: 'Cooler is safely in central depot stock. Ready for packing (No customer deposit held).'
-            } : {
-              status: 'ELIGIBLE',
-              reason: 'Returned within 36-hour SLA window in optimal thermal state.'
-            }
-          },
-          health: {
-            score: isDamaged ? 25 : 98,
-            grade: isDamaged ? 'D' : 'A',
-            agingStatus: isDamaged ? 'retire_recommended' : 'optimal',
-            action: isDamaged ? 'Route to Depot Maintenance Bay' : 'Ready for Next Order Dispatch'
-          },
-          customerDetails: {
-            name: 'Pooja Sundaram',
-            hub: 'Bengaluru Central Hub Depot',
-            address: 'Flat 402, Alpine Eco, Doddanekkundi, Bengaluru'
-          },
-          refundAssessment: {
-            isEligible: !isDepot,
-            refundAmount: 250,
-            reason: isDepot ? 'Box already in depot inventory.' : 'Cold box returned in pristine condition with 0°C-4°C thermal compliance.'
-          }
-        });
-        setInputBoxId(matchSample.id);
-      } else {
-        setError(err.message || `Cold Box #${id} not found in fleet records.`);
-        setInspectionData(null);
-      }
+      setError(err.message || `Cold Box #${id} not found in fleet records.`);
+      setInspectionData(null);
     } finally {
       setLoading(false);
     }
@@ -409,8 +311,10 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
     try {
       const res = await api.approveCoolerRefund(inspectionData.cooler.id, {
         refundPreference,
-        upiId: refundPreference === 'upi' ? (upiIdInput || 'customer@okhdfcbank') : undefined,
-        inspectorNotes: `Inward Doorstep QR Inspection: Box intact, temp verified at ${inspectionData.telemetry?.liveTemp}°C.`
+        upiId: refundPreference === 'upi' ? (upiIdInput || '') : undefined,
+        inspectorNotes: inspectionData.telemetry?.liveTemp != null
+          ? `Inward Doorstep QR Inspection: Box intact, temp verified at ${inspectionData.telemetry.liveTemp}°C.`
+          : 'Inward Doorstep QR Inspection: Box intact.'
       });
 
       setRefundSuccess(res.message);
@@ -472,7 +376,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                 </h2>
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  0°C to 4°C FreshSeal™
+                  Chilled Packaging
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -727,15 +631,6 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                             {scen.description}
                           </p>
                         </div>
-
-                        <div className="text-right shrink-0">
-                          <span className="font-mono font-black text-sm text-gray-900 dark:text-white block">
-                            {scen.temp}
-                          </span>
-                          <span className="text-[10px] text-gray-400">
-                            {scen.tempStatus}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   );
@@ -743,11 +638,11 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
               </div>
             </div>
 
-            {/* Help / FSSAI Policy Note */}
+            {/* Help / Thermal Policy Note */}
             <div className="p-3 bg-gray-50 dark:bg-slate-800/40 rounded-xl border border-gray-200 dark:border-slate-800 text-[11px] text-gray-600 dark:text-gray-400 flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>0°C to 4°C Freshness Guarantee:</strong> Orders are blast-chilled at dark hubs and sealed in multi-use ThermalVault™ EPP boxes. Zero thermocol, 100% recyclable.
+                <strong>Thermal Packaging:</strong> Orders are chilled and sealed in multi-use ThermalVault™ EPP boxes. Zero thermocol, 100% recyclable.
               </span>
             </div>
 
@@ -783,11 +678,15 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                           #{inspectionData.cooler.id}
                         </span>
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          inspectionData.telemetry?.isCompliant
-                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-rose-50 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                          inspectionData.telemetry?.liveTemp != null
+                            ? (inspectionData.telemetry?.isCompliant
+                                ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-rose-50 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800')
+                            : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300 border border-gray-200 dark:border-slate-700'
                         }`}>
-                          {inspectionData.telemetry?.isCompliant ? '0°C to 4°C Maintained' : 'Temperature Breach Alert'}
+                          {inspectionData.telemetry?.liveTemp != null
+                            ? (inspectionData.telemetry?.isCompliant ? 'Chilled Temperature Maintained' : 'Temperature Out of Range')
+                            : 'Temperature not recorded'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -798,69 +697,24 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                     {/* Temperature Pill */}
                     <div className="text-right">
                       <div className="flex items-baseline justify-end gap-1">
-                        <Thermometer className={`w-5 h-5 ${inspectionData.telemetry?.isCompliant ? 'text-emerald-600' : 'text-rose-600'}`} />
-                        <span className={`text-2xl font-black ${inspectionData.telemetry?.isCompliant ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {inspectionData.telemetry?.liveTemp}°C
+                        <Thermometer className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <span className="text-base font-bold text-gray-900 dark:text-white">
+                          {inspectionData.telemetry?.liveTemp != null
+                            ? `${inspectionData.telemetry.liveTemp}°C`
+                            : 'Temperature not recorded'}
                         </span>
                       </div>
                       <span className="text-[10px] text-gray-400 font-medium">
-                        Target: 0°C – 4°C FreshSeal™
+                        Cold Box Telemetry
                       </span>
                     </div>
                   </div>
 
-                  {/* 3 Metric Pills */}
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="p-2.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-100 dark:border-slate-800">
-                      <span className="text-[10px] text-gray-400 block">Insulation Score</span>
-                      <strong className="text-gray-900 dark:text-white text-xs">{inspectionData.telemetry?.thermalHealthScore}%</strong>
-                    </div>
-                    <div className="p-2.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-100 dark:border-slate-800">
-                      <span className="text-[10px] text-gray-400 block">Turnaround TAT</span>
-                      <strong className="text-emerald-700 dark:text-emerald-400 text-xs">{inspectionData.telemetry?.tatHours} hrs elapsed</strong>
-                    </div>
-                    <div className="p-2.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-100 dark:border-slate-800">
-                      <span className="text-[10px] text-gray-400 block">Thermocol Eliminated</span>
-                      <strong className="text-sky-700 dark:text-sky-400 text-xs">{inspectionData.telemetry?.singleUsePlasticBoxesSaved} boxes</strong>
-                    </div>
+                  {/* Operational Status Summary */}
+                  <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-100 dark:border-slate-800 text-xs text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                    <span>Assigned Hub: <strong>{inspectionData.cooler?.assignedHub || 'Regional Depot'}</strong></span>
+                    <span>Status: <strong className="capitalize">{inspectionData.cooler?.status?.replace('_', ' ') || 'Registered'}</strong></span>
                   </div>
-
-                  {/* Teammate Script #3 Cold Chain & SLA Analysis */}
-                  {inspectionData.tempCheck && (
-                    <div className={`mt-3 p-3 rounded-xl border ${
-                      inspectionData.tempCheck.verdict?.status === 'CORRECT'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
-                        : inspectionData.tempCheck.verdict?.status === 'DEPOT_READY' || inspectionData.cooler?.status === 'available'
-                        ? 'bg-cyan-50 dark:bg-cyan-950/60 border-cyan-200 dark:border-cyan-800 text-cyan-900 dark:text-cyan-200'
-                        : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
-                    }`}>
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="flex items-center gap-1.5">
-                          {inspectionData.tempCheck.verdict?.status === 'CORRECT' ? (
-                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          ) : inspectionData.tempCheck.verdict?.status === 'DEPOT_READY' || inspectionData.cooler?.status === 'available' ? (
-                            <CheckCircle2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                          )}
-                          Script #3 Verdict: {inspectionData.tempCheck.verdict?.status}
-                        </span>
-                        {inspectionData.health && (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-white/70 dark:bg-slate-800 font-black">
-                            Grade {inspectionData.health.grade} • {inspectionData.health.score}% Health
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] mt-1 leading-relaxed opacity-90">
-                        {inspectionData.tempCheck.verdict?.reason || inspectionData.tempCheck.verdict?.title}
-                      </p>
-                      {inspectionData.fleetDetails?.decision && (
-                        <p className="text-[10px] font-semibold mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10 opacity-80">
-                          Return SLA (36h limit): {inspectionData.fleetDetails.decision.status} — {inspectionData.fleetDetails.decision.reason}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* 2. CHRONOLOGICAL COLD-CHAIN TRIP LOG */}
@@ -868,26 +722,30 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      Trip Cold-Chain Tracking Log
+                      Cold-Chain Inspection Log
                     </span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      BLE Sensor Active
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                      {inspectionData.telemetry?.tempLog && inspectionData.telemetry.tempLog.length > 0 ? 'Recorded Readings' : 'No records'}
                     </span>
                   </div>
 
                   <div className="space-y-1.5 text-xs">
-                    {inspectionData.telemetry?.tempLog?.map((ping: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
-                        <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                          <span className="font-mono text-gray-400 text-[11px] shrink-0">{ping.time}</span>
-                          <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-xs">{ping.event}</span>
+                    {inspectionData.telemetry?.tempLog && inspectionData.telemetry.tempLog.length > 0 ? (
+                      inspectionData.telemetry.tempLog.map((ping: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span className="font-mono text-gray-400 text-[11px] shrink-0">{ping.time || ping.recordedAt}</span>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-xs">{ping.event || ping.source || 'Check'}</span>
+                          </div>
+                          <span className="font-mono font-bold text-xs shrink-0 text-gray-800 dark:text-gray-200">
+                            {ping.temp != null ? `${ping.temp}°C` : 'Temperature not recorded'}
+                          </span>
                         </div>
-                        <span className={`font-mono font-bold text-xs shrink-0 ${ping.temp <= 4.0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {ping.temp}°C
-                        </span>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-400 py-1.5">Temperature not recorded</p>
+                    )}
                   </div>
                 </div>
 
@@ -900,7 +758,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
                       <span className="text-[10px] text-gray-400 block">Customer Name</span>
-                      <strong className="text-gray-900 dark:text-white text-xs">{inspectionData.cooler.currentUserName || 'Pooja Sundaram'}</strong>
+                      <strong className="text-gray-900 dark:text-white text-xs">{inspectionData.cooler.currentUserName || 'Customer'}</strong>
                     </div>
 
                     <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
@@ -974,7 +832,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                         type="text"
                         value={upiIdInput}
                         onChange={(e) => setUpiIdInput(e.target.value)}
-                        placeholder="e.g. pooja@okhdfcbank"
+                        placeholder="e.g. yourname@bank"
                         className="w-full h-8 px-2.5 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                       />
                     </div>
@@ -1044,7 +902,7 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                     Select a Box to Inspect
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-                    Point your camera at a cold box QR sticker, upload a photo, or tap any of the sample scenarios on the left to verify the 0°C–4°C temperature log.
+                    Point your camera at a cold box QR sticker, upload a photo, or tap any of the sample scenarios on the left to inspect the cold box return.
                   </p>
                 </div>
 
@@ -1053,13 +911,13 @@ export const ColdBoxScannerModal: React.FC<ColdBoxScannerModalProps> = ({
                     onClick={() => handleInspectBox('BOX-BLR-417')}
                     className="px-4 py-2 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs cursor-pointer shadow-xs transition"
                   >
-                    Test Box #417 (Normal Return)
+                    Inspect Box #417
                   </button>
                   <button
-                    onClick={() => handleInspectBox('BOX-BLR-103')}
+                    onClick={() => handleInspectBox('BOX-BLR-182')}
                     className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer transition"
                   >
-                    Test Box #103 (Temp Breach)
+                    Inspect Box #182
                   </button>
                 </div>
               </div>

@@ -52,8 +52,8 @@ const MainApp: React.FC = () => {
   const [isAiButcherOpen, setIsAiButcherOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
-  // Customer Delivery Address State (saved in localStorage)
-  const [currentAddress, setCurrentAddress] = useState<DeliveryAddress>(() => {
+  // Customer Delivery Address State (saved in localStorage - null for new visitors)
+  const [currentAddress, setCurrentAddress] = useState<DeliveryAddress | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('brisketbox_active_address');
       if (saved) {
@@ -62,20 +62,10 @@ const MainApp: React.FC = () => {
         } catch (e) {}
       }
     }
-    return {
-      id: 'default_hyd',
-      tag: 'Home',
-      flatNo: 'Road No. 36',
-      building: 'Near Checkpost',
-      street: 'Jubilee Hills',
-      area: 'Jubilee Hills',
-      city: 'Hyderabad',
-      pincode: '500033',
-      formattedAddress: 'Road No. 36, Jubilee Hills, Hyderabad 500033'
-    };
+    return null;
   });
 
-  const [selectedCity, setSelectedCity] = useState(() => currentAddress?.city || 'Hyderabad');
+  const [selectedCity, setSelectedCity] = useState(() => currentAddress?.city || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -338,33 +328,28 @@ const MainApp: React.FC = () => {
                 />
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                Fresh meat and seafood cut daily and delivered cold to your door in about 90 minutes. Freshness, sealed with flavour.
+                Fresh meat and seafood cut daily and delivered cold to your door. Freshness, sealed with flavour.
               </p>
-              <div className="text-[10px] text-gray-400 dark:text-gray-500 space-y-0.5 pt-1">
-                <div>FSSAI Central Lic. No: 11224333000491</div>
-                <div>FSSC 22000 Certified Cold-Chain Processing</div>
-                <div>GSTIN: 29AAECS4912J1Z8</div>
-              </div>
             </div>
 
             <div>
               <h4 className="text-gray-900 dark:text-white font-bold mb-3">Popular Categories</h4>
               <ul className="space-y-1.5 text-gray-600 dark:text-gray-400 text-[11px]">
-                <li>Daily Harbor Fish & Seafood (Surmai, Pomfret)</li>
-                <li>Bio-Secured Farm Fresh Chicken</li>
-                <li>Pasture-Grazed Young Tender Mutton</li>
-                <li>Butter Garlic Jumbo Prawns (Cleaned & Deveined)</li>
-                <li>Chef-Crafted Ready to Cook Marinades</li>
+                <li>Daily Fish & Seafood (Surmai, Pomfret)</li>
+                <li>Fresh Chicken</li>
+                <li>Tender Mutton</li>
+                <li>Jumbo Prawns (Cleaned & Deveined)</li>
+                <li>Ready to Cook Marinades</li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Freshness Guarantee</h4>
+              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Quality & Service</h4>
               <ul className="space-y-1.5 text-gray-600 dark:text-gray-400 text-[11px]">
                 <li>Zero Security Deposit (Free Packaging)</li>
                 <li>EPP Insulated Box with Ice Gel Packs</li>
-                <li>Maintains 0°C - 4°C for up to 36 Hours</li>
-                <li>Express Delivery in ~90 Minutes</li>
+                <li>Chilled Temperature Packaging</li>
+                <li>Express Doorstep Delivery</li>
               </ul>
             </div>
 
@@ -429,7 +414,7 @@ const MainApp: React.FC = () => {
               © 2026 BrisketBox Technologies Private Limited. All rights reserved.
             </div>
             <div>
-              Fulfillment Depot: Outer Ring Road, Mahadevapura, Bengaluru 560048
+              Fresh Cold-Chain Direct Delivery
             </div>
           </div>
         </div>

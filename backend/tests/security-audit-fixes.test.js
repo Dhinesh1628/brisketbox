@@ -136,35 +136,48 @@ describe('Security Audit & Production Hardening Test Suite', () => {
     assert.equal(res.data.status, 'ok');
   });
 
-  it('2. /simulate-temp blocks unauthorized users and never leaks deliveryPin', async () => {
+  it('2. /simulate-temp is removed (404) and staff /temperature records real readings without leaking deliveryPin', async () => {
     const testOrder = {
       id: `ORD-TEMP-${Date.now()}`,
       userId: customerUser.id,
       deliveryPin: '7891',
-      liveTemp: 1.5,
+      liveTemp: null,
       tempLog: [],
       orderStatus: 'OUT_FOR_DELIVERY'
     };
     db.insert('orders', testOrder);
 
-    // Unauthenticated -> 401
-    const unauth = await request(`/api/orders/${testOrder.id}/simulate-temp`, { method: 'POST' });
-    assert.equal(unauth.status, 401);
+    // /simulate-temp is completely removed -> 404
+    const simRes = await request(`/api/orders/${testOrder.id}/simulate-temp`, { method: 'POST' });
+    assert.equal(simRes.status, 404);
 
-    // Other customer -> 403
-    const forbidden = await request(`/api/orders/${testOrder.id}/simulate-temp`, {
+    // Customer attempting to record staff check -> 403
+    const forbidden = await request(`/api/orders/${testOrder.id}/temperature`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${otherCustomerToken}` }
+      headers: { Authorization: `Bearer ${customerToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temp: 2.1 })
     });
     assert.equal(forbidden.status, 403);
 
-    // Owning customer -> 200, returns liveTemp without deliveryPin
-    const allowed = await request(`/api/orders/${testOrder.id}/simulate-temp`, {
+    // Invalid temperature reading -> 400
+    const badTemp = await request(`/api/orders/${testOrder.id}/temperature`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${customerToken}` }
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temp: 'invalid_number' })
+    });
+    assert.equal(badTemp.status, 400);
+
+    // Authorized Admin recording staff check -> 200, updates liveTemp & tempLog with audit info
+    const allowed = await request(`/api/orders/${testOrder.id}/temperature`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ temp: 2.4, event: 'Depot dispatch sensor reading' })
     });
     assert.equal(allowed.status, 200);
     assert.equal(allowed.data.success, true);
+    assert.equal(allowed.data.liveTemp, 2.4);
+    assert.equal(allowed.data.recordedEntry.source, 'STAFF_CHECK');
+    assert.equal(allowed.data.recordedEntry.recordedBy, adminUser.name);
     assert.equal(allowed.data.deliveryPin, undefined);
 
     db.delete('orders', testOrder.id);

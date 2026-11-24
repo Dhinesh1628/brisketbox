@@ -37,23 +37,20 @@ interface BannerSlide {
   cookedImage: string;
   cookedTitle: string;
   cutTag: string;
-  origin: string;
-  tempReading: string;
   accentHex: string;
-  remainingStock: number;
   productData: Product;
 }
 
 const HERO_SLIDES: BannerSlide[] = [
   {
     id: 'prod_1',
-    badge: 'Coastal Daily Catch • Harbor Fresh',
+    badge: 'Coastal Catch • Fresh Cut',
     categoryName: 'Coastal Sea Fish',
     shortCategory: 'Sea Fish',
     title: 'Surmai (Seer Fish) Prime Steaks',
     shortTitle: 'Surmai Seer Steaks',
     subtitle: 'Center-Cut Round Steaks • Cleaned & Descaled',
-    description: 'Sourced daily from coastal harbor landings. Firm, pearlescent flaky steaks trimmed with zero off-flavors, chilled at 0.8°C for instant pan searing.',
+    description: 'Firm, pearlescent flaky steaks trimmed with zero off-flavors, chilled for instant pan searing.',
     price: 649,
     mrp: 699,
     unit: '500g',
@@ -61,10 +58,7 @@ const HERO_SLIDES: BannerSlide[] = [
     cookedImage: '/images/products/cooked_surmai_tawa_fry.jpg',
     cookedTitle: 'Crispy Coastal Tawa Fry',
     cutTag: 'Center Cut Steaks',
-    origin: 'Mangalore Deep Harbor',
-    tempReading: '0.8°C',
     accentHex: '#0284c7',
-    remainingStock: 18,
     productData: {
       id: 'prod_1',
       name: 'Surmai (Seer Fish) Steaks',
@@ -73,9 +67,7 @@ const HERO_SLIDES: BannerSlide[] = [
       price: 649,
       mrp: 699,
       unit: '500g',
-      chillingMethod: 'Chilled at 0°C to 4°C',
-      catchDate: 'Today landing',
-      origin: 'Mangalore Coast',
+      chillingMethod: 'Chilled with ice packs',
       cutStyle: 'Center-cut steaks',
       stock: 35,
       image: '/images/products/prod_1.jpg'
@@ -83,12 +75,12 @@ const HERO_SLIDES: BannerSlide[] = [
   },
   {
     id: 'prod_4',
-    badge: 'Artisanal Batch • Hand Trimmed',
-    categoryName: 'Pasture-Raised Mutton',
+    badge: 'Fresh Batch • Tender Cut',
+    categoryName: 'Mutton Cuts',
     shortCategory: 'Prime Mutton',
     title: 'Rich Mutton Biryani & Curry Cut',
     shortTitle: 'Mutton Curry Cut',
-    subtitle: 'Young Goat • Balanced Ribs & Tender Shoulder',
+    subtitle: 'Balanced Ribs & Tender Shoulder',
     description: 'Freshly cut tender bone-in pieces, meticulously trimmed of excess tallow and slow-chilled. Crafted for aromatic dum biryanis and velvety rogan josh.',
     price: 549,
     mrp: 599,
@@ -97,21 +89,16 @@ const HERO_SLIDES: BannerSlide[] = [
     cookedImage: '/images/products/cooked_mutton_rogan_josh.jpg',
     cookedTitle: 'Velvety Rogan Josh',
     cutTag: 'Bone-in Curry Cut',
-    origin: 'Dindigul Certified Farms',
-    tempReading: '1.2°C',
     accentHex: '#d11243',
-    remainingStock: 12,
     productData: {
       id: 'prod_4',
       name: 'Mutton Rogan Josh',
       category: 'mutton',
-      description: 'Tender young goat cuts with rib and shoulder pieces.',
+      description: 'Tender goat cuts with rib and shoulder pieces.',
       price: 549,
       mrp: 599,
       unit: '500g',
-      chillingMethod: 'Chilled at 0°C to 4°C',
-      catchDate: 'Fresh today',
-      origin: 'Dindigul Farms',
+      chillingMethod: 'Chilled with ice packs',
       cutStyle: 'Bone-in curry cut',
       stock: 22,
       image: '/images/products/prod_4.jpg'
@@ -119,13 +106,13 @@ const HERO_SLIDES: BannerSlide[] = [
   },
   {
     id: 'prod_6',
-    badge: 'Free-Roaming • 100% Antibiotic Residue-Free',
-    categoryName: 'Village Country Poultry',
+    badge: 'Country Poultry • Tender Cut',
+    categoryName: 'Country Poultry',
     shortCategory: 'Country Poultry',
     title: 'Nati Koli (Country Chicken) Cut',
     shortTitle: 'Nati Koli Chicken',
-    subtitle: 'Authentic Free-Range • Dense & Lean Muscle Texture',
-    description: 'Free-roaming country chicken with natural, deep earthy flavor. Expertly portioned for slow-cooked traditional pepper gravies that evoke village nostalgia.',
+    subtitle: 'Dense & Lean Muscle Texture',
+    description: 'Country chicken with natural flavor. Expertly portioned for slow-cooked traditional pepper gravies.',
     price: 389,
     mrp: 429,
     unit: '500g',
@@ -133,10 +120,7 @@ const HERO_SLIDES: BannerSlide[] = [
     cookedImage: '/images/products/cooked_nati_koli.jpg',
     cookedTitle: 'Spiced Pepper Roast',
     cutTag: 'Traditional Curry Cut',
-    origin: 'Karnataka Bio-Farms',
-    tempReading: '1.0°C',
     accentHex: '#d97706',
-    remainingStock: 24,
     productData: {
       id: 'prod_6',
       name: 'Country Chicken Curry Cut',
@@ -145,9 +129,7 @@ const HERO_SLIDES: BannerSlide[] = [
       price: 389,
       mrp: 429,
       unit: '500g',
-      chillingMethod: 'Chilled at 0°C to 4°C',
-      catchDate: 'Fresh today',
-      origin: 'Local Farms',
+      chillingMethod: 'Chilled with ice packs',
       cutStyle: 'Curry cut',
       stock: 45,
       image: '/images/products/prod_6.jpg'
@@ -156,12 +138,12 @@ const HERO_SLIDES: BannerSlide[] = [
   {
     id: 'prod_3',
     badge: 'Ready to Cook • Tail-On Cleaned',
-    categoryName: 'Deep Sea Crustaceans',
+    categoryName: 'Crustaceans',
     shortCategory: 'Sea Prawns',
     title: 'Jumbo Sea Prawns (Tail-On)',
     shortTitle: 'Jumbo Sea Prawns',
     subtitle: 'De-veined Cleaned Catch • Zero Preservatives',
-    description: 'Plump ocean prawns carefully deveined with the tail preserved for maximum caramelization. Pristine snap and sweet ocean finish for garlic butter sautés.',
+    description: 'Plump prawns carefully deveined with the tail preserved for maximum caramelization. Pristine snap and sweet ocean finish for garlic butter sautés.',
     price: 599,
     mrp: 679,
     unit: '350g',
@@ -169,21 +151,16 @@ const HERO_SLIDES: BannerSlide[] = [
     cookedImage: '/images/products/cooked_tiger_prawns.jpg',
     cookedTitle: 'Garlic Butter Prawns',
     cutTag: 'Tail-on Deveined',
-    origin: 'Karwar Deep Shelf',
-    tempReading: '0.6°C',
     accentHex: '#0d9488',
-    remainingStock: 15,
     productData: {
       id: 'prod_3',
       name: 'Jumbo Prawns',
       category: 'fish',
-      description: 'Peeled and deveined sea prawns with tail-on.',
+      description: 'Peeled and deveined prawns with tail-on.',
       price: 599,
       mrp: 679,
       unit: '350g',
-      chillingMethod: 'Chilled at 0°C to 4°C',
-      catchDate: 'Today catch',
-      origin: 'Karwar Coast',
+      chillingMethod: 'Chilled with ice packs',
       cutStyle: 'Tail-on deveined',
       stock: 28,
       image: '/images/products/prod_3.jpg'
@@ -295,7 +272,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <div className="space-y-3.5">
       {/* Unified Cinematic Showcase Console */}
       <section
-        aria-label="Artisanal Meat & Seafood Showcase"
+        aria-label="Meat & Seafood Showcase"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
@@ -330,12 +307,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
                 <ThermometerSnowflake className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{currentSlide.tempReading} Chilled</span>
+                <span>Chilled Packaging</span>
               </div>
 
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>90 Mins Delivery</span>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Daily Cut Dispatch</span>
               </div>
             </div>
 
@@ -343,8 +320,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
                 <Compass className="w-3 h-3 text-[#d11243]" />
-                <span>{currentSlide.origin}</span>
-                <span>•</span>
                 <span className="text-white">{currentSlide.categoryName}</span>
               </div>
 
@@ -412,10 +387,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
             </div>
 
-            {/* Scarcity Notice */}
+            {/* Preparation Notice */}
             <div className="flex items-center gap-2 text-[11px] text-neutral-400 pt-0.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Only <strong className="text-white">{currentSlide.remainingStock} packs</strong> left for morning dispatch. Hand-cut to order.</span>
+              <span>Cut to order and sealed for fresh delivery.</span>
             </div>
           </div>
 
@@ -464,7 +439,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                 <div className="inline-flex items-center gap-1 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/15 text-[10px] font-semibold text-emerald-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>0°C Sealed</span>
+                  <span>Chilled</span>
                 </div>
               </div>
 
@@ -480,9 +455,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-[9px] text-neutral-400 font-medium">Temp</div>
+                  <div className="text-[9px] text-neutral-400 font-medium">Cold Chain</div>
                   <div className="font-bold text-cyan-300 text-[11px]">
-                    {currentSlide.tempReading}
+                    Chilled
                   </div>
                 </div>
               </div>
@@ -573,15 +548,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
       </section>
 
-      {/* 4-Point Brand Trust Ribbon with Reusable Box & Cold-Chain Guarantees */}
+      {/* 4-Point Brand Trust Ribbon with Reusable Box & Cold-Chain Packaging */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
         <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-gray-150 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs">
           <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/70 text-[#d11243] flex items-center justify-center shrink-0">
             <Clock className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white">90-Min Hyperlocal</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400">Live chilled courier</div>
+            <div className="text-xs font-bold text-gray-900 dark:text-white">Cold-Chain Delivery</div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400">Insulated chilled courier</div>
           </div>
         </div>
 
@@ -590,8 +565,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <ThermometerSnowflake className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white">0°C to 4°C Chilled</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400">Never frozen freshness</div>
+            <div className="text-xs font-bold text-gray-900 dark:text-white">Chilled Packaging</div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400">Chilled freshness</div>
           </div>
         </div>
 
@@ -600,8 +575,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white">150+ Safety Audits</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400">Chemical & antibiotic-free</div>
+            <div className="text-xs font-bold text-gray-900 dark:text-white">Fresh Cut Standards</div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400">Sealed & cleaned</div>
           </div>
         </div>
 

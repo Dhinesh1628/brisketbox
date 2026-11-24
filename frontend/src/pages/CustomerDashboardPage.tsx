@@ -74,7 +74,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
   const [profileAddress, setProfileAddress] = useState(user?.address || '');
-  const [profileCity, setProfileCity] = useState(user?.city || 'Bengaluru');
+  const [profileCity, setProfileCity] = useState(user?.city || '');
   const [profileUpiId, setProfileUpiId] = useState(user?.upiId || '');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
@@ -85,10 +85,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
       const saved = localStorage.getItem('brisketbox_saved_addresses');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return [
-      { id: 'addr_1', type: 'home', text: user?.address || 'Flat 402, Alpine Eco Apartments, Outer Ring Road, Doddanekkundi, Bengaluru - 560037', isDefault: true },
-      { id: 'addr_2', type: 'work', text: 'Prestige Tech Park, Marathahalli - Sarjapur Outer Ring Road, Kadubeesanahalli, Bengaluru - 560103', isDefault: false }
-    ];
+    return user?.address ? [{ id: 'addr_1', type: 'home', text: user.address, isDefault: true }] : [];
   });
   const [newAddressType, setNewAddressType] = useState<'home' | 'work' | 'other'>('home');
   const [newAddressText, setNewAddressText] = useState('');
@@ -193,8 +190,8 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
         name: item.name,
         price: item.price,
         unit: item.unit,
-        chillingMethod: item.chillingMethod || '0°C to 4°C FreshSeal',
-        origin: 'Certified Supply',
+        chillingMethod: item.chillingMethod || 'Chilled packaging',
+        origin: 'Direct Sourcing',
         catchDate: 'Today',
         cutStyle: item.cutStyle || 'Standard',
         category: 'Fresh Cuts',
@@ -352,7 +349,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto" />
               <p className="font-bold text-gray-900 dark:text-white text-sm">No orders placed yet</p>
               <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                Explore our daily harbor catch, farm-fresh chicken, and young mutton cuts packed in cold boxes.
+                Explore our daily fresh fish, chicken, and tender mutton cuts packed in cold boxes.
               </p>
               <button
                 onClick={onNavigateToCatalog}
@@ -538,7 +535,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                   type="tel" 
                   value={profilePhone} 
                   onChange={e => setProfilePhone(e.target.value)} 
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 98XXXXXXXX"
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white"
                 />
               </div>
@@ -551,7 +548,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                   type="text" 
                   value={profileUpiId} 
                   onChange={e => setProfileUpiId(e.target.value)} 
-                  placeholder="e.g. pooja@okhdfcbank"
+                  placeholder="e.g. yourname@bank"
                   className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white"
                 />
               </div>
@@ -659,7 +656,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
               <Heart className="w-12 h-12 text-gray-300 mx-auto" />
               <p className="font-bold text-gray-900 dark:text-white text-sm">Your Wishlist is Empty</p>
               <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                Save your favorite harbor catch or tender cuts here for 1-click reordering.
+                Save your favorite seafood or tender cuts here for 1-click reordering.
               </p>
               <button
                 onClick={onNavigateToCatalog}
@@ -815,7 +812,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 Temperature Controlled Cold Box Status
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Delivered in insulated cold boxes keeping cuts at 0°C to 4°C. Zero security deposit on packaging.
+                Delivered in insulated cold boxes keeping cuts chilled. Zero security deposit on packaging.
               </p>
             </div>
             <div className="text-right">
@@ -959,9 +956,9 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
                 <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-black text-xs flex items-center justify-center">
                   2
                 </div>
-                <h5 className="font-bold text-xs text-gray-950 dark:text-white">Quality Guarantee</h5>
+                <h5 className="font-bold text-xs text-gray-950 dark:text-white">Customer Support</h5>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                  If you ever have any issue with your order freshness, let us know within 2 hours for an immediate refund.
+                  If you ever have any issue with your order, let us know promptly for quick resolution.
                 </p>
               </div>
 

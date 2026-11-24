@@ -27,7 +27,7 @@ interface LocationSelectorModalProps {
 // Popular localities by city for quick search & selection
 const POPULAR_LOCALITIES: Record<string, { area: string; pincode: string }[]> = {
   'Hyderabad': [
-    { area: 'Jubilee Hills, Road No. 36', pincode: '500033' },
+    { area: 'Banjara Hills', pincode: '500034' },
     { area: 'Banjara Hills, Road No. 12', pincode: '500034' },
     { area: 'Madhapur, Hitech City', pincode: '500081' },
     { area: 'Gachibowli, Financial District', pincode: '500032' },
@@ -227,33 +227,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
         // ignore
       }
     } else {
-      // Default initial addresses so user has good examples
-      const initial: DeliveryAddress[] = [
-        {
-          id: 'addr_1',
-          tag: 'Home',
-          flatNo: 'Flat 402, Lotus Residency',
-          building: 'Road No. 36',
-          street: 'Near Jubilee Hills Checkpost',
-          area: 'Jubilee Hills',
-          city: 'Hyderabad',
-          pincode: '500033',
-          formattedAddress: 'Flat 402, Lotus Residency, Road No. 36, Jubilee Hills, Hyderabad 500033'
-        },
-        {
-          id: 'addr_2',
-          tag: 'Work',
-          flatNo: 'Building 12, Floor 5',
-          building: 'Raheja Mindspace IT Park',
-          street: 'Hitech City Main Road',
-          area: 'Madhapur',
-          city: 'Hyderabad',
-          pincode: '500081',
-          formattedAddress: 'Building 12, Floor 5, Raheja Mindspace, Madhapur, Hyderabad 500081'
-        }
-      ];
-      setSavedAddresses(initial);
-      localStorage.setItem('brisketbox_saved_addresses', JSON.stringify(initial));
+      setSavedAddresses([]);
     }
   }, []);
 
@@ -282,7 +256,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   // Fallback to IP-based Geolocation if hardware GPS is not available or timed out
   const fallbackIpLocation = async () => {
     try {
-      setGpsNotice('Acquiring location telemetry from network...');
+      setGpsNotice('Acquiring location from network...');
       
       const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en');
       if (res.ok) {
@@ -338,8 +312,8 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
 
     setIsDetectingGps(false);
     const fallbackCity = selectedCity || 'Hyderabad';
-    const fallbackArea = fallbackCity === 'Hyderabad' ? 'Jubilee Hills' : 'Indiranagar';
-    const fallbackPin = fallbackCity === 'Hyderabad' ? '500033' : '560038';
+    const fallbackArea = fallbackCity === 'Hyderabad' ? 'Banjara Hills' : 'Indiranagar';
+    const fallbackPin = fallbackCity === 'Hyderabad' ? '500034' : '560038';
     const fallbackAddr: DeliveryAddress = {
       id: `addr_fb_${Date.now()}`,
       tag: 'Other',
@@ -563,7 +537,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
               </h3>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-              Enter your manual home or office address for express 90-min chilled delivery
+              Enter your manual home or office address for chilled delivery
             </p>
           </div>
 
@@ -790,7 +764,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
                     required
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    placeholder="Jubilee Hills"
+                    placeholder="Banjara Hills"
                     className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                   />
                 </div>

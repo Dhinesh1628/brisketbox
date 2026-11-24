@@ -85,46 +85,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     verified?: boolean;
   }
 
-  const defaultReviews: ReviewItem[] = [
-    {
-      id: 'rev_1',
-      author: 'Ananya R.',
-      location: 'Bengaluru',
-      rating: 5,
-      date: 'Yesterday',
-      comment: 'Super fresh and completely odorless! Delivered fresh and cold. Pieces were trimmed cleanly and cooked evenly.',
-      cut: 'Curry Cut',
-      verified: true
-    },
-    {
-      id: 'rev_2',
-      author: 'Vikramaditya S.',
-      location: 'Bengaluru',
-      rating: 5,
-      date: '3 days ago',
-      comment: 'Really fresh and tender! No ice crystals because it was chilled, not rock frozen. Family loved the taste.',
-      cut: 'Biryani Cut',
-      verified: true
-    },
-    {
-      id: 'rev_3',
-      author: 'Deepika M.',
-      location: 'Bengaluru',
-      rating: 5,
-      date: '1 week ago',
-      comment: 'Clean cut without unwanted bones or fat. Arrived on time and cooked evenly.',
-      cut: 'Boneless Cubes',
-      verified: true
-    }
-  ];
+  const defaultReviews: ReviewItem[] = [];
 
   const [reviews, setReviews] = useState<ReviewItem[]>(() => {
     try {
-      if (!product) return defaultReviews;
+      if (!product) return [];
       const saved = localStorage.getItem(`brisketbox_reviews_${product.id}`);
-      return saved ? JSON.parse(saved) : defaultReviews;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return defaultReviews;
+      return [];
     }
   });
 
@@ -206,11 +175,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const discountPct = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
   const visual = getProductVisual(product.id, product.image || product.imageUrl);
 
-  // Alternate gallery images for rich visual fidelity: Raw Cut -> Chef Cooked Dish -> Packaging
+  // Alternate gallery images: Raw Cut -> Chef Cooked Dish
   const fallbackGallery = [
     product.image || visual.rawImage,
-    visual.cookedImage,
-    'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
+    visual.cookedImage || visual.rawImage
   ];
 
   const handleAddToCart = () => {
@@ -245,7 +213,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <span className="text-gray-300 dark:text-gray-600">•</span>
             <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
               <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
-              <span>{product.eta || '90 Mins Express'}</span>
+              <span>{product.eta || 'Express Chilled'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -283,7 +251,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   }`}
                 >
                   <ThermometerSnowflake className="w-3.5 h-3.5" />
-                  <span>0°C Raw Cut</span>
+                  <span>Raw Cut</span>
                 </button>
                 <button
                   type="button"
@@ -319,7 +287,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ) : (
                     <>
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>0°C - 4°C FreshChilled™</span>
+                      <span>Fresh Chilled</span>
                     </>
                   )}
                 </div>
@@ -395,11 +363,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Quality Guarantee Mini Card */}
+              {/* Quality Standards Mini Card */}
               <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-xs space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold text-emerald-950 dark:text-emerald-300">
                   <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                  <span>Our Freshness Promise</span>
+                  <span>Quality Standards</span>
                 </div>
                 <p className="text-[11px] text-emerald-800 dark:text-emerald-300/90 leading-relaxed">
                   Cleaned and kept chilled on ice. Delivered fresh and ready to cook.
@@ -431,8 +399,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {/* Daily Market Rate Notice Banner */}
                 <div className="mt-2.5 flex items-center gap-2 p-2 rounded-xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-600 dark:text-gray-300">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                  <span className="font-bold text-gray-900 dark:text-white">Daily Harbor & Farm Rate:</span>
-                  <span>Direct sourcing ensures today's price is lower than your local butcher shop.</span>
+                  <span className="font-bold text-gray-900 dark:text-white">Daily Market Rate:</span>
+                  <span>Direct pricing updated daily.</span>
                 </div>
               </div>
 
@@ -450,8 +418,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
                 <div className="p-1">
                   <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">Storage</span>
-                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block">0°C to 4°C</span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Never Frozen</span>
+                  <span className="text-xs font-extrabold text-gray-900 dark:text-white mt-0.5 block">Chilled</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Keep Refrigerated</span>
                 </div>
               </div>
 
@@ -584,13 +552,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <div className="border-t border-gray-100 dark:border-slate-800 pt-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center gap-1 bg-amber-400 px-2.5 py-1 rounded-lg text-xs font-black text-gray-950">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span>4.9</span>
-                    </div>
+                    {reviews.length > 0 && (
+                      <div className="flex items-center gap-1 bg-amber-400 px-2.5 py-1 rounded-lg text-xs font-black text-gray-950">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span>{(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}</span>
+                      </div>
+                    )}
                     <div>
                       <h4 className="text-xs font-bold text-gray-900 dark:text-white">Customer Reviews & Ratings</h4>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400">{reviews.length + 1420} verified customer ratings</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {reviews.length > 0
+                          ? `${reviews.length} verified customer review${reviews.length === 1 ? '' : 's'}`
+                          : 'No reviews yet. Be the first to review!'}
+                      </span>
                     </div>
                   </div>
 
@@ -660,7 +634,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         required
                         value={authorName}
                         onChange={(e) => setAuthorName(e.target.value)}
-                        placeholder="e.g. Ramesh K. or Pooja"
+                        placeholder="Your Name"
                         className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                       />
                     </div>

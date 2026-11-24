@@ -19,7 +19,8 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   const { totalItems } = useCart();
   const [internalChatbotOpen, setInternalChatbotOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const phoneNumber = '919741288301'; // Official BrisketBox Direct WhatsApp Concierge: +91 97412 88301
+  const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '';
+  const phoneNumber = supportPhone ? supportPhone.replace(/[^0-9]/g, '') : '';
 
   const isChatbotOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalChatbotOpen;
 
@@ -95,19 +96,21 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
                 <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-emerald-500" />
               </button>
 
-              <button
-                onClick={() => handleOpenWhatsAppDirect("Hello BrisketBox! I want to order fresh seafood/meat from today's harbor batch.")}
-                className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#128C7E] dark:hover:border-[#128C7E] rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#128C7E]" />
-                  <div>
-                    <div className="font-bold text-gray-900 dark:text-white text-[11px]">Direct WhatsApp (+91 97412 88301)</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400">Quick order & 90-min chilled slot booking</div>
+              {phoneNumber && (
+                <button
+                  onClick={() => handleOpenWhatsAppDirect("Hello BrisketBox! I have a question about fresh cuts and orders.")}
+                  className="w-full text-left p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#128C7E] dark:hover:border-[#128C7E] rounded-xl flex items-center justify-between group shadow-2xs hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#128C7E]" />
+                    <div>
+                      <div className="font-bold text-gray-900 dark:text-white text-[11px]">Direct WhatsApp ({supportPhone})</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">Order assistance & questions</div>
+                    </div>
                   </div>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#128C7E]" />
-              </button>
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-[#128C7E]" />
+                </button>
+              )}
 
             </div>
           </div>

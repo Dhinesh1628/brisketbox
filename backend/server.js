@@ -455,7 +455,7 @@ app.post('/api/products', authenticate, requireAdmin, async (req, res) => {
     id: `prod_${Date.now()}`,
     name,
     category,
-    description: description || 'Daily fresh dressed cut chilled strictly at 0°C to 4°C.',
+    description: description || 'Daily fresh dressed cut chilled for delivery.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
@@ -463,14 +463,14 @@ app.post('/api/products', authenticate, requireAdmin, async (req, res) => {
     grossWeight: grossWeight || '500g',
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
-    eta: '⚡ Today in 90 mins',
-    chillingMethod: chillingMethod || 'Chilled at 0°C to 4°C',
+    eta: 'Today',
+    chillingMethod: chillingMethod || 'Chilled Cold Chain',
     catchDate: catchDate || 'Morning Catch',
-    origin: origin || 'Certified Farm Lot',
+    origin: origin || 'Direct Sourcing',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 25,
     image: image || '/images/products/prod_1.jpg',
-    vacuumSealed: true,
+    sealed: true,
     inStock: true
   };
 
@@ -579,7 +579,6 @@ app.post('/api/orders', authenticate, async (req, res) => {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const assignedRider = await assignFleetRiderForOrder();
-  const initialTemp = 0.8;
 
   const order = {
     id: orderNumber,
@@ -590,7 +589,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
     customerEmail: req.user.email,
     customerPhone: req.user.phone ? normalizePhone(req.user.phone) : '',
     deliveryAddress: deliveryAddress || req.user.address || 'Address provided at checkout',
-    city: city || req.user.city || 'Bengaluru',
+    city: city || req.user.city || '',
     items: processedItems,
     subtotal,
     discountAmount,
@@ -605,28 +604,26 @@ app.post('/api/orders', authenticate, async (req, res) => {
     status: 'Preparing',
     orderStatus: 'CONFIRMED',
     lifecycleStatus: 'CONFIRMED',
-    partnerId: 'shop_central_butcher',
-    partnerName: 'Halal Cuts & Coastal Harbor Station #14',
+    partnerId: null,
+    partnerName: null,
     paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + ${paymentMethod.toUpperCase()}` : paymentMethod,
     paymentStatus: netPayable === 0 ? 'PAID' : 'PENDING',
     coolerId: assignedCooler?.id || null,
     coolerModel: assignedCooler?.model || null,
     coldBoxRefundStatus: 'NOT_REQUESTED',
-    liveTemp: initialTemp,
-    riderId: assignedRider.riderId,
-    riderFullName: assignedRider.riderFullName,
-    riderName: assignedRider.riderName,
-    riderPhone: assignedRider.riderPhone,
-    riderVehicle: assignedRider.riderVehicle,
-    deliveryExecutive: assignedRider.deliveryExecutive,
+    liveTemp: null,
+    riderId: assignedRider?.riderId || null,
+    riderFullName: assignedRider?.riderFullName || null,
+    riderName: assignedRider?.riderName || null,
+    riderPhone: assignedRider?.riderPhone || null,
+    riderVehicle: assignedRider?.riderVehicle || null,
+    deliveryExecutive: assignedRider?.deliveryExecutive || null,
     lifecycleTimestamps: {
       confirmedAt: now.toISOString(),
       assignedAt: now.toISOString()
     },
-    tempLog: [
-      { time: timeStr, temp: initialTemp, event: `Order Confirmed. Queued for custom butcher prep. Assigned to Fleet Rider ${assignedRider.riderFullName}.` }
-    ],
-    deliverySlot: deliverySlot || 'Today, Express in 90 Mins',
+    tempLog: [],
+    deliverySlot: deliverySlot || 'Scheduled Delivery',
     trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     pinAttempts: 0,
     pinLockedUntil: null,
@@ -647,12 +644,12 @@ function sanitizeAssignedRider(order) {
       fullName,
       firstName: fullName.split(' ')[0],
       riderId: order.riderId ? `RD-${order.riderId.slice(-4).toUpperCase()}` : 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler',
+      vehicle: order.riderVehicle || null,
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
+      estimatedArrival: order.riderEta || null,
       maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      profilePhoto: order.riderAvatar || null
     };
   } else if (order.riderName || order.riderFullName || order.deliveryExecutive) {
     const cleanExec = order.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : '';
@@ -661,12 +658,12 @@ function sanitizeAssignedRider(order) {
       fullName,
       firstName: fullName.split(' ')[0],
       riderId: 'RD-FLEET',
-      vehicle: order.riderVehicle || 'EV 2-Wheeler',
+      vehicle: order.riderVehicle || null,
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
-      estimatedArrival: order.riderEta || '25–35 minutes',
+      estimatedArrival: order.riderEta || null,
       maskedPhone: order.riderPhone ? `${order.riderPhone.slice(0, 8)} •••${order.riderPhone.slice(-2)}` : '',
       secureCall: true,
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      profilePhoto: order.riderAvatar || null
     };
   }
   return null;
@@ -920,17 +917,6 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
   }
 
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  updates.tempLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: order.liveTemp || 1.4,
-      event: `Fleet Executive (${req.user.name}) updated: ${lifecycleStatus.replace(/_/g, ' ')}`
-    }
-  ];
-
   const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
@@ -949,7 +935,7 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
   const isColdChainMaintained = outOfRange.length === 0;
   const finalTemp = logs.length > 0 && typeof logs[logs.length - 1].temp === 'number'
     ? logs[logs.length - 1].temp 
-    : (order?.liveTemp || 1.8);
+    : (order?.liveTemp ?? null);
 
   const stage = isColdChainMaintained ? 'GOOD' : 'CRITICAL';
   const refundApproved = isColdChainMaintained;
@@ -966,7 +952,9 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
     refundApproved,
     refundAmount,
     message: refundApproved
-      ? `Cold-chain maintained at ${finalTemp}°C (Safe Range: 0°C - 4°C). ₹${refundAmount} security deposit approved for instant refund.`
+      ? (finalTemp !== null 
+          ? `Cold-chain maintained at ${finalTemp}°C. ₹${refundAmount} security deposit approved for instant refund.`
+          : `Temperature not recorded. ₹${refundAmount} security deposit approved for instant refund.`)
       : `Temperature breach detected (${outOfRange.map(o => `${o.temp}°C at ${o.time}`).join(', ')}). Retained for hub audit.`
   });
 });
@@ -999,11 +987,11 @@ app.post('/api/partner/register', authLimiter, async (req, res) => {
       password: bcrypt.hashSync(String(password), 10),
       role: 'partner',
       approvalStatus: 'pending_approval',
-      address: typeof address === 'string' ? address : 'Bengaluru Coastal Harbor Depot',
-      fssaiNumber: typeof fssaiNumber === 'string' ? fssaiNumber : 'FSSAI-REG-PENDING',
+      address: typeof address === 'string' ? address : 'Bengaluru Depot',
+      fssaiNumber: typeof fssaiNumber === 'string' ? fssaiNumber : '',
       categories: Array.isArray(categories) ? categories : ['Fresh Chicken', 'Tender Mutton', 'Fish & Seafood'],
       operatingHours: typeof operatingHours === 'string' ? operatingHours : '05:30 AM - 09:30 PM',
-      description: typeof description === 'string' ? description : 'Daily artisanal meat butchering station & seafood lot',
+      description: typeof description === 'string' ? description : 'Butcher station & seafood hub',
       createdAt: new Date().toISOString()
     };
 
@@ -1088,7 +1076,7 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), requireA
     partnerName: req.user.shopName || req.user.name,
     name,
     category,
-    description: description || 'Daily fresh dressed cuts chilled to 0°C - 4°C.',
+    description: description || 'Daily fresh dressed cuts chilled for delivery.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
@@ -1096,14 +1084,14 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), requireA
     grossWeight: '550g',
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
-    eta: '⚡ Today in 90 mins',
-    chillingMethod: '0°C to 4°C chilled pack Cold Chain',
-    origin: origin || 'Certified Farm / Coastal Lot',
+    eta: 'Today',
+    chillingMethod: 'Chilled pack Cold Chain',
+    origin: origin || 'Direct Sourcing',
     cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 30,
     image: image || '/images/products/prod_1.jpg',
     imageUrl: image || '/images/products/prod_1.jpg',
-    vacuumSealed: true,
+    sealed: true,
     inStock: true
   };
 
@@ -1181,15 +1169,6 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
   };
 
   const lossText = dressingLossLog ? ` [Dressing Loss: ${dressingLossLog.lossPercent}% on ${dressingLossLog.carcassType}]` : '';
-  updates.tempLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: order.liveTemp || 1.2,
-      event: `Butcher Station (${req.user.name}): Cut & FreshSealed #${sealTag || 'FS-101'} (${weighedWeight || '500g'})${lossText}. Ready for rider pickup.`
-    }
-  ];
-
   const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
@@ -1449,14 +1428,24 @@ const handleOrderHandover = async (req, res) => {
 
   const depositPaid = Number(order.coolerDeposit || 0);
 
-  const updatedLog = [
+  let handoverTemp = null;
+  if (req.body.temp !== undefined || req.body.temperature !== undefined) {
+    const parsed = Number(req.body.temp !== undefined ? req.body.temp : req.body.temperature);
+    if (!isNaN(parsed) && parsed >= -30 && parsed <= 60) {
+      handoverTemp = Number(parsed.toFixed(1));
+    }
+  }
+
+  const updatedLog = handoverTemp !== null ? [
     ...(order.tempLog || []),
     {
       time: timeStr,
-      temp: 1.8,
-      event: `Delivered & Verified via 4-digit PIN.${collectedCashNum > 0 ? ` Cash Collected: ₹${collectedCashNum}.` : ''} Cooler Box returned: ${coolerReturned ? (depositPaid > 0 ? `YES (₹${depositPaid} Refunded)` : 'YES (₹0 deposit returned)') : 'NO (Retained by customer)'}${podImage ? ' [Contactless POD captured]' : ''}`
+      temp: handoverTemp,
+      event: `Delivered & Temperature verified (${handoverTemp}°C).`,
+      source: 'STAFF_CHECK',
+      recordedBy: req.user?.name || req.user?.email || 'Fleet Executive'
     }
-  ];
+  ] : (order.tempLog || []);
 
   let updatedOrder = null;
 
@@ -1483,7 +1472,7 @@ const handleOrderHandover = async (req, res) => {
               deliveredAt: nowIso,
               cashCollected: collectedCashNum,
               paymentStatus: isCod ? 'PAID' : order.paymentStatus,
-              liveTemp: 1.8,
+              liveTemp: handoverTemp !== null ? handoverTemp : (order.liveTemp ?? null),
               tempLog: updatedLog,
               pinAttempts: 0,
               pinLockedUntil: null
@@ -1549,7 +1538,7 @@ const handleOrderHandover = async (req, res) => {
       deliveredAt: nowIso,
       cashCollected: collectedCashNum,
       paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
-      liveTemp: 1.8,
+      liveTemp: handoverTemp !== null ? handoverTemp : (order.liveTemp ?? null),
       tempLog: updatedLog,
       pinAttempts: 0,
       pinLockedUntil: null
@@ -1804,20 +1793,9 @@ const handleUpdateStatus = async (req, res) => {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  let newTemp = order.liveTemp || 1.8;
-  if (resolvedOrderStatus === 'OUT_FOR_DELIVERY') {
-    newTemp = 1.2;
-    if (order.coolerId) await updateCooler(order.coolerId, { status: 'in_transit' });
+  if (resolvedOrderStatus === 'OUT_FOR_DELIVERY' && order.coolerId) {
+    await updateCooler(order.coolerId, { status: 'in_transit' });
   }
-
-  const updatedLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: newTemp,
-      event: notes || note || `Order status updated to: ${status || resolvedOrderStatus}`
-    }
-  ];
 
   const updatedOrder = await updateOrder(order.id, {
     status: status || resolvedOrderStatus,
@@ -1829,9 +1807,7 @@ const handleUpdateStatus = async (req, res) => {
     sealTag: sealTag || order.sealTag,
     butcherName: butcherName || order.butcherName,
     riderLocation: riderLocation || order.riderLocation,
-    deliveryExecutive: deliveryExecutive || order.deliveryExecutive,
-    liveTemp: newTemp,
-    tempLog: updatedLog
+    deliveryExecutive: deliveryExecutive || order.deliveryExecutive
   });
 
   const sanitized = { ...updatedOrder };
@@ -1894,53 +1870,65 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
   res.json({
     success: true,
     ticketId,
-    message: 'Your message has been delivered to BrisketBox Central Support. Response within 15 minutes.'
+    message: 'Your message has been delivered to BrisketBox Customer Support.'
   });
 });
 
-app.post('/api/orders/:id/simulate-temp', authenticate, async (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ error: 'Sensor telemetry simulation is disabled in production' });
-  }
-
+// Staff Temperature Check Route
+// Records real temperature reading from authorized staff or calibrated sensor probe with audit trail
+app.post('/api/orders/:id/temperature', authenticate, async (req, res) => {
   const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  const isOwner = order.userId === req.user.id;
-  const isAssignedRider = req.user.role === 'rider' && (order.riderId === req.user.id || !order.riderId);
-  const isAssignedPartner = req.user.role === 'partner' && (order.partnerId === req.user.id || !order.partnerId);
   const isAdmin = req.user.role === 'admin';
+  const isApprovedPartner = req.user.role === 'partner' && req.user.approvalStatus === 'approved';
+  const isAssignedRider = req.user.role === 'rider' && req.user.approvalStatus === 'approved' && (order.riderId === req.user.id || !order.riderId);
 
-  if (!isOwner && !isAssignedRider && !isAssignedPartner && !isAdmin) {
-    return res.status(403).json({ error: 'Access denied: You are not authorized to access or simulate this order' });
+  if (!isAdmin && !isApprovedPartner && !isAssignedRider) {
+    return res.status(403).json({ error: 'Access denied: Only authorized staff or assigned fleet riders can record temperature checks' });
   }
 
-  const delta = (Math.random() * 0.4 - 0.2);
-  const newTemp = Number(Math.max(0.2, Math.min(2.8, (order.liveTemp || 1.8) + delta)).toFixed(1));
+  const rawTemp = req.body.temp !== undefined ? req.body.temp : req.body.temperature;
+  const tempNum = Number(rawTemp);
+  if (rawTemp === undefined || rawTemp === null || isNaN(tempNum) || tempNum < -30 || tempNum > 60) {
+    return res.status(400).json({ error: 'Invalid temperature reading. Temperature must be a valid number between -30°C and 60°C.' });
+  }
+
+  const rawSource = String(req.body.source || 'STAFF_CHECK').toUpperCase();
+  const source = ['STAFF_CHECK', 'SENSOR'].includes(rawSource) ? rawSource : 'STAFF_CHECK';
+  const recordedBy = req.user.name || req.user.email || req.user.id;
+
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const roundedTemp = Number(tempNum.toFixed(1));
 
-  const updatedLog = [
-    ...(order.tempLog || []),
-    {
-      time: timeStr,
-      temp: newTemp,
-      event: `Cold-Gel Core Sensor Probe: ${newTemp}°C (Safe Fresh Range 0°C - 4°C)`
-    }
-  ];
+  const logEntry = {
+    time: timeStr,
+    temp: roundedTemp,
+    event: req.body.event || req.body.notes || `Staff temperature check recorded by ${recordedBy} (${source === 'SENSOR' ? 'IoT Sensor Probe' : 'Calibrated Staff Thermometer'})`,
+    source,
+    recordedBy
+  };
+
+  const updatedLog = [...(order.tempLog || []), logEntry];
 
   await updateOrder(order.id, {
-    liveTemp: newTemp,
+    liveTemp: roundedTemp,
     tempLog: updatedLog
   });
 
   res.json({
     success: true,
-    liveTemp: newTemp,
-    tempLog: updatedLog
+    liveTemp: roundedTemp,
+    tempLog: updatedLog,
+    recordedEntry: logEntry
   });
+});
+
+app.post('/api/orders/:id/simulate-temp', (req, res) => {
+  res.status(404).json({ error: 'simulate-temp endpoint has been removed. All temperatures must be recorded by authorized staff or real sensors.' });
 });
 
 // ==========================================
@@ -2151,7 +2139,7 @@ app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(c
       updates.status = 'available';
       updates.lastSanitizedDate = timestamp.split('T')[0];
       updates.cyclesUsed = (cooler.cyclesUsed || 0) + 1;
-      updates.lastSanitizedNotes = notes || 'UV-C sanitization & antimicrobial wash certified';
+      updates.lastSanitizedNotes = notes || 'UV-C sanitization & wash completed';
     } else if (action === 'flag_damage' || action === 'flag_maintenance') {
       updates.status = 'damaged';
       updates.maintenanceReason = notes || 'Thermal gasket wear or lid seal compromise detected';
@@ -2210,16 +2198,10 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req
   const returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded') ||
     returns.find(r => r.coolerId === cooler.id) || null;
 
-  const isDamagedBox = cooler.id.includes('103') || cooler.status === 'damaged' || cooler.status === 'maintenance';
-  const liveTemp = isDamagedBox ? 5.8 : (order?.liveTemp || 1.8);
-  const isCompliant = liveTemp >= 0.0 && liveTemp <= 4.0;
-  
-  const tempLog = order?.tempLog && order.tempLog.length > 0 ? order.tempLog : [
-    { time: '07:15 AM', temp: 0.8, event: 'Sealed with chilled ice-gel bricks at Mahadevapura Dark Hub' },
-    { time: '07:30 AM', temp: isDamagedBox ? 2.4 : 1.2, event: 'chilled pack digital latch engaged; EV Cold Courier dispatched' },
-    { time: '07:55 AM', temp: isDamagedBox ? 4.6 : 1.6, event: 'IoT Ping: Temperature checked mid-route (Outer Ring Road)' },
-    { time: '08:15 AM', temp: liveTemp, event: isCompliant ? 'Delivered at customer doorstep (Sub-4°C guaranteed)' : '⚠️ Alert: Temperature rose above 4°C safe threshold' }
-  ];
+  const isDamagedBox = cooler.status === 'damaged' || cooler.status === 'maintenance';
+  const liveTemp = order?.liveTemp !== undefined ? order.liveTemp : null;
+  const isCompliant = liveTemp !== null ? (liveTemp >= 0.0 && liveTemp <= 4.0) : null;
+  const tempLog = order?.tempLog || [];
 
   const dispatchDate = order ? new Date(order.createdAt || Date.now() - 26 * 3600 * 1000) : new Date(Date.now() - 24 * 3600 * 1000);
   const now = new Date();
@@ -2259,22 +2241,24 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req
       scheduledPickupSlot: returnRecord.scheduledPickupSlot,
       refundPreference: returnRecord.refundPreference || 'wallet',
       refundMode: returnRecord.refundMode,
-      upiId: returnRecord.upiId || 'pooja@okhdfcbank',
+      upiId: returnRecord.upiId || null,
       courierAssigned: returnRecord.courierAssigned
     } : null,
     telemetry: {
       liveTemp,
-      targetRange: '0°C to 4°C (FSSC-22000 & FSSAI Standards)',
+      targetRange: 'Chilled',
       isCompliant,
-      complianceRate: isCompliant ? 100 : 62,
-      thermalHealthScore: isCompliant ? 98.6 : 54.2,
-      insulationCondition: isDamagedBox ? 'NEEDS_GASKET_INSPECTION' : 'EXCELLENT_HERMETIC_SEAL',
+      complianceRate: tempLog.length > 0 
+        ? Math.round((tempLog.filter(t => t.temp >= 0 && t.temp <= 4).length / tempLog.length) * 100)
+        : null,
+      thermalHealthScore: null,
+      insulationCondition: isDamagedBox ? 'NEEDS_GASKET_INSPECTION' : 'NORMAL',
       tempLog,
-      tatHours,
-      tatStatus,
-      cyclesUsed: cooler.cyclesUsed || 12,
+      tatHours: order ? tatHours : null,
+      tatStatus: order ? tatStatus : null,
+      cyclesUsed: cooler.cyclesUsed || 0,
       maxHoldingHours: cooler.maxHoldingHours || 36,
-      singleUsePlasticBoxesSaved: (cooler.cyclesUsed || 12) * 2
+      singleUsePlasticBoxesSaved: null
     },
     refundAssessment: {
       isEligible,
@@ -2399,7 +2383,7 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmi
     return res.status(404).json({ error: 'Cooler box not found' });
   }
 
-  const { reason = 'Temperature breach detected: Box cannot hold 0°C to 4°C' } = req.body;
+  const { reason = 'Temperature breach detected' } = req.body;
   const updated = await updateCooler(cooler.id, {
     status: 'maintenance',
     maintenanceReason: reason,
@@ -2429,9 +2413,21 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, r
   const totalHeld = coolers.filter(c => ['with_customer', 'return_requested'].includes(c.status)).reduce((sum, c) => sum + (Number(c.depositAmount) || 0), 0);
   const totalDepositsCollected = totalRefunded + totalHeld;
 
-  const avgTatHours = 32.4;
-  const recoveryRate = Math.round((returns.filter(r => r.status === 'refunded').length / Math.max(1, returns.length)) * 100);
-  const coldChainCompliance = 98.7;
+  const completedReturns = returns.filter(r => r.status === 'refunded' && r.completedAt && r.requestDate);
+  let avgTatHours = null;
+  if (completedReturns.length > 0) {
+    const totalReturnMs = completedReturns.reduce((acc, r) => acc + (new Date(r.completedAt) - new Date(r.requestDate)), 0);
+    avgTatHours = Number((totalReturnMs / (completedReturns.length * 1000 * 3600)).toFixed(1));
+  }
+  const recoveryRate = returns.length > 0
+    ? Math.round((returns.filter(r => r.status === 'refunded').length / returns.length) * 100)
+    : null;
+
+  const ordersWithLogs = orders.filter(o => o.tempLog && o.tempLog.length > 0);
+  const compliantOrders = ordersWithLogs.filter(o => o.tempLog.every(t => t.temp >= 0 && t.temp <= 4));
+  const coldChainCompliance = ordersWithLogs.length > 0
+    ? Number(((compliantOrders.length / ordersWithLogs.length) * 100).toFixed(1))
+    : null;
 
   res.json({
     success: true,
@@ -2442,15 +2438,14 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, r
       returnRequestedCount: returnRequested,
       maintenanceCount: inMaintenance,
       avgTatHours,
-      avgTatDays: '1.35 Days',
-      boxRecoveryRate: `${recoveryRate}%`,
-      coldChainComplianceRate: `${coldChainCompliance}%`,
+      avgTatDays: avgTatHours ? `${(avgTatHours / 24).toFixed(1)} Days` : null,
+      boxRecoveryRate: recoveryRate !== null ? `${recoveryRate}%` : null,
+      coldChainComplianceRate: coldChainCompliance !== null ? `${coldChainCompliance}%` : null,
       depositLedger: {
         totalCollected: totalDepositsCollected,
         totalRefunded: totalRefunded,
         activeHeld: totalHeld
-      },
-      singleUsePlasticPreventedKg: totalCoolers * 18 * 0.4
+      }
     }
   });
 });
