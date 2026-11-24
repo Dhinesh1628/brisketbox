@@ -117,11 +117,12 @@ export const AdminDashboardPage: React.FC = () => {
   const [scannedCoolerId, setScannedCoolerId] = useState<string | undefined>(undefined);
   const [coolerAnalytics, setCoolerAnalytics] = useState<any>(null);
   const [coolerSubView, setCoolerSubView] = useState<'health' | 'inventory'>('health');
+  const [cashDeposits, setCashDeposits] = useState<any[]>([]);
 
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [m, o, c, r, p, u, ca, ridersList, partnersList] = await Promise.all([
+      const [m, o, c, r, p, u, ca, ridersList, partnersList, depositsList] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getOrders().catch(() => []),
         api.getCoolers().catch(() => []),
@@ -130,7 +131,8 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminUsers().catch(() => []),
         api.getCoolerAnalytics().catch(() => null),
         api.getAdminRiders().catch(() => []),
-        api.getAdminPartners().catch(() => [])
+        api.getAdminPartners().catch(() => []),
+        api.getAdminCashDeposits().catch(() => [])
       ]);
       if (m) setMetrics(m);
       setOrders(o || []);
@@ -141,10 +143,22 @@ export const AdminDashboardPage: React.FC = () => {
       if (ca) setCoolerAnalytics(ca);
       if (Array.isArray(ridersList)) setAdminRiders(ridersList);
       if (Array.isArray(partnersList)) setAdminPartners(partnersList);
+      if (Array.isArray(depositsList)) setCashDeposits(depositsList);
     } catch (err) {
       console.error('Failed to load operations data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmCashDeposit = async (depId: string) => {
+    try {
+      const res = await api.confirmCashDeposit(depId);
+      showNotification(`✓ Cash Deposit Confirmed: ₹${res.deposit?.amount || res.amount || ''} (Rider Cash Updated)`);
+      setCashDeposits(prev => prev.map(d => d.id === depId ? { ...d, status: 'CONFIRMED', confirmedAt: new Date().toISOString() } : d));
+      loadAllData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to confirm cash deposit');
     }
   };
 
@@ -1412,6 +1426,79 @@ export const AdminDashboardPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Section: Rider Cash on Delivery & Hub Deposits */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-2xs text-xs space-y-3 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-gray-950 dark:text-white text-sm">
+                  Rider COD Cash-in-Hand & Hub Deposits ({cashDeposits.filter(d => d.status === 'PENDING').length} Pending)
+                </h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Confirm physical cash handovers from delivery riders at the depot. Rider cash-in-hand updates only upon confirmation.
+                </p>
+              </div>
+            </div>
+
+            {cashDeposits.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 bg-gray-50 dark:bg-slate-800/40 rounded-xl">
+                No cash deposits requested yet. Riders submit cash handover requests from the rider portal.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 text-[11px] border-b border-gray-200 dark:border-slate-700">
+                    <tr>
+                      <th className="py-2.5 px-3">Deposit Ref</th>
+                      <th className="py-2.5 px-3">Rider</th>
+                      <th className="py-2.5 px-3">Amount</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Submitted At</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                    {cashDeposits.map((dep) => (
+                      <tr key={dep.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                        <td className="py-2.5 px-3 font-mono font-bold">{dep.id}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-bold">{dep.riderName || 'Rider'}</span>
+                          <span className="text-gray-400 text-[10px] ml-1">({dep.riderPhone || dep.riderId})</span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-black text-amber-900 dark:text-amber-300">
+                          ₹{dep.amount}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            dep.status === 'CONFIRMED'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}>
+                            {dep.status || 'PENDING'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-400 text-[10px]">
+                          {dep.createdAt ? new Date(dep.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {dep.status === 'PENDING' ? (
+                            <button
+                              onClick={() => handleConfirmCashDeposit(dep.id)}
+                              className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                            >
+                              Confirm Cash Received
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 font-semibold text-[11px]">✓ Confirmed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

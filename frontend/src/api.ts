@@ -652,6 +652,29 @@ export const api = {
     return res.json();
   },
 
+  async getAdminCashDeposits(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/admin/cash-deposits`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch cash deposits');
+    }
+    return res.json();
+  },
+
+  async confirmCashDeposit(depositId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/cash-deposits/${encodeURIComponent(depositId)}/confirm`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to confirm cash deposit');
+    }
+    return res.json();
+  },
+
   // --- BUTCHER / PARTNER SHOP ECOSYSTEM ---
   async partnerRegister(data: any): Promise<any> {
     const res = await fetch(`${API_BASE}/partner/register`, {
