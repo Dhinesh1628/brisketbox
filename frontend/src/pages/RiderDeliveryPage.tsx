@@ -296,7 +296,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   };
 
   useEffect(() => {
-    if (user?.role === 'rider' && user.approvalStatus === 'approved') {
+    if ((user?.role === 'rider' || user?.role === 'admin') && (user.approvalStatus === 'approved' || user.role === 'admin')) {
       loadOrders();
       const interval = setInterval(loadOrders, 10000);
       return () => clearInterval(interval);
@@ -308,7 +308,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
     let watchId: number | null = null;
     let intervalId: any = null;
 
-    if (isGpsStreaming && user?.role === 'rider') {
+    if (isGpsStreaming && (user?.role === 'rider' || user?.role === 'admin')) {
       if ('geolocation' in navigator) {
         watchId = navigator.geolocation.watchPosition(
           (pos) => {
@@ -558,9 +558,9 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   };
 
   // =========================================================================
-  // VIEW 1: AUTHENTICATION & ONBOARDING GATE (When not logged in as Rider)
+  // VIEW 1: AUTHENTICATION & ONBOARDING GATE (When not logged in as Rider/Admin)
   // =========================================================================
-  if (!user || user.role !== 'rider') {
+  if (!user || (user.role !== 'rider' && user.role !== 'admin')) {
     return (
       <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">
@@ -779,7 +779,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
   // =========================================================================
   // VIEW 2: PENDING APPROVAL NOTICE (When registered but not approved yet)
   // =========================================================================
-  if (user?.approvalStatus === 'pending_approval') {
+  if (user?.role !== 'admin' && user?.approvalStatus === 'pending_approval') {
     return (
       <div className="min-h-screen w-full overflow-x-hidden bg-[#f4f6f8] text-slate-900 flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-slate-200/90 text-slate-900 shadow-xs px-4 py-3">

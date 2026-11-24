@@ -348,7 +348,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   };
 
   useEffect(() => {
-    if (user?.role === 'partner' && user.approvalStatus === 'approved') {
+    if ((user?.role === 'partner' || user?.role === 'admin') && (user.approvalStatus === 'approved' || user.role === 'admin')) {
       loadPartnerData(true);
       const interval = setInterval(() => loadPartnerData(false), 4000);
       return () => clearInterval(interval);
@@ -674,9 +674,9 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   const netPayout = Math.round(todayTotalRevenue * 0.92);
 
   // =========================================================================
-  // AUTHENTICATION & ONBOARDING GATE (When not authenticated as Partner)
+  // AUTHENTICATION & ONBOARDING GATE (When not authenticated as Partner/Admin)
   // =========================================================================
-  if (!user || user.role !== 'partner') {
+  if (!user || (user.role !== 'partner' && user.role !== 'admin')) {
     return (
       <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans selection:bg-[#d11243]">
         <header className="bg-white border-b border-gray-200 px-4 py-3 shadow-xs">
@@ -893,7 +893,7 @@ export const ButcherStationPage: React.FC<ButcherStationPageProps> = ({ onBackTo
   // =========================================================================
   // PENDING APPROVAL VIEW
   // =========================================================================
-  if (user?.approvalStatus === 'pending_approval') {
+  if (user?.role !== 'admin' && user?.approvalStatus === 'pending_approval') {
     return (
       <div className="min-h-screen bg-[#f7f7f9] text-[#0f172a] flex flex-col font-sans">
         <header className="bg-white border-b border-gray-200 px-4 py-3 shadow-xs">
