@@ -17,7 +17,7 @@ const localBinaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-
 const systemBinary = process.env.MONGOMS_SYSTEM_BINARY || (fs.existsSync(localBinaryPath) ? localBinaryPath : undefined);
 const replSet = await MongoMemoryReplSet.create({
   replSet: { count: 1, storageEngine: 'wiredTiger' },
-  binary: systemBinary ? { systemBinary } : {}
+  binary: systemBinary ? { systemBinary } : { version: '7.0.14' }
 });
 const mongoUri = replSet.getUri();
 process.env.MONGODB_URI = mongoUri;

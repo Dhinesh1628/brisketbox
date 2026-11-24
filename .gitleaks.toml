@@ -22,5 +22,9 @@ regexes = [
 paths = [
   '''backend/tests/helpers/mockRazorpayBootstrap\.js''',
   '''backend/tests/.*\.test\.js''',
+  '''scripts/run-backend-tests\.js''',
+  '''scripts/check-backend-syntax\.js''',
+  '''\.github/workflows/ci\.yml''',
+  '''docs/CI\.md''',
   '''\.gitleaks\.toml'''
 ]

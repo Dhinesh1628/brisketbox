@@ -67,7 +67,7 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
     console.log('[Test Setup] Starting MongoMemoryReplSet...');
     replSet = await MongoMemoryReplSet.create({
       replSet: { count: 1, storageEngine: 'wiredTiger' },
-      binary: systemBinary ? { systemBinary } : {}
+      binary: systemBinary ? { systemBinary } : { version: '7.0.14' }
     });
     mongoUri = replSet.getUri();
     console.log('[Test Setup] ReplSet running at:', mongoUri);

@@ -13,7 +13,7 @@ concurrency:
 jobs:
   backend:
     name: Backend CI (Syntax, Tests & Audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,6 +26,9 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
+
+      - name: Install system dependencies for MongoDB
+        run: sudo apt-get update && sudo apt-get install -y libcurl4
 
       - name: Install root dependencies
         run: npm ci
@@ -50,6 +53,7 @@ jobs:
       - name: Run all backend tests
         env:
           NODE_ENV: test
+          MONGOMS_VERSION: '7.0.14'
           JWT_SECRET: ci_test_fake_jwt_secret_32bytes_value_12345
           RAZORPAY_KEY_ID: rzp_test_ci_placeholder_key_id
           RAZORPAY_KEY_SECRET: ci_fake_razorpay_secret_placeholder
@@ -58,7 +62,7 @@ jobs:
 
   frontend:
     name: Frontend CI (Lint, Typecheck, Build & Audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -85,7 +89,10 @@ jobs:
 
   gitleaks:
     name: Secret Scanning (Gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
