@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { User } from '../models/User.js';
 import { db } from '../db.js';
 
 export function validateProductionEnv() {
@@ -101,7 +103,7 @@ export function verifyToken(token) {
   return jwt.verify(token, getJwtSecret());
 }
 
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   const token = getAuthTokenFromReq(req);
   if (!token) {
     return res.status(401).json({ error: 'Authentication required. No token provided.' });
@@ -109,7 +111,12 @@ export const authenticate = (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    const user = db.findById('users', decoded.id);
+    let user = null;
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      user = await User.findOne({ id: decoded.id }).lean();
+    } else if (process.env.NODE_ENV !== 'production') {
+      user = db.findById('users', decoded.id);
+    }
     if (!user) {
       return res.status(401).json({ error: 'User account not found' });
     }
@@ -120,7 +127,7 @@ export const authenticate = (req, res, next) => {
   }
 };
 
-export const authenticateOptional = (req, res, next) => {
+export const authenticateOptional = async (req, res, next) => {
   const token = getAuthTokenFromReq(req);
   if (!token) {
     req.user = null;
@@ -129,7 +136,12 @@ export const authenticateOptional = (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    const user = db.findById('users', decoded.id);
+    let user = null;
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      user = await User.findOne({ id: decoded.id }).lean();
+    } else if (process.env.NODE_ENV !== 'production') {
+      user = db.findById('users', decoded.id);
+    }
     req.user = user || null;
   } catch (err) {
     req.user = null;

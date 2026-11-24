@@ -2,7 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
@@ -13,10 +13,11 @@ process.env.RAZORPAY_KEY_ID = 'rzp_test_placeholder';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret_placeholder';
 
 const binaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
-const mongoServer = await MongoMemoryServer.create({
+const replSet = await MongoMemoryReplSet.create({
+  replSet: { count: 1, storageEngine: 'wiredTiger' },
   binary: { systemBinary: binaryPath }
 });
-const mongoUri = mongoServer.getUri();
+const mongoUri = replSet.getUri();
 process.env.MONGODB_URI = mongoUri;
 
 const { default: app } = await import('../server.js');
@@ -162,8 +163,8 @@ describe('Enterprise Production Hardening & Security Test Suite', () => {
   after(async () => {
     try {
       await mongoose.disconnect();
-      if (mongoServer) {
-        await mongoServer.stop();
+      if (replSet) {
+        await replSet.stop();
       }
     } finally {
       setTimeout(() => process.exit(0), 200).unref();

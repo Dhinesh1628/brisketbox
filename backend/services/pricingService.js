@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import { db } from '../db.js';
+import { Product } from '../models/Product.js';
 import { validateAndApplyCoupon } from './couponService.js';
 
 /**
@@ -40,7 +42,7 @@ export function calculateItemUnitPrice(product, selectedWeight) {
  * @param {number} [params.tipAmount] - Delivery tip in INR
  * @returns {object} Verified calculation breakdown
  */
-export function calculateOrderPricing({
+export async function calculateOrderPricing({
   items,
   couponCode = null,
   user = null,
@@ -51,6 +53,7 @@ export function calculateOrderPricing({
     throw new Error('Please add at least one cut to your cold box');
   }
 
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
   let subtotal = 0;
   const processedItems = [];
 
@@ -60,7 +63,13 @@ export function calculateOrderPricing({
       throw new Error('Each order item must specify a valid productId');
     }
 
-    const prod = db.findById('products', productId);
+    let prod = null;
+    if (isMongo) {
+      prod = await Product.findOne({ id: productId }).lean();
+    }
+    if (!prod) {
+      prod = db.findById('products', productId);
+    }
     if (!prod) {
       throw new Error(`Cut "${productId}" was not found in active inventory`);
     }
@@ -93,7 +102,7 @@ export function calculateOrderPricing({
   let discountAmount = 0;
   let appliedCoupon = null;
   if (couponCode) {
-    const couponResult = validateAndApplyCoupon(couponCode, user, subtotal);
+    const couponResult = await validateAndApplyCoupon(couponCode, user, subtotal);
     if (couponResult.valid) {
       discountAmount = couponResult.discount;
       appliedCoupon = couponResult.coupon;

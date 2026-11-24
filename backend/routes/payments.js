@@ -1,22 +1,28 @@
 import express from 'express';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
+import mongoose from 'mongoose';
 import { db } from '../db.js';
-import { assignFleetRiderForOrder } from '../dispatch.js';
-import { getAuthTokenFromReq, verifyToken, authenticate, requireAdmin, authenticateOptional } from '../services/auth.js';
+import { User } from '../models/User.js';
+import { Order } from '../models/Order.js';
+import { Cooler } from '../models/Cooler.js';
+import { authenticate, authenticateOptional, requireAdmin, getAuthTokenFromReq, verifyToken } from '../services/auth.js';
 import { calculateOrderPricing } from '../services/pricingService.js';
 import { recordCouponUsage } from '../services/couponService.js';
-import { deductStock, releaseStock } from '../services/stockService.js';
 import { debitWallet, creditWallet } from '../services/walletService.js';
+import { deductStock, releaseStock } from '../services/stockService.js';
 import { finalizePayment, releasePaymentReservations } from '../services/paymentFinalizer.js';
 
 const router = express.Router();
 
-const getUserFromReq = (req) => {
+const getUserFromReq = async (req) => {
   const token = getAuthTokenFromReq(req);
   if (!token) return null;
   try {
     const decoded = verifyToken(token);
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      return await User.findOne({ id: decoded.id }).lean();
+    }
     return db.findById('users', decoded.id) || null;
   } catch (e) {
     return null;
@@ -68,11 +74,12 @@ router.post('/create-order', async (req, res) => {
     }
 
     // Authenticate user or create guest session
-    const reqAuthUser = getUserFromReq(req) || req.user;
+    const reqAuthUser = (await getUserFromReq(req)) || req.user;
     const isGuest = !reqAuthUser;
 
+    const guestId = `guest_${crypto.randomBytes(4).toString('hex')}`;
     const user = reqAuthUser || { 
-      id: `guest_${crypto.randomBytes(4).toString('hex')}`, 
+      id: guestId, 
       name: addressDetails?.fullName || 'Valued Customer', 
       email: addressDetails?.email || 'customer@brisketbox.in', 
       phone: addressDetails?.phone || '+91 98765 43210',
@@ -92,7 +99,7 @@ router.post('/create-order', async (req, res) => {
     // 1. CRITICAL: Tested Server-Side Pricing Function (Ignores all client discounts/prices)
     let pricing;
     try {
-      pricing = calculateOrderPricing({
+      pricing = await calculateOrderPricing({
         items,
         couponCode,
         user,
@@ -120,8 +127,15 @@ router.post('/create-order', async (req, res) => {
       if (isGuest) {
         return res.status(400).json({ error: 'Please sign in to use BrisketBox Wallet balance' });
       }
-      const dbUser = db.findById('users', user.id);
-      const availableBalance = Number(dbUser?.walletBalance || 0);
+      let availableBalance = 0;
+      if (mongoose.connection && mongoose.connection.readyState === 1) {
+        const dbUser = await User.findOne({ id: user.id }).lean();
+        availableBalance = Number(dbUser?.walletBalance || 0);
+      } else {
+        const dbUser = db.findById('users', user.id);
+        availableBalance = Number(dbUser?.walletBalance || 0);
+      }
+
       if (availableBalance < walletDeduction) {
         return res.status(400).json({ 
           error: `Insufficient wallet balance. Available: ₹${availableBalance}, requested: ₹${walletDeduction}` 
@@ -129,9 +143,10 @@ router.post('/create-order', async (req, res) => {
       }
     }
 
-    // Cryptographically secure, collision-safe order number and PIN
+    // Cryptographically secure, collision-safe order number, PIN, and guestToken
     const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     const deliveryPin = crypto.randomInt(1000, 10000).toString();
+    const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : null;
 
     // 2. CASE A: 100% Wallet Paid (Fully paid via store credit)
     if (walletDeduction > 0 && netPayable === 0) {
@@ -166,13 +181,12 @@ router.post('/create-order', async (req, res) => {
         return res.status(400).json({ error: stockErr.message });
       }
 
-      // Record coupon usage if applied
       if (couponCode) {
-        recordCouponUsage(couponCode, user, orderNumber);
+        await recordCouponUsage(couponCode, user, orderNumber);
       }
 
-      const assignedRider = assignFleetRiderForOrder();
-      const order = createOrderRecord({
+      const assignedRider = await assignFleetRiderForOrder();
+      const order = await createOrderRecord({
         orderNumber,
         user,
         processedItems,
@@ -195,13 +209,15 @@ router.post('/create-order', async (req, res) => {
         orderStatus: 'CONFIRMED',
         stockDeducted: true,
         walletDebited: true,
-        assignedRider
+        assignedRider,
+        guestToken
       });
 
       return res.status(201).json({
         success: true,
         isWalletPaid: true,
         order,
+        guestToken,
         message: `Order placed successfully! ₹${walletDeduction} deducted from your BrisketBox Wallet.`
       });
     }
@@ -242,11 +258,11 @@ router.post('/create-order', async (req, res) => {
       }
 
       if (couponCode) {
-        recordCouponUsage(couponCode, user, orderNumber);
+        await recordCouponUsage(couponCode, user, orderNumber);
       }
 
-      const assignedRider = assignFleetRiderForOrder();
-      const order = createOrderRecord({
+      const assignedRider = await assignFleetRiderForOrder();
+      const order = await createOrderRecord({
         orderNumber,
         user,
         processedItems,
@@ -264,36 +280,36 @@ router.post('/create-order', async (req, res) => {
         deliverySlot,
         deliveryNotes,
         city: city || 'Bengaluru',
-        paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + Cash on Delivery (₹${netPayable})` : 'cod',
+        paymentMethod: 'Cash on Delivery (Pay at Doorstep)',
         paymentStatus: 'PENDING',
         orderStatus: 'CONFIRMED',
         stockDeducted: true,
         walletDebited: walletDeduction > 0,
-        assignedRider
+        assignedRider,
+        guestToken
       });
 
       return res.status(201).json({
         success: true,
         isCod: true,
         order,
-        message: walletDeduction > 0
-          ? `Order placed! ₹${walletDeduction} deducted from wallet, pay ₹${netPayable} in cash at doorstep.`
-          : 'Order placed successfully via Cash on Delivery'
+        guestToken,
+        message: 'Order confirmed! Please have ₹' + netPayable + ' cash or UPI ready for delivery executive.'
       });
     }
 
-    // 4. CASE C: Online Payment (Razorpay)
-    // If partial wallet was selected, debit wallet upfront so it cannot be double-spent
+    // 4. CASE C: Online Payment Gateway (Razorpay)
+    // Upfront partial wallet deduction if customer combined wallet + online payment
     if (walletDeduction > 0) {
-      const walletIdempotencyKey = `wallet_order_${orderNumber}_partial_debit`;
+      const walletIdempotencyKey = `wallet_order_${orderNumber}_partial_reserve`;
       try {
         await debitWallet({
           userId: user.id,
           amount: walletDeduction,
           idempotencyKey: walletIdempotencyKey,
           orderId: orderNumber,
-          title: `Partial Payment for #${orderNumber}`,
-          description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`
+          title: `Partial Store Credit for Order #${orderNumber}`,
+          description: `₹${walletDeduction} reserved for order payment.`
         });
       } catch (walletErr) {
         return res.status(400).json({ error: walletErr.message });
@@ -301,44 +317,39 @@ router.post('/create-order', async (req, res) => {
     }
 
     let razorpayOrderId = `order_${crypto.randomBytes(8).toString('hex')}`;
-    
+
     if (razorpayInstance && !isDemoKey) {
       try {
-        const rzpOrder = await razorpayInstance.orders.create({
+        const options = {
           amount: amountInPaise,
           currency: 'INR',
           receipt: orderNumber,
+          payment_capture: 1,
           notes: {
             orderNumber,
-            customerEmail: user.email || addressDetails?.email || '',
-            walletDeduction: String(walletDeduction)
+            userId: user.id,
+            city: city || 'Bengaluru'
           }
-        });
+        };
+        const rzpOrder = await razorpayInstance.orders.create(options);
         razorpayOrderId = rzpOrder.id;
-      } catch (err) {
-        console.error('[Razorpay] Order creation failed:', err.message);
+      } catch (rzpErr) {
+        console.error('[Razorpay Order Creation Failed]:', rzpErr);
         if (walletDeduction > 0) {
           await creditWallet({
             userId: user.id,
             amount: walletDeduction,
-            idempotencyKey: `wallet_rollback_rzp_fail_${orderNumber}`,
+            idempotencyKey: `wallet_release_rzp_fail_${orderNumber}`,
             orderId: orderNumber,
-            title: 'Wallet Rollback',
-            description: 'Razorpay order creation failed; store credit refunded.'
+            title: 'Store Credit Release',
+            description: 'Razorpay order creation failed; store credit released.'
           });
         }
-        if (isProd) {
-          return res.status(502).json({ error: 'Payment gateway temporarily unavailable. Please choose COD or try again.' });
-        }
-        razorpayOrderId = `order_test_${crypto.randomBytes(8).toString('hex')}`;
+        return res.status(502).json({ error: 'Failed to initialize payment gateway. Please try again.' });
       }
-    } else {
-      razorpayOrderId = `order_test_${crypto.randomBytes(8).toString('hex')}`;
     }
 
-    const guestToken = crypto.randomBytes(24).toString('hex');
-
-    const order = createOrderRecord({
+    const order = await createOrderRecord({
       orderNumber,
       user,
       processedItems,
@@ -392,7 +403,7 @@ router.post('/create-order', async (req, res) => {
 // ==========================================
 // 2. POST /api/payments/verify
 // ==========================================
-router.post('/verify', authenticate, async (req, res) => {
+router.post('/verify', authenticateOptional, async (req, res) => {
   try {
     const { 
       razorpay_order_id, 
@@ -405,21 +416,44 @@ router.post('/verify', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Missing payment verification parameters (razorpay_order_id and razorpay_payment_id are required)' });
     }
 
-    // Find order by Razorpay Order ID or internal Order ID
-    let order = db.get('orders').find(o => o.razorpayOrderId === razorpay_order_id || o.id === orderId || o.orderNumber === orderId);
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+    // Find order by Razorpay Order ID or internal Order ID from MongoDB
+    let order = null;
+    if (isMongo) {
+      order = await Order.findOne({
+        $or: [
+          { razorpayOrderId: razorpay_order_id },
+          { id: orderId },
+          { orderNumber: orderId }
+        ]
+      }).lean();
+    } else {
+      order = (db.get('orders') || []).find(o => o.razorpayOrderId === razorpay_order_id || o.id === orderId || o.orderNumber === orderId);
+    }
+
     if (!order) {
       return res.status(404).json({ error: 'Order not found for verification' });
     }
 
-    // Access control: only the owning customer or admin can verify payment
-    if (req.user && req.user.role !== 'admin' && order.userId !== req.user.id) {
+    // Access control: only the owning customer, admin, or guest with valid guestToken can verify
+    const guestToken = req.headers['x-guest-token'] || req.body.guestToken;
+    const isOwner = req.user && req.user.id === order.userId;
+    const isAdmin = req.user && req.user.role === 'admin';
+    const isValidGuest = guestToken && order.guestToken && guestToken === order.guestToken;
+
+    if (!req.user && !isValidGuest) {
+      return res.status(401).json({ error: 'Authentication or valid guest token required to verify payment' });
+    }
+
+    if (!isAdmin && !isOwner && !isValidGuest) {
       return res.status(403).json({ error: 'Access denied: You are not authorized to verify payment for this order' });
     }
 
     // Idempotency: If order is already PAID, return success immediately
     if (order.paymentStatus === 'PAID') {
       const sanitized = { ...order };
-      if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
+      if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user?.id && !isValidGuest) {
         delete sanitized.deliveryPin;
       }
       return res.status(200).json({
@@ -467,7 +501,7 @@ router.post('/verify', authenticate, async (req, res) => {
             return res.status(400).json({ error: `Currency mismatch: Expected INR, got ${paymentDetails.currency}` });
           }
 
-          const expectedPaise = order.amountInPaise || Math.round(order.totalAmount * 100);
+          const expectedPaise = order.amountInPaise || Math.round((order.totalAmount || order.total) * 100);
           if (paymentDetails.amount !== expectedPaise) {
             return res.status(400).json({ 
               error: `Payment amount mismatch: Expected ₹${expectedPaise / 100}, got ₹${paymentDetails.amount / 100}` 
@@ -478,51 +512,50 @@ router.post('/verify', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Razorpay order ID mismatch' });
           }
         } catch (fetchErr) {
-          console.error('[Razorpay] Payment fetch verification failed:', fetchErr.message);
-          return res.status(400).json({ error: `Payment gateway verification failed: ${fetchErr.message}` });
+          console.error('[Razorpay Payment Fetch Failed]:', fetchErr);
+          return res.status(400).json({ error: `Failed to verify payment with Razorpay: ${fetchErr.message}` });
         }
       }
     }
 
     if (!isSignatureValid) {
-      // Do NOT set order paymentStatus to FAILED so malicious callers cannot sabotage legitimate pending orders
+      console.warn('[Payments] Invalid payment signature detected for order:', razorpay_order_id);
       return res.status(400).json({ error: 'Invalid payment signature. Verification failed.' });
     }
 
-    // Centralized, idempotent payment finalizer
+    // Call unified, idempotent payment finalizer with real transactions
     const finalResult = await finalizePayment({
       orderId: order.id,
-      razorpayPaymentId: razorpay_payment_id,
-      razorpayOrderId: razorpay_order_id,
-      razorpaySignature: razorpay_signature || 'SERVER_VERIFIED',
-      amountInPaise: order.amountInPaise || Math.round(order.totalAmount * 100),
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
+      amountInPaise: order.amountInPaise || Math.round((order.totalAmount || order.total) * 100),
       currency: 'INR',
-      source: 'verify'
+      source: 'verify',
+      eventId: razorpayPaymentId
     });
 
-    if (finalResult.refundRequired) {
-      return res.status(409).json({
-        error: 'Item out of stock during payment. Order moved to refund-required state.',
+    if (!finalResult.success && finalResult.refundRequired) {
+      return res.status(400).json({
+        error: finalResult.error,
+        refundRequired: true,
         order: finalResult.order
       });
     }
 
-    if (!finalResult.success) {
-      return res.status(400).json({ error: finalResult.error || 'Payment finalization failed' });
+    const updatedOrder = finalResult.order;
+    const sanitizedOrder = { ...updatedOrder };
+    if (req.user && req.user.role !== 'admin' && sanitizedOrder.userId !== req.user?.id && !isValidGuest) {
+      delete sanitizedOrder.deliveryPin;
     }
 
-    const sanitized = { ...finalResult.order };
-    if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
-      delete sanitized.deliveryPin;
-    }
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Payment verified and order confirmed successfully',
-      order: sanitized
+      order: sanitizedOrder
     });
   } catch (err) {
-    console.error('[Payments] Verify error:', err);
+    console.error('[Payments] Payment verification error:', err);
     res.status(500).json({ error: err.message || 'Payment verification failed' });
   }
 });
@@ -534,17 +567,14 @@ router.post('/webhook', async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
-      return res.status(400).json({ error: 'Missing X-Razorpay-Signature header' });
+      return res.status(400).json({ error: 'Missing x-razorpay-signature header' });
     }
 
-    if (!RAZORPAY_WEBHOOK_SECRET) {
-      console.error('[Razorpay Webhook] RAZORPAY_WEBHOOK_SECRET is not configured');
-      return res.status(500).json({ error: 'Webhook secret not configured' });
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      return res.status(400).json({ error: 'Raw body required for webhook signature verification' });
     }
 
-    const rawBody = req.rawBody || JSON.stringify(req.body);
-
-    // Cryptographic timing-safe comparison on the exact raw body
     const expectedSignature = crypto
       .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
       .update(rawBody)
@@ -560,31 +590,54 @@ router.post('/webhook', async (req, res) => {
 
     const event = req.body.event;
     const payload = req.body.payload;
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
     console.log(`[Razorpay Webhook] Verified event: ${event}`);
 
-    // Handle duplicate webhook events idempotently
+    // Handle duplicate webhook events idempotently with transactions
     if (event === 'payment.captured') {
       const payment = payload.payment.entity;
       const orderId = payment.order_id;
-      const order = db.get('orders').find(o => o.razorpayOrderId === orderId);
+
+      let order = null;
+      if (isMongo) {
+        order = await Order.findOne({ razorpayOrderId: orderId }).lean();
+      } else {
+        order = (db.get('orders') || []).find(o => o.razorpayOrderId === orderId);
+      }
 
       if (!order) {
         return res.status(404).json({ error: 'Order not found for captured payment' });
       }
 
+      // Idempotency: If already marked PAID, acknowledge duplicate webhook safely
+      if (order.paymentStatus === 'PAID') {
+        return res.status(200).json({ status: 'ok', received: true, alreadyPaid: true });
+      }
+
       // 1. Verify currency
       if (payment.currency !== 'INR') {
-        db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        if (isMongo) {
+          await Order.updateOne({ id: order.id }, { $set: { paymentStatus: 'FAILED' } });
+        } else {
+          db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        }
         return res.status(400).json({ error: `Currency mismatch: Expected INR, got ${payment.currency}` });
       }
 
       // 2. Verify amount
-      const expectedPaise = order.amountInPaise || Math.round(order.totalAmount * 100);
+      const expectedPaise = order.amountInPaise || Math.round((order.totalAmount || order.total) * 100);
       if (payment.amount !== expectedPaise) {
-        db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        if (isMongo) {
+          await Order.updateOne({ id: order.id }, { $set: { paymentStatus: 'FAILED' } });
+        } else {
+          db.update('orders', order.id, { paymentStatus: 'FAILED' });
+        }
         return res.status(400).json({ error: `Payment amount mismatch: Expected ${expectedPaise} paise, got ${payment.amount} paise` });
       }
+
+      // Unique PaymentEvent key: Razorpay payment ID or event ID, NEVER Date.now()!
+      const uniqueEventId = req.body.id || req.headers['x-razorpay-event-id'] || payment.id;
 
       const finalResult = await finalizePayment({
         orderId: order.id,
@@ -592,32 +645,55 @@ router.post('/webhook', async (req, res) => {
         razorpayOrderId: payment.order_id,
         amountInPaise: payment.amount,
         currency: payment.currency,
-        source: 'webhook'
+        source: 'webhook',
+        eventId: uniqueEventId
       });
 
       return res.status(200).json({ status: 'ok', received: true, success: finalResult.success });
     } else if (event === 'payment.failed' || event === 'order.expired') {
       const payment = payload?.payment?.entity;
       const orderId = payment?.order_id || payload?.order?.entity?.id;
-      const order = db.get('orders').find(o => o.razorpayOrderId === orderId || o.id === orderId);
+
+      let order = null;
+      if (isMongo) {
+        order = await Order.findOne({
+          $or: [{ razorpayOrderId: orderId }, { id: orderId }]
+        }).lean();
+      } else {
+        order = (db.get('orders') || []).find(o => o.razorpayOrderId === orderId || o.id === orderId);
+      }
 
       if (order) {
-        await releasePaymentReservations(order.id);
+        await releasePaymentReservations({ orderId: order.id });
         console.log(`[Webhook] Order ${order.id} payment failed/expired. Released reservations.`);
       }
     } else if (event === 'refund.processed') {
       const refund = payload.refund.entity;
       const paymentId = refund.payment_id;
-      const order = db.get('orders').find(o => o.razorpayPaymentId === paymentId);
 
-      if (order && order.refundStatus !== 'REFUNDED') {
-        db.update('orders', order.id, {
-          refundStatus: 'REFUNDED',
-          refundId: refund.id,
-          refundAmount: refund.amount / 100,
-          refundProcessedAt: new Date().toISOString()
-        });
-        console.log(`[Webhook] Refund for order ${order.id} processed: ₹${refund.amount / 100}`);
+      let order = null;
+      if (isMongo) {
+        order = await Order.findOne({ razorpayPaymentId: paymentId }).lean();
+        if (order && order.refundStatus !== 'REFUNDED') {
+          await Order.updateOne({ id: order.id }, {
+            $set: {
+              refundStatus: 'REFUNDED',
+              refundId: refund.id,
+              refundAmount: refund.amount / 100,
+              refundProcessedAt: new Date().toISOString()
+            }
+          });
+        }
+      } else {
+        order = (db.get('orders') || []).find(o => o.razorpayPaymentId === paymentId);
+        if (order && order.refundStatus !== 'REFUNDED') {
+          db.update('orders', order.id, {
+            refundStatus: 'REFUNDED',
+            refundId: refund.id,
+            refundAmount: refund.amount / 100,
+            refundProcessedAt: new Date().toISOString()
+          });
+        }
       }
     }
 
@@ -631,43 +707,62 @@ router.post('/webhook', async (req, res) => {
 // ==========================================
 // 4. GET /api/payments/status/:orderId
 // ==========================================
-router.get('/status/:orderId', authenticateOptional, (req, res) => {
+router.get('/status/:orderId', authenticateOptional, async (req, res) => {
   const { orderId } = req.params;
-  const order = db.get('orders').find(o => o.id === orderId || o.orderNumber === orderId || o.razorpayOrderId === orderId);
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+  let order = null;
+  if (isMongo) {
+    order = await Order.findOne({
+      $or: [{ id: orderId }, { orderNumber: orderId }, { razorpayOrderId: orderId }]
+    }).lean();
+  } else {
+    order = (db.get('orders') || []).find(o => o.id === orderId || o.orderNumber === orderId || o.razorpayOrderId === orderId);
+  }
 
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
 
-  // Authorization: Must be order owner, admin, or provide valid guestToken
-  const isOwner = req.user && (req.user.role === 'admin' || order.userId === req.user.id);
-  const guestTokenHeader = req.headers['x-guest-token'] || req.query.guestToken;
-  const isValidGuest = Boolean(order.guestToken && guestTokenHeader && order.guestToken === guestTokenHeader);
+  const guestToken = req.headers['x-guest-token'] || req.query.guestToken;
+  const isOwner = req.user && req.user.id === order.userId;
+  const isAdmin = req.user && req.user.role === 'admin';
+  const isValidGuest = guestToken && order.guestToken && guestToken === order.guestToken;
 
-  if (!isOwner && !isValidGuest) {
-    return res.status(403).json({ error: 'Access denied: Authentication or valid guest token required to inspect payment status' });
+  if (!isAdmin && !isOwner && !isValidGuest) {
+    return res.status(403).json({ error: 'Access denied: You are not authorized to view payment status for this order' });
   }
 
-  res.status(200).json({
+  res.json({
     orderId: order.id,
     orderNumber: order.orderNumber,
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
-    totalAmount: order.totalAmount,
     paymentMethod: order.paymentMethod,
-    razorpayOrderId: order.razorpayOrderId,
-    razorpayPaymentId: order.razorpayPaymentId,
+    totalAmount: order.totalAmount,
+    walletDeduction: order.walletDeduction || 0,
+    coolerDeposit: order.coolerDeposit || 0,
+    coolerId: order.coolerId,
     createdAt: order.createdAt
   });
 });
 
 // ==========================================
-// 5. POST /api/payments/refund-coldbox (Admin authorized, idempotent, strictly matching deposit paid)
+// 5. POST /api/payments/refund-coldbox
 // ==========================================
 router.post('/refund-coldbox', authenticate, requireAdmin, async (req, res) => {
   try {
     const { orderId, coolerId, notes } = req.body;
-    const order = db.get('orders').find(o => o.id === orderId || o.orderNumber === orderId);
+    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+
+    let order = null;
+    if (isMongo) {
+      order = await Order.findOne({
+        $or: [{ id: orderId }, { orderNumber: orderId }]
+      }).lean();
+    } else {
+      order = (db.get('orders') || []).find(o => o.id === orderId || o.orderNumber === orderId);
+    }
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -681,11 +776,19 @@ router.post('/refund-coldbox', authenticate, requireAdmin, async (req, res) => {
     // A ₹0 deposit must produce a ₹0 refund!
     const depositPaid = Number(order.coolerDeposit || 0);
     if (depositPaid <= 0) {
-      const updatedOrder = db.update('orders', order.id, {
+      const refundUpdates = {
         coldBoxRefundStatus: 'REFUNDED',
         refundAmount: 0,
         refundProcessedAt: new Date().toISOString()
-      });
+      };
+
+      let updatedOrder = null;
+      if (isMongo) {
+        updatedOrder = await Order.findOneAndUpdate({ id: order.id }, { $set: refundUpdates }, { new: true }).lean();
+      } else {
+        updatedOrder = db.update('orders', order.id, refundUpdates);
+      }
+
       return res.status(200).json({
         success: true,
         message: 'No deposit was charged for this order (₹0 deposit). Zero refund recorded.',
@@ -694,13 +797,11 @@ router.post('/refund-coldbox', authenticate, requireAdmin, async (req, res) => {
       });
     }
 
-    // Ensure refund does not exceed amount actually paid
-    const actualTotalPaid = Number(order.totalAmount || 0);
+    const actualTotalPaid = Number(order.totalAmount || order.total || 0);
     const refundAmount = Math.min(depositPaid, actualTotalPaid);
 
     let refundId = `rfnd_${crypto.randomBytes(6).toString('hex')}`;
 
-    // If online payment via Razorpay, initiate real gateway refund
     if (order.razorpayPaymentId && razorpayInstance && !isDemoKey) {
       try {
         const rzpRefund = await razorpayInstance.payments.refund(order.razorpayPaymentId, {
@@ -713,44 +814,85 @@ router.post('/refund-coldbox', authenticate, requireAdmin, async (req, res) => {
         refundId = rzpRefund.id;
       } catch (err) {
         console.error('[Razorpay Refund Error]:', err.message);
-        // Do NOT record refund as successful if gateway failed!
         return res.status(502).json({ 
           error: `Razorpay refund failed: ${err.message}. Refund was not recorded.` 
         });
       }
     }
 
-    // Update Order & Cooler
-    const updatedOrder = db.update('orders', order.id, {
+    const refundUpdates = {
       coldBoxRefundStatus: 'REFUNDED',
       refundId,
       refundAmount,
       refundProcessedAt: new Date().toISOString()
-    });
+    };
 
-    if (order.coolerId) {
-      db.update('coolers', order.coolerId, {
-        status: 'available',
-        currentOrderId: null,
-        currentUserId: null
-      });
+    let updatedOrder = null;
+    if (isMongo) {
+      updatedOrder = await Order.findOneAndUpdate({ id: order.id }, { $set: refundUpdates }, { new: true }).lean();
+      if (order.coolerId) {
+        await Cooler.findOneAndUpdate(
+          { id: order.coolerId },
+          { $set: { status: 'available', currentOrderId: null, currentUserId: null } }
+        );
+      }
+    } else {
+      updatedOrder = db.update('orders', order.id, refundUpdates);
+      if (order.coolerId) {
+        db.update('coolers', order.coolerId, {
+          status: 'available',
+          currentOrderId: null,
+          currentUserId: null
+        });
+      }
     }
 
     res.status(200).json({
       success: true,
-      message: `₹${refundAmount} cold-box deposit refund processed successfully`,
-      refundId,
+      message: `Cold-box deposit of ₹${refundAmount} refunded successfully`,
       refundAmount,
+      refundId,
       order: updatedOrder
     });
   } catch (err) {
     console.error('[Payments] Coldbox refund error:', err);
-    res.status(500).json({ error: err.message || 'Refund processing failed' });
+    res.status(500).json({ error: err.message || 'Failed to process cold-box refund' });
   }
 });
 
-// Helper to create and insert order
-function createOrderRecord(params) {
+// Helper functions for fleet assignment
+async function assignFleetRiderForOrder() {
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  let riders = [];
+  if (isMongo) {
+    riders = await User.find({ role: 'rider', approvalStatus: 'approved' }).lean();
+  } else {
+    riders = (db.get('users') || []).filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+  }
+
+  if (riders.length > 0) {
+    const selected = riders[0];
+    return {
+      riderId: selected.id,
+      riderName: selected.name ? selected.name.split(' ')[0] : 'Rider',
+      riderFullName: selected.name || 'Fleet Delivery Executive',
+      riderPhone: selected.phone || '+91 97412 88301',
+      riderVehicle: selected.vehicleType ? `${selected.vehicleType} (${selected.vehicleNumber || 'KA-04-EV'})` : 'EV 2-Wheeler',
+      deliveryExecutive: `${selected.name || 'Fleet Executive'} (${selected.phone || '+91 97412 88301'})`
+    };
+  }
+
+  return {
+    riderId: 'usr_rider_1',
+    riderName: 'Suresh',
+    riderFullName: 'Suresh Patil',
+    riderPhone: '+91 97412 88301',
+    riderVehicle: 'EV 2-Wheeler (KA-04-EV-819)',
+    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)'
+  };
+}
+
+async function createOrderRecord(params) {
   const {
     orderNumber,
     user,
@@ -760,10 +902,10 @@ function createOrderRecord(params) {
     couponCode,
     coolerDeposit,
     shippingFee,
-    tipAmount = 0,
-    deliveryPin = '',
+    tipAmount,
+    deliveryPin,
     totalAmount,
-    walletDeduction = 0,
+    walletDeduction,
     deliveryAddress,
     addressDetails,
     deliverySlot,
@@ -780,19 +922,35 @@ function createOrderRecord(params) {
     guestToken = null
   } = params;
 
-  // Do NOT reserve coolers before payment is confirmed (unless COD or 100% Wallet Paid)
   let assignedCooler = null;
-  if (orderStatus === 'CONFIRMED' || paymentMethod === 'cod') {
-    const availableCoolers = db.get('coolers') || [];
-    assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-    if (assignedCooler) {
-      db.update('coolers', assignedCooler.id, {
-        status: 'assigned',
-        currentOrderId: orderNumber,
-        currentUserId: user.id,
-        currentUserName: user.name
-      });
+  if (orderStatus === 'CONFIRMED' || paymentMethod === 'cod') {
+    if (isMongo) {
+      const cooler = await Cooler.findOneAndUpdate(
+        { status: 'available' },
+        { 
+          $set: { 
+            status: 'assigned', 
+            currentOrderId: orderNumber, 
+            currentUserId: user.id, 
+            currentUserName: user.name 
+          } 
+        },
+        { new: true }
+      );
+      if (cooler) assignedCooler = { id: cooler.id, model: cooler.model };
+    } else {
+      const availableCoolers = db.get('coolers') || [];
+      assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
+      if (assignedCooler) {
+        db.update('coolers', assignedCooler.id, {
+          status: 'assigned',
+          currentOrderId: orderNumber,
+          currentUserId: user.id,
+          currentUserName: user.name
+        });
+      }
     }
   }
 
@@ -856,7 +1014,12 @@ function createOrderRecord(params) {
     deliveryNotes: deliveryNotes || ''
   };
 
-  db.insert('orders', order);
+  if (isMongo) {
+    await Order.create(order);
+  } else {
+    db.insert('orders', order);
+  }
+
   return order;
 }
 

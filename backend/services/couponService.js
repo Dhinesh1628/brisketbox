@@ -1,4 +1,7 @@
+import mongoose from 'mongoose';
 import { db } from '../db.js';
+import { CouponUsage } from '../models/CouponUsage.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const COUPON_REGISTRY = {
   'WELCOME50': {
@@ -58,9 +61,10 @@ export const COUPON_REGISTRY = {
  * @param {string} rawCode
  * @param {object} user - Authenticated user object or guest
  * @param {number} subtotal - Server-computed subtotal in INR
- * @returns {{ valid: boolean, discount: number, coupon?: object, error?: string }}
+ * @param {mongoose.ClientSession} [session]
+ * @returns {Promise<{ valid: boolean, discount: number, coupon?: object, error?: string }>}
  */
-export function validateAndApplyCoupon(rawCode, user, subtotal) {
+export async function validateAndApplyCoupon(rawCode, user, subtotal, session = null) {
   if (!rawCode) {
     return { valid: false, discount: 0 };
   }
@@ -89,9 +93,29 @@ export function validateAndApplyCoupon(rawCode, user, subtotal) {
     };
   }
 
-  // Check usage history in database
-  const allUsages = db.get('couponUsages') || [];
-  const totalUsages = allUsages.filter(u => u.code === code).length;
+  // Check usage history in MongoDB (sole source of truth)
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  let totalUsages = 0;
+  let userUsages = 0;
+
+  if (isMongo) {
+    const qTotal = CouponUsage.countDocuments({ code });
+    if (session) qTotal.session(session);
+    totalUsages = await qTotal;
+
+    if (coupon.maxPerUser && user && user.id) {
+      const qUser = CouponUsage.countDocuments({ code, userId: user.id });
+      if (session) qUser.session(session);
+      userUsages = await qUser;
+    }
+  } else {
+    const allUsages = db.get('couponUsages') || [];
+    totalUsages = allUsages.filter(u => u.code === code).length;
+    if (coupon.maxPerUser && user && user.id) {
+      userUsages = allUsages.filter(u => u.code === code && (u.userId === user.id || (user.phone && u.phone === user.phone))).length;
+    }
+  }
+
   if (coupon.maxTotalUsage && totalUsages >= coupon.maxTotalUsage) {
     return { valid: false, discount: 0, error: `Coupon "${code}" has reached its total redemption limit` };
   }
@@ -104,7 +128,6 @@ export function validateAndApplyCoupon(rawCode, user, subtotal) {
         error: `Please sign in to apply coupon "${code}"`
       };
     }
-    const userUsages = allUsages.filter(u => u.code === code && (u.userId === user.id || (user.phone && u.phone === user.phone))).length;
     if (userUsages >= coupon.maxPerUser) {
       return {
         valid: false,
@@ -136,19 +159,26 @@ export function validateAndApplyCoupon(rawCode, user, subtotal) {
 /**
  * Records coupon usage upon confirmed payment or COD placement.
  */
-export function recordCouponUsage(rawCode, user, orderId) {
-  if (!rawCode) return;
+export async function recordCouponUsage(rawCode, user, orderId, session = null) {
+  if (!rawCode || !user || !user.id) return null;
   const code = String(rawCode).trim().toUpperCase();
-  if (!COUPON_REGISTRY[code]) return;
-
-  const usageRecord = {
-    id: `cu_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+  const coupon = COUPON_REGISTRY[code];
+  const discount = coupon ? (coupon.type === 'flat' ? coupon.discount : 0) : 0;
+  const usage = {
+    id: `cp_${uuidv4()}`,
     code,
-    userId: user?.id || 'guest',
-    phone: user?.phone || null,
-    orderId,
+    userId: user.id,
+    phone: user.phone || null,
+    orderId: String(orderId),
+    discount,
     redeemedAt: new Date().toISOString()
   };
 
-  db.insert('couponUsages', usageRecord);
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  if (isMongo) {
+    return await CouponUsage.create([usage], { session });
+  } else {
+    db.insert('couponUsages', usage);
+    return usage;
+  }
 }

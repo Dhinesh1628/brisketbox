@@ -4,28 +4,22 @@ import {
   canRoleExecuteTransition,
   normalizeLifecycle
 } from './services/orderStateMachine.js';
-import { cancelOrder } from './services/orderService.js';
 import {
-  validate,
-  loginSchema,
-  registerSchema,
-  profileUpdateSchema,
-  riderRegisterSchema,
-  partnerRegisterSchema,
-  orderCreateSchema,
   riderLifecycleSchema,
   partnerOrderStatusSchema,
-  coolerReturnRequestSchema,
   coolerActionSchema,
   coolerInspectionDecisionSchema,
-  contactMessageSchema,
-  partnerStockUpdateSchema
+  validate
 } from './validators/schemas.js';
+import {
+  cancelOrder
+} from './services/orderService.js';
 import {
   validateProductionEnv,
   getJwtSecret,
   createToken,
   authenticate,
+  authenticateOptional,
   requireAdmin,
   requireRole,
   requireApproved,
@@ -63,6 +57,33 @@ import {
   calculateHealthScore,
   generateFleetHealthOverview
 } from './services/coolerHealthAnalytics.js';
+import {
+  findUser,
+  findUserById,
+  findUsers,
+  createUser,
+  updateUser,
+  findProducts,
+  findProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  findOrders,
+  findOrderById,
+  findOrder,
+  createOrder,
+  updateOrder,
+  findCoolers,
+  findCoolerById,
+  createCooler,
+  updateCooler,
+  findCoolerReturns,
+  findCoolerReturnById,
+  createCoolerReturn,
+  updateCoolerReturn,
+  findContacts,
+  createContact
+} from './services/dataAccess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,7 +92,6 @@ validateProductionEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-// JWT_SECRET centralized via getJwtSecret() in services/auth.js
 
 process.on('uncaughtException', (err) => {
   console.error('[Server Error: Uncaught Exception]:', err?.message || err);
@@ -81,12 +101,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Server Error: Unhandled Rejection]:', reason?.message || reason);
 });
 
-// Initiate MongoDB connection asynchronously
-connectMongoDB().then(connected => {
-  if (connected) {
-    db.syncWithMongo();
-  }
-});
+// Initiate MongoDB connection asynchronously (never block startup; never syncWithMongo to memory)
+connectMongoDB();
 
 // ==========================================
 // SECURITY HARDENING (OWASP & Production Guardrails)
@@ -121,49 +137,38 @@ const allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultOrigins;
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+    const isVercelPreview = /^https:\/\/.*brisketbox.*\.vercel\.app$/.test(origin);
+    if (isVercelPreview) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Razorpay-Signature']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-guest-token']
 }));
 
-// 4. Rate Limiting Protection (Anti-DDoS & Anti-Brute-Force) with Vercel Serverless compatibility
+// 4. Rate limiting on all API routes
+const isTest = process.env.NODE_ENV === 'test';
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: isTest ? 50000 : 500,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
   message: { error: 'Too many requests from this IP address. Please try again in 15 minutes.' }
 });
-app.use('/api/', generalLimiter);
-
-// Connect per request with retry logic in production & 503 availability gate
-app.use('/api', async (req, res, next) => {
-  if (req.path === '/health' || req.path === '/api/health') {
-    return next();
-  }
-  if (process.env.NODE_ENV === 'production') {
-    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      try {
-        await connectMongoDB(3);
-      } catch (err) {
-        return res.status(503).json({
-          error: 'Service Unavailable: Database connection is offline. Please try again shortly.'
-        });
-      }
-    }
-  }
-  next();
-});
+app.use('/api', generalLimiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: isTest ? 50000 : 30,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
@@ -172,118 +177,115 @@ const authLimiter = rateLimit({
 
 const pinLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 5,
+  max: isTest ? 50000 : 5,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
   message: { error: 'Too many PIN verification attempts. Please wait 5 minutes before trying again.' }
 });
 
-const chatbotLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: { xForwardedForHeader: false, default: false },
-  message: { error: 'Too many queries. Please slow down.' }
-});
-
-const paymentLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: { xForwardedForHeader: false, default: false },
-  message: { error: 'Too many payment requests. Please try again later.' }
-});
-
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: isTest ? 50000 : 20,
+  skip: () => isTest,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, default: false },
-  message: { error: 'Support message limit reached. Please contact us via WhatsApp or wait 15 minutes.' }
+  message: { error: 'Too many contact messages submitted. Please try again later.' }
 });
 
-// 5. XSS Input Sanitization Middleware
-const sanitizeValue = (val) => {
-  if (typeof val === 'string') {
-    return val
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '');
-  }
-  if (val && typeof val === 'object' && !Array.isArray(val)) {
-    const sanitized = {};
-    for (const key of Object.keys(val)) {
-      sanitized[key] = sanitizeValue(val[key]);
-    }
-    return sanitized;
-  }
-  if (Array.isArray(val)) {
-    return val.map(sanitizeValue);
-  }
-  return val;
-};
-
-app.use((req, res, next) => {
-  if (req.body) req.body = sanitizeValue(req.body);
-  if (req.query) req.query = sanitizeValue(req.query);
-  if (req.params) req.params = sanitizeValue(req.params);
-  next();
-});
-
-// Raw body retention for cryptographic Webhook signature verification
+// 5. Body parser with Raw body retention for cryptographic Webhook signature verification
 app.use(express.json({
+  limit: '2mb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
   }
 }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Razorpay Payments Router
-app.use('/api/payments', paymentLimiter, paymentsRouter);
-
-// Fleet & Cold-Chain Analytics Engine Router
-app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
-
-// WhatsApp Cloud API Webhook & Master Butcher Concierge Router
-app.use('/api', whatsappWebhookRouter);
-
-// Serve static frontend in production
-const clientDist = fs.existsSync(path.join(__dirname, '../frontend/dist')) 
-  ? path.join(__dirname, '../frontend/dist') 
-  : path.join(__dirname, '../client/dist');
-if (!process.env.VERCEL) {
+// Serve frontend static assets (for monolith build)
+const clientDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
 }
+
+// 7. Mount specialized sub-routers
+app.use('/api/payments', paymentsRouter);
+app.use('/api/whatsapp', whatsappWebhookRouter);
+app.use('/api/analytics', analyticsRouter);
+
+// Cold-chain telemetry route for IoT gateway
+app.post('/api/iot/coldchain-ping', (req, res) => {
+  const { coolerId, boxId, temp, temperature, battery, lat, lng, secretKey } = req.body;
+  const expectedKey = process.env.IOT_SECRET_KEY || 'bb_iot_sensor_secret_2026';
+  if (secretKey && secretKey !== expectedKey) {
+    return res.status(403).json({ error: 'Unauthorized sensor gateway' });
+  }
+
+  const id = coolerId || boxId || 'BOX-BLR-001';
+  const recordedTemp = Number(temp || temperature || 1.8);
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const isCompliant = recordedTemp >= 0.0 && recordedTemp <= 4.0;
+  res.json({
+    success: true,
+    coolerId: id,
+    recordedTemp,
+    isCompliant,
+    recordedAt: now.toISOString(),
+    status: isCompliant ? 'COLD_CHAIN_NORMAL' : 'TEMPERATURE_BREACH_ALERT'
+  });
+});
 
 // Health & Database Status check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
 
-app.get('/api/db/status', (req, res) => {
+app.get('/api/db/status', async (req, res) => {
+  const [products, orders, coolers, users, returns] = await Promise.all([
+    findProducts(),
+    findOrders(),
+    findCoolers(),
+    findUsers(),
+    findCoolerReturns()
+  ]);
   res.json({
     database: 'MongoDB',
     engine: 'Mongoose ODM',
     ...getMongoStatus(),
     cachedStats: {
-      products: db.get('products').length,
-      orders: db.get('orders').length,
-      coolers: db.get('coolers').length,
-      users: db.get('users').length,
-      returns: db.get('coolerReturns').length
+      products: products.length,
+      orders: orders.length,
+      coolers: coolers.length,
+      users: users.length,
+      returns: returns.length
     }
+  });
+});
+
+app.get('/api/stats', async (req, res) => {
+  const [products, orders, coolers, users, returns] = await Promise.all([
+    findProducts(),
+    findOrders(),
+    findCoolers(),
+    findUsers(),
+    findCoolerReturns()
+  ]);
+  res.json({
+    products: products.length,
+    orders: orders.length,
+    coolers: coolers.length,
+    users: users.length,
+    returns: returns.length
   });
 });
 
 app.get('/api', (req, res) => {
   res.json({ status: 'ok', name: 'BrisketBox API', uptime: process.uptime() });
 });
-
-// Middleware
-// Auth middleware centralized in services/auth.js
 
 // ==========================================
 // 1. AUTHENTICATION (Google OAuth 2.0 & Email/Password)
@@ -299,7 +301,7 @@ app.post('/api/auth/google', authLimiter, async (req, res, next) => {
   }
 });
 
-app.post('/api/auth/register', authLimiter, (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { name, email, password, phone, address, city, upiId } = req.body || {};
     if (!name || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
@@ -307,7 +309,7 @@ app.post('/api/auth/register', authLimiter, (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    const existing = await findUser({ email: cleanEmail });
     if (existing) {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
@@ -326,7 +328,7 @@ app.post('/api/auth/register', authLimiter, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    db.insert('users', newUser);
+    await createUser(newUser);
     const token = createToken(newUser);
     const { password: _, ...userWithoutPw } = newUser;
     res.status(201).json({ user: userWithoutPw, token });
@@ -336,7 +338,7 @@ app.post('/api/auth/register', authLimiter, (req, res) => {
 });
 
 // Standard Login supporting Email or Mobile number
-app.post('/api/auth/login', authLimiter, (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
@@ -345,14 +347,15 @@ app.post('/api/auth/login', authLimiter, (req, res) => {
     }
 
     const cleanPhone = input.replace(/[^0-9]/g, '');
-    const user = db.get('users').find(u => {
-      if (u.email && u.email.toLowerCase() === input) return true;
-      if (cleanPhone && cleanPhone.length >= 10 && u.phone) {
+    let user = await findUser({ email: input });
+    if (!user && cleanPhone.length >= 10) {
+      const users = await findUsers();
+      user = users.find(u => {
+        if (!u.phone) return false;
         const uPhoneClean = String(u.phone).replace(/[^0-9]/g, '');
         return uPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(uPhoneClean);
-      }
-      return false;
-    });
+      });
+    }
 
     const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
     if (!user || !isPwMatch) {
@@ -373,9 +376,9 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-app.get('/api/auth/me', authenticate, (req, res) => {
+app.get('/api/auth/me', authenticate, async (req, res) => {
   const { password: _, ...userWithoutPw } = req.user;
-  const activeCoolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
+  const activeCoolers = await findCoolers({ currentUserId: req.user.id });
   res.json({
     ...userWithoutPw,
     activeCoolersCount: activeCoolers.length,
@@ -383,7 +386,7 @@ app.get('/api/auth/me', authenticate, (req, res) => {
   });
 });
 
-app.patch('/api/auth/profile', authenticate, (req, res) => {
+app.patch('/api/auth/profile', authenticate, async (req, res) => {
   const { name, phone, address, city, upiId, savedAddresses } = req.body;
   const updates = {};
   if (name) updates.name = name;
@@ -393,7 +396,7 @@ app.patch('/api/auth/profile', authenticate, (req, res) => {
   if (upiId) updates.upiId = upiId;
   if (savedAddresses) updates.savedAddresses = savedAddresses;
 
-  const updated = db.update('users', req.user.id, updates);
+  const updated = await updateUser(req.user.id, updates);
   if (!updated) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -406,9 +409,9 @@ app.patch('/api/auth/profile', authenticate, (req, res) => {
 // 2. PRODUCTS
 // ==========================================
 
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   const { category, search } = req.query;
-  let products = db.get('products');
+  let products = await findProducts();
 
   if (search) {
     const q = search.toLowerCase().trim();
@@ -421,132 +424,116 @@ app.get('/api/products', (req, res) => {
       (p.chillingMethod && p.chillingMethod.toLowerCase().includes(q))
     );
   } else if (category && category !== 'All') {
-    products = products.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    products = products.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
   }
 
   res.json(products);
 });
 
-app.get('/api/products/:id', (req, res) => {
-  const product = db.findById('products', req.params.id);
+app.get('/api/products/:id', async (req, res) => {
+  const product = await findProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: 'Cut not found in inventory' });
   }
   res.json(product);
 });
 
-app.post('/api/products', authenticate, requireAdmin, (req, res) => {
+app.post('/api/products', authenticate, requireAdmin, async (req, res) => {
   const { name, category, description, price, mrp, unit, netWeight, grossWeight, pieces, serves, chillingMethod, catchDate, origin, cutStyle, stock, image } = req.body;
   if (!name || !price || !category) {
     return res.status(400).json({ error: 'Name, price, and category are required' });
   }
 
   const newProduct = {
-    id: `prod_${uuidv4().slice(0, 8)}`,
+    id: `prod_${Date.now()}`,
     name,
     category,
-    description: description || 'Fresh cut, cleaned and packed on ice.',
+    description: description || 'Daily fresh dressed cut chilled strictly at 0°C to 4°C.',
     price: parseInt(price, 10),
     mrp: parseInt(mrp || price, 10),
     unit: unit || '500g',
     netWeight: netWeight || '450g',
-    grossWeight: grossWeight || '600g',
+    grossWeight: grossWeight || '500g',
     pieces: pieces || '4-6 Pieces',
     serves: serves || 'Serves 2-3',
     eta: '⚡ Today in 90 mins',
-    chillingMethod: chillingMethod || '0°C to 4°C chilled pack Cold Chain',
-    catchDate: catchDate || 'Daily Harbor Lot',
-    origin: origin || 'Indian Coastal Waters / Certified Farm',
-    cutStyle: cutStyle || 'Standard Curry Cut',
+    chillingMethod: chillingMethod || 'Chilled at 0°C to 4°C',
+    catchDate: catchDate || 'Morning Catch',
+    origin: origin || 'Certified Farm Lot',
+    cutStyle: cutStyle || 'Butcher Fresh Cut',
     stock: parseInt(stock, 10) || 25,
-    image: image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+    image: image || '/images/products/prod_1.jpg',
     vacuumSealed: true,
-    featured: false
+    inStock: true
   };
 
-  db.insert('products', newProduct);
-  res.status(201).json(newProduct);
+  const created = await createProduct(newProduct);
+  res.status(201).json(created);
 });
 
-app.put('/api/products/:id', authenticate, requireAdmin, (req, res) => {
-  const { name, category, price, mrp, unit, description, netWeight, grossWeight, pieces, serves, chillingMethod, origin, cutStyle, inStock, stock, image } = req.body;
-  const updates = {};
-  if (name !== undefined) updates.name = name;
-  if (category !== undefined) updates.category = category;
-  if (price !== undefined) updates.price = Number(price);
-  if (mrp !== undefined) updates.mrp = Number(mrp);
-  if (unit !== undefined) updates.unit = unit;
-  if (description !== undefined) updates.description = description;
-  if (netWeight !== undefined) updates.netWeight = netWeight;
-  if (grossWeight !== undefined) updates.grossWeight = grossWeight;
-  if (pieces !== undefined) updates.pieces = pieces;
-  if (serves !== undefined) updates.serves = serves;
-  if (chillingMethod !== undefined) updates.chillingMethod = chillingMethod;
-  if (origin !== undefined) updates.origin = origin;
-  if (cutStyle !== undefined) updates.cutStyle = cutStyle;
-  if (inStock !== undefined) updates.inStock = Boolean(inStock);
-  if (stock !== undefined) updates.stock = Number(stock);
-  if (image !== undefined) updates.image = image;
-
-  const updated = db.update('products', req.params.id, updates);
+app.put('/api/products/:id', authenticate, requireAdmin, async (req, res) => {
+  const updates = req.body;
+  const updated = await updateProduct(req.params.id, updates);
   if (!updated) {
     return res.status(404).json({ error: 'Product not found' });
   }
   res.json(updated);
 });
 
-app.delete('/api/products/:id', authenticate, requireAdmin, (req, res) => {
-  const deleted = db.delete('products', req.params.id);
+app.delete('/api/products/:id', authenticate, requireAdmin, async (req, res) => {
+  const deleted = await deleteProduct(req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: 'Product not found' });
   }
-  res.json({ message: 'Cut removed from inventory', id: req.params.id });
+  res.json({ success: true, message: 'Cut removed from active catalog' });
 });
 
 // ==========================================
-// 3. ORDERS & CHECKOUT (₹ INR + ₹250 Deposit)
+// 3. ORDERS
 // ==========================================
 
 app.post('/api/orders', authenticate, async (req, res) => {
-  const { items, deliveryAddress, deliverySlot, deliveryNotes, paymentMethod = 'cod', city, couponCode, useWallet, tipAmount } = req.body;
+  const {
+    items,
+    deliveryAddress,
+    city,
+    paymentMethod = 'cash',
+    deliverySlot,
+    deliveryNotes,
+    couponCode,
+    useWallet = false
+  } = req.body;
 
-  if (!items || !items.length) {
-    return res.status(400).json({ error: 'Please add at least one cut to your cold box' });
-  }
-
-  // Calculate pricing strictly on server
   let pricing;
   try {
-    pricing = calculateOrderPricing({
+    pricing = await calculateOrderPricing({
       items,
       couponCode,
       user: req.user,
-      useWallet: Boolean(useWallet),
-      tipAmount
+      useWallet,
+      tipAmount: req.body?.tipAmount
     });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  } catch (priceErr) {
+    return res.status(400).json({ error: priceErr.message });
   }
 
   const {
+    processedItems,
     subtotal,
     discountAmount,
-    coolerDeposit,
     shippingFee,
-    grossTotal,
+    coolerDeposit,
     walletDeduction,
-    netPayable,
-    processedItems
+    netPayable
   } = pricing;
 
-  // Deduct stock atomically
+  // Deduct inventory atomically
   try {
     await deductStock(processedItems);
   } catch (stockErr) {
-    return res.status(400).json({ error: stockErr.message });
+    return res.status(409).json({ error: stockErr.message });
   }
 
-  // Cryptographically secure collision-safe IDs
   const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const deliveryPin = crypto.randomInt(1000, 10000).toString();
 
@@ -568,13 +555,13 @@ app.post('/api/orders', authenticate, async (req, res) => {
   }
 
   if (couponCode) {
-    recordCouponUsage(couponCode, req.user, orderNumber);
+    await recordCouponUsage(couponCode, req.user, orderNumber);
   }
 
-  const availableCoolers = db.get('coolers') || [];
-  const assignedCooler = availableCoolers.find(c => c.status === 'available') || null;
+  const availableCoolers = await findCoolers({ status: 'available' });
+  const assignedCooler = availableCoolers[0] || null;
   if (assignedCooler) {
-    db.update('coolers', assignedCooler.id, {
+    await updateCooler(assignedCooler.id, {
       status: 'assigned',
       currentOrderId: orderNumber,
       currentUserId: req.user.id,
@@ -584,7 +571,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const assignedRider = assignFleetRiderForOrder();
+  const assignedRider = await assignFleetRiderForOrder();
   const initialTemp = 0.8;
 
   const order = {
@@ -605,6 +592,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
     shippingFee,
     tipAmount: pricing.tipAmount,
     walletDeduction,
+    stockDeducted: true,
     total: netPayable,
     totalAmount: netPayable,
     status: 'Preparing',
@@ -639,7 +627,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
     deliveryNotes: deliveryNotes || ''
   };
 
-  db.insert('orders', order);
+  await createOrder(order);
   res.status(201).json(order);
 });
 
@@ -647,18 +635,17 @@ app.post('/api/orders', authenticate, async (req, res) => {
 function sanitizeAssignedRider(order) {
   if (!order) return null;
   if (order.riderId) {
-    const rawRider = db.findById('users', order.riderId);
-    const fullName = order.riderFullName || rawRider?.name || 'Suresh Patil';
+    const fullName = order.riderFullName || 'Suresh Patil';
     return {
       fullName,
       firstName: fullName.split(' ')[0],
-      riderId: rawRider?.id ? `RD-${rawRider.id.slice(-4).toUpperCase()}` : (order.riderId || 'RD-FLEET'),
-      vehicle: order.riderVehicle || (rawRider?.vehicleType ? `${rawRider.vehicleType} (${rawRider.vehicleNumber || ''})` : 'EV 2-Wheeler (Ather 450X)'),
+      riderId: order.riderId ? `RD-${order.riderId.slice(-4).toUpperCase()}` : 'RD-FLEET',
+      vehicle: order.riderVehicle || 'EV 2-Wheeler (Ather 450X)',
       status: order.lifecycleStatus || order.status || 'Rider Assigned',
       estimatedArrival: order.riderEta || '25–35 minutes',
-      maskedPhone: order.riderPhone || (rawRider?.phone ? `${rawRider.phone.slice(0, 9)} •••${rawRider.phone.slice(-2)}` : '+91 97412 •••01'),
+      maskedPhone: order.riderPhone || '+91 97412 •••01',
       secureCall: true,
-      profilePhoto: rawRider?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     };
   } else if (order.riderName || order.riderFullName || order.deliveryExecutive) {
     const cleanExec = order.deliveryExecutive ? order.deliveryExecutive.replace(/\s*\([^)]*\)/g, '').trim() : '';
@@ -678,22 +665,24 @@ function sanitizeAssignedRider(order) {
   return null;
 }
 
-app.get('/api/orders', authenticate, (req, res) => {
-  let orders = db.get('orders') || [];
-
+app.get('/api/orders', authenticate, async (req, res) => {
+  let filter = {};
   if (req.user.role === 'admin') {
     // Admin can view all orders
   } else if (req.user.role === 'customer') {
-    orders = orders.filter(o => o.userId === req.user.id);
+    filter = { userId: req.user.id };
   } else if (req.user.role === 'rider') {
-    orders = orders.filter(o => o.riderId === req.user.id && o.orderStatus !== 'PENDING_PAYMENT');
+    filter = { riderId: req.user.id, orderStatus: { $ne: 'PENDING_PAYMENT' } };
   } else if (req.user.role === 'partner') {
-    orders = orders.filter(o => (o.partnerId === req.user.shopId || o.partnerId === req.user.id) && o.orderStatus !== 'PENDING_PAYMENT');
+    filter = {
+      $or: [{ partnerId: req.user.shopId }, { partnerId: req.user.id }],
+      orderStatus: { $ne: 'PENDING_PAYMENT' }
+    };
   } else {
-    orders = [];
+    return res.json([]);
   }
 
-  // Never return deliveryPin on list endpoints or to unauthorized roles
+  const orders = await findOrders(filter);
   const sanitized = orders.map(o => {
     const { deliveryPin, ...safeOrder } = o;
     return {
@@ -704,8 +693,8 @@ app.get('/api/orders', authenticate, (req, res) => {
   res.json(sanitized);
 });
 
-app.get('/api/orders/:id', authenticate, (req, res) => {
-  const order = db.findById('orders', req.params.id);
+app.get('/api/orders/:id', authenticate, async (req, res) => {
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -719,10 +708,9 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
     return res.status(403).json({ error: 'Access denied: You do not own or manage this order' });
   }
 
-  const cooler = order.coolerId ? db.findById('coolers', order.coolerId) : null;
+  const cooler = order.coolerId ? await findCoolerById(order.coolerId) : null;
   const { deliveryPin, ...safeOrder } = order;
 
-  // deliveryPin is strictly confidential and returned only to the owning customer
   if (isOwnerCustomer) {
     safeOrder.deliveryPin = deliveryPin;
   }
@@ -738,7 +726,7 @@ app.get('/api/orders/:id', authenticate, (req, res) => {
 // 4A. RIDER ECOSYSTEM ENDPOINTS
 // ==========================================
 
-app.post('/api/rider/register', authLimiter, (req, res) => {
+app.post('/api/rider/register', authLimiter, async (req, res) => {
   try {
     const { name, email, phone, password, address, vehicleType, vehicleNumber, licenseNumber, upiId } = req.body || {};
     if (!name || !email || !password || !phone || typeof email !== 'string' || typeof password !== 'string') {
@@ -746,7 +734,7 @@ app.post('/api/rider/register', authLimiter, (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    const existing = await findUser({ email: cleanEmail });
     if (existing) {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
@@ -772,7 +760,7 @@ app.post('/api/rider/register', authLimiter, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    db.insert('users', newRider);
+    await createUser(newRider);
     const { password: _, ...safeRider } = newRider;
     res.status(201).json({
       message: 'Rider registration submitted. Your application is under review by Operations.',
@@ -783,7 +771,7 @@ app.post('/api/rider/register', authLimiter, (req, res) => {
   }
 });
 
-app.post('/api/rider/login', authLimiter, (req, res) => {
+app.post('/api/rider/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
@@ -791,12 +779,12 @@ app.post('/api/rider/login', authLimiter, (req, res) => {
       return res.status(400).json({ error: 'Rider email/phone and password required' });
     }
 
-    const user = db.get('users').find(u => {
-      if (u.email && u.email.toLowerCase() === input) return true;
-      const cleanDigits = input.replace(/[^0-9]/g, '');
-      if (cleanDigits.length >= 10 && u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-      return false;
-    });
+    const cleanDigits = input.replace(/[^0-9]/g, '');
+    let user = await findUser({ email: input });
+    if (!user && cleanDigits.length >= 10) {
+      const riders = await findUsers({ role: 'rider' });
+      user = riders.find(u => u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits));
+    }
 
     const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
     if (!user || !isPwMatch) {
@@ -841,26 +829,21 @@ app.get('/api/rider/me', authenticate, requireRole('rider'), (req, res) => {
   res.json(safeRider);
 });
 
-app.patch('/api/rider/status', authenticate, requireRole('rider'), requireApproved, (req, res) => {
+app.patch('/api/rider/status', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
   const { online } = req.body;
-  const updated = db.update('users', req.user.id, { online: !!online });
+  const updated = await updateUser(req.user.id, { online: !!online });
   const { password: _, ...safeRider } = updated;
   res.json(safeRider);
 });
 
-app.get('/api/rider/orders', authenticate, requireRole('rider'), requireApproved, (req, res) => {
-  const allOrders = db.get('orders');
-  const assigned = allOrders.filter(o => 
-    o.riderId === req.user.id || 
-    (o.riderFullName === req.user.name) ||
-    (!o.riderId && (o.status === 'Cold Box Packed' || o.lifecycleStatus === 'PACKED' || o.status === 'Rider Assigned'))
-  );
+app.get('/api/rider/orders', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
+  const assigned = await findOrders({ riderId: req.user.id });
   res.json(assigned);
 });
 
-app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, validate(riderLifecycleSchema), (req, res) => {
+app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'), requireApproved, pinLimiter, validate(riderLifecycleSchema), async (req, res) => {
   const { lifecycleStatus, pin, coolerReturned, podImage, notes } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -941,21 +924,20 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
     }
   ];
 
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
 // Cold-chain compliance scan per analytical-scripts/cooler_health.py
-app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireApproved, (req, res) => {
+app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
   const { coolerId, orderId } = req.body;
   if (!coolerId) {
     return res.status(400).json({ error: 'Cooler ID is required' });
   }
 
-  const order = orderId ? db.findById('orders', orderId) : null;
+  const order = orderId ? await findOrderById(orderId) : null;
   const logs = order?.tempLog || order?.temperatureLog || [];
   
-  // Script rule: temperature must stay between 0.0°C and 4.0°C
   const outOfRange = logs.filter(r => typeof r.temp === 'number' && (r.temp < 0.0 || r.temp > 4.0));
   const isColdChainMaintained = outOfRange.length === 0;
   const finalTemp = logs.length > 0 && typeof logs[logs.length - 1].temp === 'number'
@@ -985,7 +967,7 @@ app.post('/api/rider/cooler-check', authenticate, requireRole('rider'), requireA
 // 4B. BUTCHER / PARTNER SHOP ENDPOINTS
 // ==========================================
 
-app.post('/api/partner/register', authLimiter, (req, res) => {
+app.post('/api/partner/register', authLimiter, async (req, res) => {
   try {
     const { shopName, ownerName, email, phone, password, address, fssaiNumber, categories, operatingHours, description } = req.body || {};
     if (!shopName || !ownerName || !email || !password || typeof email !== 'string' || typeof password !== 'string') {
@@ -993,7 +975,7 @@ app.post('/api/partner/register', authLimiter, (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const existing = db.get('users').find(u => (u.email || '').toLowerCase() === cleanEmail);
+    const existing = await findUser({ email: cleanEmail });
     if (existing) {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
@@ -1017,7 +999,7 @@ app.post('/api/partner/register', authLimiter, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    db.insert('users', newPartner);
+    await createUser(newPartner);
     const { password: _, ...safePartner } = newPartner;
     res.status(201).json({
       message: 'Partner shop application submitted successfully. Pending Admin verification.',
@@ -1028,7 +1010,7 @@ app.post('/api/partner/register', authLimiter, (req, res) => {
   }
 });
 
-app.post('/api/partner/login', authLimiter, (req, res) => {
+app.post('/api/partner/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const input = (typeof email === 'string' ? email : '').toLowerCase().trim();
@@ -1036,12 +1018,12 @@ app.post('/api/partner/login', authLimiter, (req, res) => {
       return res.status(400).json({ error: 'Partner business email and password required' });
     }
 
-    const user = db.get('users').find(u => {
-      if (u.email && u.email.toLowerCase() === input) return true;
-      const cleanDigits = input.replace(/[^0-9]/g, '');
-      if (cleanDigits.length >= 10 && u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits)) return true;
-      return false;
-    });
+    const cleanDigits = input.replace(/[^0-9]/g, '');
+    let user = await findUser({ email: input });
+    if (!user && cleanDigits.length >= 10) {
+      const partners = await findUsers({ role: 'partner' });
+      user = partners.find(u => u.phone && String(u.phone).replace(/[^0-9]/g, '').endsWith(cleanDigits));
+    }
 
     const isPwMatch = Boolean(user && user.password && bcrypt.compareSync(password, user.password));
     if (!user || !isPwMatch) {
@@ -1080,13 +1062,13 @@ app.get('/api/partner/me', authenticate, requireRole('partner'), (req, res) => {
   res.json(safePartner);
 });
 
-app.get('/api/partner/products', authenticate, requireRole('partner'), requireApproved, (req, res) => {
-  const allProds = db.get('products');
+app.get('/api/partner/products', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
+  const allProds = await findProducts();
   const partnerProds = allProds.filter(p => p.partnerId === req.user.shopId || (!p.partnerId && req.user.role === 'admin'));
   res.json(partnerProds.length > 0 ? partnerProds : allProds);
 });
 
-app.post('/api/partner/products', authenticate, requireRole('partner'), requireApproved, (req, res) => {
+app.post('/api/partner/products', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
   const { name, category, description, price, mrp, unit, netWeight, pieces, serves, origin, cutStyle, stock, image } = req.body;
   if (!name || !price || !category) {
     return res.status(400).json({ error: 'Name, price, and category are required' });
@@ -1117,35 +1099,35 @@ app.post('/api/partner/products', authenticate, requireRole('partner'), requireA
     inStock: true
   };
 
-  db.insert('products', newProd);
-  res.status(201).json(newProd);
+  const created = await createProduct(newProd);
+  res.status(201).json(created);
 });
 
-app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), requireApproved, (req, res) => {
+app.patch('/api/partner/products/:id/stock', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
   const { stock, inStock } = req.body;
-  const prod = db.findById('products', req.params.id);
+  const prod = await findProductById(req.params.id);
   if (!prod) return res.status(404).json({ error: 'Product not found' });
 
   const updates = {};
   if (typeof stock === 'number') updates.stock = stock;
   if (typeof inStock === 'boolean') updates.inStock = inStock;
 
-  const updated = db.update('products', prod.id, updates);
+  const updated = await updateProduct(prod.id, updates);
   res.json(updated);
 });
 
-app.get('/api/partner/orders', authenticate, requireRole('partner'), requireApproved, (req, res) => {
-  const allOrders = db.get('orders');
-  const partnerOrders = allOrders.filter(o => o.partnerId === req.user.shopId || req.user.role === 'admin' || !o.partnerId);
+app.get('/api/partner/orders', authenticate, requireRole('partner'), requireApproved, async (req, res) => {
+  const partnerOrders = await findOrders({
+    $or: [{ partnerId: req.user.shopId }, { partnerId: req.user.id }]
+  });
   res.json(partnerOrders);
 });
 
-app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, validate(partnerOrderStatusSchema), (req, res) => {
+app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner'), requireApproved, validate(partnerOrderStatusSchema), async (req, res) => {
   const { status, lifecycleStatus, prepStage, weighedWeight, sealTag, batchLotId, coolerId, itemPrepList, dressingLossLog } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
-  // Ensure partner can only update their shop's orders
   if (req.user.role !== 'admin' && order.partnerId && order.partnerId !== req.user.shopId && order.partnerId !== req.user.id) {
     return res.status(403).json({ error: 'Access denied: You are not the assigned partner shop for this order' });
   }
@@ -1200,7 +1182,7 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
     }
   ];
 
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
@@ -1208,50 +1190,50 @@ app.patch('/api/partner/orders/:id/status', authenticate, requireRole('partner')
 // 4C. ADMIN MULTI-PORTAL MANAGEMENT ENDPOINTS
 // ==========================================
 
-app.get('/api/admin/riders', authenticate, requireAdmin, (req, res) => {
-  const riders = db.get('users').filter(u => u.role === 'rider');
+app.get('/api/admin/riders', authenticate, requireAdmin, async (req, res) => {
+  const riders = await findUsers({ role: 'rider' });
   const safeRiders = riders.map(({ password: _, ...r }) => r);
   res.json(safeRiders);
 });
 
-app.patch('/api/admin/riders/:id/approval', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/riders/:id/approval', authenticate, requireAdmin, async (req, res) => {
   const { approvalStatus } = req.body;
   if (!['approved', 'rejected', 'suspended', 'pending_approval'].includes(approvalStatus)) {
     return res.status(400).json({ error: 'Invalid approval status' });
   }
 
-  const updated = db.update('users', req.params.id, { approvalStatus });
+  const updated = await updateUser(req.params.id, { approvalStatus });
   if (!updated) return res.status(404).json({ error: 'Rider not found' });
   const { password: _, ...safeRider } = updated;
   res.json(safeRider);
 });
 
-app.get('/api/admin/partners', authenticate, requireAdmin, (req, res) => {
-  const partners = db.get('users').filter(u => u.role === 'partner');
+app.get('/api/admin/partners', authenticate, requireAdmin, async (req, res) => {
+  const partners = await findUsers({ role: 'partner' });
   const safePartners = partners.map(({ password: _, ...p }) => p);
   res.json(safePartners);
 });
 
-app.patch('/api/admin/partners/:id/approval', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/partners/:id/approval', authenticate, requireAdmin, async (req, res) => {
   const { approvalStatus } = req.body;
   if (!['approved', 'rejected', 'suspended', 'pending_approval'].includes(approvalStatus)) {
     return res.status(400).json({ error: 'Invalid approval status' });
   }
 
-  const updated = db.update('users', req.params.id, { approvalStatus });
+  const updated = await updateUser(req.params.id, { approvalStatus });
   if (!updated) return res.status(404).json({ error: 'Partner shop not found' });
   const { password: _, ...safePartner } = updated;
   res.json(safePartner);
 });
 
-app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, async (req, res) => {
   const { riderId, partnerId } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
 
   const updates = {};
   if (riderId) {
-    const rider = db.findById('users', riderId);
+    const rider = await findUserById(riderId);
     if (rider) {
       updates.riderId = rider.id;
       updates.riderName = rider.name.split(' ')[0];
@@ -1269,21 +1251,21 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, (req, res)
   }
 
   if (partnerId) {
-    const partner = db.get('users').find(u => u.shopId === partnerId || u.id === partnerId);
+    const partner = await findUser({ $or: [{ shopId: partnerId }, { id: partnerId }] });
     if (partner) {
       updates.partnerId = partner.shopId || partner.id;
       updates.partnerName = partner.shopName || partner.name;
     }
   }
 
-  const updatedOrder = db.update('orders', order.id, updates);
+  const updatedOrder = await updateOrder(order.id, updates);
   res.json(updatedOrder);
 });
 
-// Database-Persistent Handover PIN Verification (Persistent Attempt Limits & Fraud Lockout)
+// Database-Persistent Handover PIN Verification
 const handleOrderHandover = async (req, res) => {
   const { pin, deliveryPin, coolerReturned, podImage, notes, cashCollected, cashAmount } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -1328,7 +1310,7 @@ const handleOrderHandover = async (req, res) => {
     const isLocked = currentAttempts >= 3;
     const lockedUntil = isLocked ? new Date(nowTime + 300000).toISOString() : null;
 
-    db.update('orders', order.id, {
+    await updateOrder(order.id, {
       pinAttempts: currentAttempts,
       pinLockedUntil: lockedUntil
     });
@@ -1348,7 +1330,7 @@ const handleOrderHandover = async (req, res) => {
   }
 
   // PIN verified successfully: reset security tracker in database
-  db.update('orders', order.id, {
+  await updateOrder(order.id, {
     pinAttempts: 0,
     pinLockedUntil: null
   });
@@ -1366,7 +1348,6 @@ const handleOrderHandover = async (req, res) => {
   const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
   const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
 
-  // Cooler deposit refund: ONLY if deposit was actually paid, not already refunded, and cooler was returned
   const depositPaid = Number(order.coolerDeposit || 0);
   let depositRefundedThisTime = false;
   if (coolerReturned && depositPaid > 0 && !order.coolerDepositRefunded && order.userId) {
@@ -1394,7 +1375,7 @@ const handleOrderHandover = async (req, res) => {
     }
   ];
 
-  const updatedOrder = db.update('orders', order.id, {
+  const updatedOrder = await updateOrder(order.id, {
     status: 'Delivered',
     orderStatus: 'DELIVERED',
     lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
@@ -1410,20 +1391,18 @@ const handleOrderHandover = async (req, res) => {
     tempLog: updatedLog
   });
 
-  // If cash was collected by rider, update rider's floating cash in hand balance
   if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
-    const rider = db.findById('users', req.user.id);
+    const rider = await findUserById(req.user.id);
     if (rider) {
       const currentCash = rider.cashInHand || 0;
-      db.update('users', rider.id, { cashInHand: currentCash + collectedCashNum });
+      await updateUser(rider.id, { cashInHand: currentCash + collectedCashNum });
     }
   }
 
   if (coolerReturned && order.coolerId) {
-    db.update('coolers', order.coolerId, { status: 'available' });
+    await updateCooler(order.coolerId, { status: 'available' });
   }
 
-  // Strip deliveryPin for non-owner customers
   const sanitized = { ...updatedOrder };
   if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
     delete sanitized.deliveryPin;
@@ -1436,12 +1415,12 @@ const handleOrderHandover = async (req, res) => {
   });
 };
 
-app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), requireApproved, (req, res) => {
+app.post('/api/rider/cash-deposit', authenticate, requireRole('rider'), requireApproved, async (req, res) => {
   const { amount, depotId } = req.body;
-  const rider = db.findById('users', req.user.id);
+  const rider = await findUserById(req.user.id);
   const currentCash = rider?.cashInHand || 0;
   const depositAmt = Math.min(Number(amount) || currentCash, currentCash);
-  const updatedRider = db.update('users', req.user.id, {
+  const updatedRider = await updateUser(req.user.id, {
     cashInHand: Math.max(0, currentCash - depositAmt)
   });
   res.json({
@@ -1471,7 +1450,7 @@ const handleUpdateStatus = async (req, res) => {
     deliveryExecutive
   } = req.body;
 
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -1532,7 +1511,7 @@ const handleUpdateStatus = async (req, res) => {
   let newTemp = order.liveTemp || 1.8;
   if (resolvedOrderStatus === 'OUT_FOR_DELIVERY') {
     newTemp = 1.2;
-    if (order.coolerId) db.update('coolers', order.coolerId, { status: 'in_transit' });
+    if (order.coolerId) await updateCooler(order.coolerId, { status: 'in_transit' });
   }
 
   const updatedLog = [
@@ -1544,7 +1523,7 @@ const handleUpdateStatus = async (req, res) => {
     }
   ];
 
-  const updatedOrder = db.update('orders', order.id, {
+  const updatedOrder = await updateOrder(order.id, {
     status: status || resolvedOrderStatus,
     orderStatus: resolvedOrderStatus,
     prepStage: status,
@@ -1559,7 +1538,6 @@ const handleUpdateStatus = async (req, res) => {
     tempLog: updatedLog
   });
 
-  // Never leak deliveryPin to non-owner customers
   const sanitized = { ...updatedOrder };
   if (req.user && req.user.role !== 'admin' && sanitized.userId !== req.user.id) {
     delete sanitized.deliveryPin;
@@ -1592,7 +1570,7 @@ app.post('/api/orders/:id/cancel', authenticate, async (req, res) => {
 });
 
 // Customer Concierge Support & Contact Form Submission (Anti-Spam Rate Limited)
-app.post('/api/contact', contactLimiter, (req, res) => {
+app.post('/api/contact', contactLimiter, async (req, res) => {
   const { name, email, phone, category, orderId, message } = req.body;
   if (!name || !phone || !message) {
     return res.status(400).json({ error: 'Name, phone number, and message are required.' });
@@ -1612,8 +1590,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   };
 
   try {
-    const contacts = db.get('contacts') || [];
-    db.insert('contacts', ticket);
+    await createContact(ticket);
   } catch (e) {
     console.warn('Could not insert to contacts table:', e.message);
   }
@@ -1625,12 +1602,12 @@ app.post('/api/contact', contactLimiter, (req, res) => {
   });
 });
 
-app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
+app.post('/api/orders/:id/simulate-temp', authenticate, async (req, res) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(403).json({ error: 'Sensor telemetry simulation is disabled in production' });
   }
 
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -1658,7 +1635,7 @@ app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
     }
   ];
 
-  db.update('orders', order.id, {
+  await updateOrder(order.id, {
     liveTemp: newTemp,
     tempLog: updatedLog
   });
@@ -1674,27 +1651,27 @@ app.post('/api/orders/:id/simulate-temp', authenticate, (req, res) => {
 // 4. REUSABLE COOLER FLEET & RETURNS
 // ==========================================
 
-app.get('/api/coolers', authenticate, (req, res) => {
+app.get('/api/coolers', authenticate, async (req, res) => {
   if (req.user.role === 'admin') {
-    return res.json(db.get('coolers'));
+    return res.json(await findCoolers());
   }
-  const userCoolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
+  const userCoolers = await findCoolers({ currentUserId: req.user.id });
   res.json(userCoolers);
 });
 
-app.get('/api/coolers/my-coolers', authenticate, (req, res) => {
-  const coolers = db.get('coolers').filter(c => c.currentUserId === req.user.id);
-  const returns = db.get('coolerReturns').filter(r => r.userId === req.user.id);
+app.get('/api/coolers/my-coolers', authenticate, async (req, res) => {
+  const coolers = await findCoolers({ currentUserId: req.user.id });
+  const returns = await findCoolerReturns({ userId: req.user.id });
   res.json({ coolers, returns });
 });
 
-app.post('/api/coolers/request-return', authenticate, (req, res) => {
+app.post('/api/coolers/request-return', authenticate, async (req, res) => {
   const { coolerId, pickupSlot, notes, address, upiId, refundPreference = 'wallet' } = req.body;
   if (!coolerId) {
     return res.status(400).json({ error: 'Please select a cooler box to return' });
   }
 
-  const cooler = db.findById('coolers', coolerId);
+  const cooler = await findCoolerById(coolerId);
   if (!cooler) {
     return res.status(404).json({ error: 'Cooler box not found' });
   }
@@ -1725,42 +1702,41 @@ app.post('/api/coolers/request-return', authenticate, (req, res) => {
     courierAssigned: 'Hub Return Partner Chetan (+91 99002 11842)'
   };
 
-  db.insert('coolerReturns', returnRecord);
-
-  db.update('coolers', cooler.id, {
+  await createCoolerReturn(returnRecord);
+  await updateCooler(cooler.id, {
     status: 'return_requested'
   });
 
   res.status(201).json(returnRecord);
 });
 
-app.get('/api/returns', authenticate, (req, res) => {
+app.get('/api/returns', authenticate, async (req, res) => {
   if (req.user.role === 'admin') {
-    return res.json(db.get('coolerReturns'));
+    return res.json(await findCoolerReturns());
   }
-  const userReturns = db.get('coolerReturns').filter(r => r.userId === req.user.id);
+  const userReturns = await findCoolerReturns({ userId: req.user.id });
   res.json(userReturns);
 });
 
-app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/returns/:id/status', authenticate, requireAdmin, async (req, res) => {
   const { status, conditionNotes, refundPreference } = req.body;
-  const returnItem = db.findById('coolerReturns', req.params.id);
+  const returnItem = await findCoolerReturnById(req.params.id);
   if (!returnItem) {
     return res.status(404).json({ error: 'Return request not found' });
   }
 
   const resolvedPreference = refundPreference || returnItem.refundPreference || 'wallet';
 
-  const updatedReturn = db.update('coolerReturns', returnItem.id, {
+  const updatedReturn = await updateCoolerReturn(returnItem.id, {
     status,
     conditionNotes: conditionNotes || 'Box inspected: EPP walls intact, gel bricks sanitized.',
     completedAt: status === 'refunded' ? new Date().toISOString() : returnItem.completedAt
   });
 
   if (status === 'refunded') {
-    const cooler = db.findById('coolers', returnItem.coolerId);
+    const cooler = await findCoolerById(returnItem.coolerId);
     if (cooler) {
-      db.update('coolers', cooler.id, {
+      await updateCooler(cooler.id, {
         status: 'available',
         currentOrderId: null,
         currentUserId: null,
@@ -1770,48 +1746,43 @@ app.patch('/api/returns/:id/status', authenticate, requireAdmin, (req, res) => {
       });
     }
 
-    const user = db.findById('users', returnItem.userId);
+    const user = await findUserById(returnItem.userId);
     if (user) {
       const refundAmt = returnItem.refundAmount || 250;
-      const updates = {
-        depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
-      };
-
       if (resolvedPreference === 'wallet') {
-        const newBal = (user.walletBalance || 0) + refundAmt;
-        const tx = {
-          id: `tx_${Date.now()}`,
-          amount: refundAmt,
-          type: 'credit',
-          title: 'Cooler Box Deposit Refund',
-          description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to BrisketBox Wallet.`,
-          date: new Date().toISOString(),
-          balanceAfter: newBal,
-          coolerId: returnItem.coolerId
-        };
-        updates.walletBalance = newBal;
-        updates.walletTransactions = [tx, ...(user.walletTransactions || [])];
+        try {
+          await creditWallet({
+            userId: user.id,
+            amount: refundAmt,
+            idempotencyKey: `return_refund_${returnItem.id}`,
+            title: 'Cooler Box Deposit Refund',
+            description: `insulated bag box #${returnItem.coolerId} returned & verified. Instant refund added to BrisketBox Wallet.`
+          });
+        } catch (wErr) {
+          console.warn('[Return Status] Wallet credit error:', wErr.message);
+        }
+      } else {
+        await updateUser(user.id, {
+          depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
+        });
       }
-
-      db.update('users', user.id, updates);
     }
   } else if (status === 'picked_up') {
-    db.update('coolers', returnItem.coolerId, { status: 'sanitizing' });
+    await updateCooler(returnItem.coolerId, { status: 'sanitizing' });
   }
 
   res.json(updatedReturn);
 });
 
-// ==========================================
-// 4A-1. COOLER HEALTH CHECKER (Teammate Analytical Scripts Suite)
-// Evaluates 0°C-4°C Cold-Chain Compliance, Return SLA (36h limit),
-// Cycle Aging, and Breakdown Anomaly Detection.
-// ==========================================
-
 // 1. Fleet-wide Cooler Health Overview
-app.get('/api/admin/coolers/health', authenticate, requireAdmin, (req, res) => {
+app.get('/api/admin/coolers/health', authenticate, requireAdmin, async (req, res) => {
   try {
-    const overview = generateFleetHealthOverview(db.data || {});
+    const [coolers, orders, coolerReturns] = await Promise.all([
+      findCoolers(),
+      findOrders(),
+      findCoolerReturns()
+    ]);
+    const overview = generateFleetHealthOverview({ coolers, orders, coolerReturns });
     res.json({
       success: true,
       ...overview
@@ -1823,10 +1794,10 @@ app.get('/api/admin/coolers/health', authenticate, requireAdmin, (req, res) => {
 });
 
 // 2. Specific Cooler Health Diagnostic (By QR Code or Box ID)
-const handleCoolerHealthDiagnostic = (req, res) => {
+const handleCoolerHealthDiagnostic = async (req, res) => {
   try {
     const qrOrId = (req.params.qr || req.params.coolerId || '').trim();
-    const coolers = db.get('coolers') || [];
+    const coolers = await findCoolers();
     let cooler = findCooler(coolers, qrOrId);
 
     if (!cooler) {
@@ -1837,8 +1808,13 @@ const handleCoolerHealthDiagnostic = (req, res) => {
       });
     }
 
-    const tempCheck = getTemperatureCheck(cooler, db.data || {});
-    const fleetDetails = getFleetDetails(cooler, db.data || {});
+    const [orders, coolerReturns] = await Promise.all([
+      findOrders(),
+      findCoolerReturns()
+    ]);
+    const dbData = { coolers, orders, coolerReturns };
+    const tempCheck = getTemperatureCheck(cooler, dbData);
+    const fleetDetails = getFleetDetails(cooler, dbData);
     const health = calculateHealthScore(cooler, tempCheck, fleetDetails);
 
     res.json({
@@ -1859,11 +1835,11 @@ app.get('/api/admin/coolers/:qr/health', authenticate, requireAdmin, handleCoole
 app.get('/api/coolers/:qr/health', authenticate, requireAdmin, handleCoolerHealthDiagnostic);
 
 // 3. Cooler Maintenance / Operational Actions (Sanitize, Flag Breakdown, Decommission)
-app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(coolerActionSchema), (req, res) => {
+app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(coolerActionSchema), async (req, res) => {
   try {
     const coolerId = req.params.id;
     const { action, notes } = req.body;
-    const cooler = db.findById('coolers', coolerId);
+    const cooler = await findCoolerById(coolerId);
 
     if (!cooler) {
       return res.status(404).json({ error: `Cooler ${coolerId} not found` });
@@ -1893,7 +1869,7 @@ app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(c
       return res.status(400).json({ error: 'Invalid action. Supported: sanitize, flag_damage, decommission, recommission' });
     }
 
-    const updated = db.update('coolers', coolerId, updates);
+    const updated = await updateCooler(coolerId, updates);
     res.json({
       success: true,
       message: `Action '${action}' applied successfully to ${coolerId}`,
@@ -1908,12 +1884,11 @@ app.post('/api/admin/coolers/:id/action', authenticate, requireAdmin, validate(c
 // ==========================================
 // 4B. COLD BOX QR SCANNER, TELEMETRY & DIAGNOSTICS (Ashik Spec)
 // ==========================================
-app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, (req, res) => {
+app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
-  // Strip URL or common prefixes if scanned as a full URL
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -1925,17 +1900,17 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, (req, res)
     return res.status(404).json({ error: `Cooler Box "${rawId}" not found in fleet directory.` });
   }
 
-  // Find associated order
-  const orders = db.get('orders') || [];
+  const [orders, returns] = await Promise.all([
+    findOrders(),
+    findCoolerReturns()
+  ]);
+
   const order = (cooler.currentOrderId ? orders.find(o => o.id === cooler.currentOrderId) : null) ||
     orders.find(o => o.coolerId === cooler.id) || null;
 
-  // Find active return request if any
-  const returns = db.get('coolerReturns') || [];
   const returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded') ||
     returns.find(r => r.coolerId === cooler.id) || null;
 
-  // Generate / format IoT Cold-Chain Telemetry (Ashik Data Analyst Spec)
   const isDamagedBox = cooler.id.includes('103') || cooler.status === 'damaged' || cooler.status === 'maintenance';
   const liveTemp = isDamagedBox ? 5.8 : (order?.liveTemp || 1.8);
   const isCompliant = liveTemp >= 0.0 && liveTemp <= 4.0;
@@ -1947,15 +1922,18 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, (req, res)
     { time: '08:15 AM', temp: liveTemp, event: isCompliant ? 'Delivered at customer doorstep (Sub-4°C guaranteed)' : '⚠️ Alert: Temperature rose above 4°C safe threshold' }
   ];
 
-  // Calculate Turnaround Time (TAT)
   const dispatchDate = order ? new Date(order.createdAt || Date.now() - 26 * 3600 * 1000) : new Date(Date.now() - 24 * 3600 * 1000);
   const now = new Date();
   const tatHours = Math.max(1, Math.round((now - dispatchDate) / (1000 * 60 * 60)));
   const tatStatus = tatHours <= 48 ? 'OPTIMAL_UNDER_48H' : (tatHours <= 72 ? 'STANDARD_WINDOW' : 'OVERDUE');
 
-  // Refund Decision Analysis
   const isEligible = cooler.status === 'with_customer' || cooler.status === 'return_requested' || cooler.status === 'in_transit';
   const refundAmount = cooler.depositAmount || 250;
+
+  const dbData = { coolers, orders, coolerReturns: returns };
+  const tempCheck = getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, dbData);
+  const fleetDetails = getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, dbData);
+  const health = calculateHealthScore({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, tempCheck, fleetDetails);
 
   res.json({
     success: true,
@@ -2008,21 +1986,17 @@ app.get('/api/coolers/inspect/:coolerId', authenticate, requireAdmin, (req, res)
         ? 'APPROVE_REFUND_AND_REPAIR_BOX' 
         : (isEligible ? 'APPROVE_INSTANT_REFUND' : 'BOX_READY_FOR_USE')
     },
-    tempCheck: getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-    fleetDetails: getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-    health: calculateHealthScore(
-      { ...cooler, status: isDamagedBox ? 'damaged' : cooler.status },
-      getTemperatureCheck({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {}),
-      getFleetDetails({ ...cooler, status: isDamagedBox ? 'damaged' : cooler.status }, db.data || {})
-    )
+    tempCheck,
+    fleetDetails,
+    health
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireAdmin, validate(coolerInspectionDecisionSchema), (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireAdmin, validate(coolerInspectionDecisionSchema), async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -2035,17 +2009,15 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireA
 
   const { refundPreference = 'wallet', upiId, inspectorNotes = 'QR Inward Inspection: EPP foam walls intact, gel bricks sanitized.' } = req.body;
 
-  // Resolve user
   const userId = cooler.currentUserId || 'usr_customer';
-  const user = db.findById('users', userId);
+  const user = await findUserById(userId);
   const refundAmt = cooler.depositAmount || 250;
 
-  // Find or create return record
-  const returns = db.get('coolerReturns') || [];
+  const returns = await findCoolerReturns();
   let returnRecord = returns.find(r => r.coolerId === cooler.id && r.status !== 'refunded');
 
   if (returnRecord) {
-    db.update('coolerReturns', returnRecord.id, {
+    await updateCoolerReturn(returnRecord.id, {
       status: 'refunded',
       conditionNotes: inspectorNotes,
       completedAt: new Date().toISOString(),
@@ -2069,34 +2041,30 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireA
       conditionNotes: inspectorNotes,
       courierAssigned: 'Hub Inward Specialist Rajeshwar Rao'
     };
-    db.insert('coolerReturns', returnRecord);
+    await createCoolerReturn(returnRecord);
   }
 
-  // Credit Wallet if preference is wallet
   if (user) {
-    const updates = {
-      depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
-    };
     if (refundPreference === 'wallet') {
-      const newBal = (user.walletBalance || 0) + refundAmt;
-      const tx = {
-        id: `tx_${Date.now()}`,
-        amount: refundAmt,
-        type: 'credit',
-        title: 'Cooler Box Deposit Refund',
-        description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to BrisketBox Wallet.`,
-        date: new Date().toISOString(),
-        balanceAfter: newBal,
-        coolerId: cooler.id
-      };
-      updates.walletBalance = newBal;
-      updates.walletTransactions = [tx, ...(user.walletTransactions || [])];
+      try {
+        await creditWallet({
+          userId: user.id,
+          amount: refundAmt,
+          idempotencyKey: `cooler_inspect_refund_${cooler.id}_${Date.now()}`,
+          title: 'Cooler Box Deposit Refund',
+          description: `insulated bag box #${cooler.id} QR inspected & verified. Instant refund added to BrisketBox Wallet.`
+        });
+      } catch (wErr) {
+        console.warn('[Cooler Refund] Wallet credit error:', wErr.message);
+      }
+    } else {
+      await updateUser(user.id, {
+        depositBalance: Math.max(0, (user.depositBalance || 0) - refundAmt)
+      });
     }
-    db.update('users', user.id, updates);
   }
 
-  // Update Cooler status to available
-  const updatedCooler = db.update('coolers', cooler.id, {
+  const updatedCooler = await updateCooler(cooler.id, {
     status: 'available',
     currentOrderId: null,
     currentUserId: null,
@@ -2115,11 +2083,11 @@ app.post('/api/coolers/inspect/:coolerId/approve-refund', authenticate, requireA
   });
 });
 
-app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmin, (req, res) => {
+app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmin, async (req, res) => {
   const rawId = (req.params.coolerId || '').trim();
   const cleanId = rawId.replace(/^https?:\/\/[^\/]+\/(coolers\/)?/i, '').replace(/^BRISKETBOX-/i, '').replace(/^TV-/i, '');
   
-  const coolers = db.get('coolers') || [];
+  const coolers = await findCoolers();
   let cooler = coolers.find(c => 
     c.id.toLowerCase() === cleanId.toLowerCase() || 
     c.id.toLowerCase() === rawId.toLowerCase() ||
@@ -2131,7 +2099,7 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmi
   }
 
   const { reason = 'Temperature breach detected: Box cannot hold 0°C to 4°C' } = req.body;
-  const updated = db.update('coolers', cooler.id, {
+  const updated = await updateCooler(cooler.id, {
     status: 'maintenance',
     maintenanceReason: reason,
     lastInspectedDate: new Date().toISOString()
@@ -2144,9 +2112,11 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmi
   });
 });
 
-app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) => {
-  const coolers = db.get('coolers') || [];
-  const returns = db.get('coolerReturns') || [];
+app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, res) => {
+  const [coolers, returns] = await Promise.all([
+    findCoolers(),
+    findCoolerReturns()
+  ]);
 
   const totalCoolers = coolers.length;
   const withCustomer = coolers.filter(c => c.status === 'with_customer').length;
@@ -2187,8 +2157,8 @@ app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, (req, res) =>
 // ==========================================
 // 5. IN-APP VAULT WALLET
 // ==========================================
-app.get('/api/wallet', authenticate, (req, res) => {
-  const user = db.findById('users', req.user.id);
+app.get('/api/wallet', authenticate, async (req, res) => {
+  const user = await findUserById(req.user.id);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -2205,11 +2175,13 @@ app.get('/api/wallet', authenticate, (req, res) => {
 // 5. OPERATIONS METRICS
 // ==========================================
 
-app.get('/api/admin/metrics', authenticate, requireAdmin, (req, res) => {
-  const orders = db.get('orders');
-  const coolers = db.get('coolers');
-  const returns = db.get('coolerReturns');
-  const products = db.get('products');
+app.get('/api/admin/metrics', authenticate, requireAdmin, async (req, res) => {
+  const [orders, coolers, returns, products] = await Promise.all([
+    findOrders(),
+    findCoolers(),
+    findCoolerReturns(),
+    findProducts()
+  ]);
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
   const activeOrders = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
@@ -2247,10 +2219,15 @@ app.post('/api/admin/backup', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin Customer Management
-app.get('/api/admin/users', authenticate, requireAdmin, (req, res) => {
-  const users = db.get('users').map(u => {
+app.get('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
+  const [allUsers, allOrders] = await Promise.all([
+    findUsers(),
+    findOrders()
+  ]);
+
+  const users = allUsers.map(u => {
     const { password, ...userWithoutPw } = u;
-    const userOrders = db.get('orders').filter(o => o.userId === u.id || o.customerEmail === u.email);
+    const userOrders = allOrders.filter(o => o.userId === u.id || o.customerEmail === u.email);
     const totalSpent = userOrders.reduce((sum, o) => sum + (o.paymentStatus === 'PAID' ? (o.total || o.subtotal || 0) : 0), 0);
     return {
       ...userWithoutPw,
@@ -2262,11 +2239,11 @@ app.get('/api/admin/users', authenticate, requireAdmin, (req, res) => {
 });
 
 // Admin Fleet: Register New Cooler
-app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
+app.post('/api/coolers', authenticate, requireAdmin, async (req, res) => {
   const { id, qrCode, model, depositAmount, assignedHub } = req.body;
   if (!id) return res.status(400).json({ error: 'Cooler ID is required (e.g. BOX-BLR-109)' });
   
-  const existing = db.findById('coolers', id);
+  const existing = await findCoolerById(id);
   if (existing) return res.status(409).json({ error: 'Cooler ID already exists' });
   
   const newCooler = {
@@ -2284,14 +2261,14 @@ app.post('/api/coolers', authenticate, requireAdmin, (req, res) => {
     assignedHub: assignedHub || 'Bengaluru Central Hub Depot'
   };
   
-  db.insert('coolers', newCooler);
-  res.status(201).json(newCooler);
+  const created = await createCooler(newCooler);
+  res.status(201).json(created);
 });
 
 // Admin Fleet: Update Cooler Status / Sanitation cycle
-app.patch('/api/coolers/:id/status', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/coolers/:id/status', authenticate, requireAdmin, async (req, res) => {
   const { status, assignedHub } = req.body;
-  const cooler = db.findById('coolers', req.params.id);
+  const cooler = await findCoolerById(req.params.id);
   if (!cooler) return res.status(404).json({ error: 'Cooler not found' });
   
   const updates = { status };
@@ -2301,21 +2278,21 @@ app.patch('/api/coolers/:id/status', authenticate, requireAdmin, (req, res) => {
   }
   if (assignedHub) updates.assignedHub = assignedHub;
   
-  const updated = db.update('coolers', req.params.id, updates);
+  const updated = await updateCooler(req.params.id, updates);
   res.json(updated);
 });
 
 // Admin Courier & Fleet Assignment for Order
-app.patch('/api/orders/:id/courier', authenticate, requireAdmin, (req, res) => {
+app.patch('/api/orders/:id/courier', authenticate, requireAdmin, async (req, res) => {
   const { deliveryExecutive, coolerId } = req.body;
-  const order = db.findById('orders', req.params.id);
+  const order = await findOrderById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   
   const updates = {};
   if (deliveryExecutive) updates.deliveryExecutive = deliveryExecutive;
   if (coolerId) {
     updates.coolerId = coolerId;
-    db.update('coolers', coolerId, {
+    await updateCooler(coolerId, {
       status: 'assigned',
       currentOrderId: order.id,
       currentUserId: order.userId,
@@ -2323,7 +2300,7 @@ app.patch('/api/orders/:id/courier', authenticate, requireAdmin, (req, res) => {
     });
   }
   
-  const updated = db.update('orders', req.params.id, updates);
+  const updated = await updateOrder(req.params.id, updates);
   res.json(updated);
 });
 
@@ -2364,8 +2341,9 @@ if (!process.env.VERCEL && isDirectRun) {
     res.sendFile(indexHtml);
   });
 
-  app.listen(PORT, () => {
-    console.log(`[BrisketBox API] Running on port ${PORT}`);
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, () => {
+    console.log(`[BrisketBox API] Running on http://${HOST}:${PORT}`);
   });
 }
 

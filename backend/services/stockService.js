@@ -2,25 +2,8 @@ import mongoose from 'mongoose';
 import { Product } from '../models/Product.js';
 import { db } from '../db.js';
 
-let stockOperationMutex = Promise.resolve();
-
 /**
- * Sequential mutex lock to prevent concurrent stock race conditions in local memory fallback.
- */
-function withStockLock(callback) {
-  const nextLock = stockOperationMutex.then(async () => {
-    try {
-      return await callback();
-    } catch (err) {
-      throw err;
-    }
-  });
-  stockOperationMutex = nextLock.catch(() => {});
-  return nextLock;
-}
-
-/**
- * Atomically verifies and deducts inventory stock for order items.
+ * Atomically verifies and deducts inventory stock for order items using MongoDB transactions.
  * If any single product has insufficient stock, the entire transaction is aborted
  * and no inventory is deducted.
  *
@@ -32,67 +15,67 @@ function withStockLock(callback) {
  * @returns {Promise<{ success: boolean, deductedItems: Array }>}
  */
 export async function deductStock(items, options = {}) {
-  return withStockLock(async () => {
-    if (!Array.isArray(items) || items.length === 0) return { success: true, deductedItems: [] };
+  if (!Array.isArray(items) || items.length === 0) return { success: true, deductedItems: [] };
 
-    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
-    const session = options.session || null;
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-    if (isMongo) {
+  if (isMongo) {
+    const executeInSession = async (session) => {
       const deducted = [];
+      for (const item of items) {
+        const qty = Number(item.quantity) || 1;
+        const updated = await Product.findOneAndUpdate(
+          { id: item.productId, stock: { $gte: qty } },
+          { $inc: { stock: -qty } },
+          { new: true, session }
+        );
+
+        if (!updated) {
+          const current = await Product.findOne({ id: item.productId }).session(session);
+          throw new Error(`Insufficient stock for "${current?.name || item.productId}". Only ${current?.stock || 0} remaining (requested ${qty}).`);
+        }
+
+        deducted.push({ productId: item.productId, quantity: qty });
+      }
+      return { success: true, deductedItems: deducted };
+    };
+
+    if (options.session) {
+      return await executeInSession(options.session);
+    } else {
+      const ownSession = await mongoose.startSession();
       try {
-        for (const item of items) {
-          const qty = Number(item.quantity) || 1;
-          const query = Product.findOneAndUpdate(
-            { id: item.productId, stock: { $gte: qty } },
-            { $inc: { stock: -qty } },
-            { new: true, session }
-          );
-          const updated = await query;
-
-          if (!updated) {
-            const current = await Product.findOne({ id: item.productId }).session(session);
-            throw new Error(`Insufficient stock for "${current?.name || item.productId}". Only ${current?.stock || 0} remaining (requested ${qty}).`);
-          }
-
-          deducted.push({ productId: item.productId, quantity: qty });
-        }
-        return { success: true, deductedItems: deducted };
-      } catch (err) {
-        // Rollback any items deducted in this partial batch if not using an aborted session
-        if (!session) {
-          for (const rolled of deducted) {
-            await Product.findOneAndUpdate(
-              { id: rolled.productId },
-              { $inc: { stock: rolled.quantity } }
-            );
-          }
-        }
-        throw err;
+        let result = null;
+        await ownSession.withTransaction(async () => {
+          result = await executeInSession(ownSession);
+        });
+        return result;
+      } finally {
+        await ownSession.endSession();
       }
     }
+  }
 
-    // LowDB fallback (only active when MongoDB is not connected)
-    for (const item of items) {
-      const prod = db.findById('products', item.productId);
-      if (!prod) {
-        throw new Error(`Product "${item.productId}" not found in stock directory`);
-      }
-      if (prod.stock < item.quantity) {
-        throw new Error(`Insufficient stock for "${prod.name}". Only ${prod.stock} remaining (requested ${item.quantity}).`);
-      }
+  // LowDB fallback (only active when MongoDB is not connected in local non-prod)
+  for (const item of items) {
+    const prod = db.findById('products', item.productId);
+    if (!prod) {
+      throw new Error(`Product "${item.productId}" not found in stock directory`);
     }
-
-    const deducted = [];
-    for (const item of items) {
-      const prod = db.findById('products', item.productId);
-      const newStock = Math.max(0, prod.stock - item.quantity);
-      db.update('products', prod.id, { stock: newStock });
-      deducted.push({ productId: prod.id, quantity: item.quantity, previousStock: prod.stock, newStock });
+    if (prod.stock < item.quantity) {
+      throw new Error(`Insufficient stock for "${prod.name}". Only ${prod.stock} remaining (requested ${item.quantity}).`);
     }
+  }
 
-    return { success: true, deductedItems: deducted };
-  });
+  const deducted = [];
+  for (const item of items) {
+    const prod = db.findById('products', item.productId);
+    const newStock = Math.max(0, prod.stock - item.quantity);
+    db.update('products', prod.id, { stock: newStock });
+    deducted.push({ productId: prod.id, quantity: item.quantity, previousStock: prod.stock, newStock });
+  }
+
+  return { success: true, deductedItems: deducted };
 }
 
 /**
@@ -101,32 +84,37 @@ export async function deductStock(items, options = {}) {
  *
  * @param {Array<{ productId: string, quantity: number }>} items
  * @param {{ session?: mongoose.ClientSession }} [options]
- * @returns {Promise<{ success: boolean }>}
+ * @returns {Promise<{ success: boolean, restoredItems: Array }>}
  */
 export async function releaseStock(items, options = {}) {
-  return withStockLock(async () => {
-    if (!Array.isArray(items) || items.length === 0) return { success: true };
+  if (!Array.isArray(items) || items.length === 0) return { success: true, restoredItems: [] };
 
-    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
-    const session = options.session || null;
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  const session = options.session || null;
 
+  if (isMongo) {
+    const restored = [];
     for (const item of items) {
       const qty = Number(item.quantity) || 1;
-      if (isMongo) {
-        await Product.findOneAndUpdate(
-          { id: item.productId },
-          { $inc: { stock: qty } },
-          { session }
-        );
-      } else {
-        const prod = db.findById('products', item.productId);
-        if (prod) {
-          const restoredStock = (prod.stock || 0) + qty;
-          db.update('products', prod.id, { stock: restoredStock });
-        }
-      }
+      await Product.findOneAndUpdate(
+        { id: item.productId },
+        { $inc: { stock: qty } },
+        { new: true, session }
+      );
+      restored.push({ productId: item.productId, quantity: qty });
     }
+    return { success: true, restoredItems: restored };
+  }
 
-    return { success: true };
-  });
+  // LowDB fallback
+  const restored = [];
+  for (const item of items) {
+    const prod = db.findById('products', item.productId);
+    if (prod) {
+      const newStock = prod.stock + item.quantity;
+      db.update('products', prod.id, { stock: newStock });
+      restored.push({ productId: prod.id, quantity: item.quantity, previousStock: prod.stock, newStock });
+    }
+  }
+  return { success: true, restoredItems: restored };
 }

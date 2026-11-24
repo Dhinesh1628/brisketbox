@@ -1,4 +1,7 @@
+import mongoose from 'mongoose';
 import { db } from './db.js';
+import { User } from './models/User.js';
+import { Order } from './models/Order.js';
 
 let roundRobinPointer = 0;
 
@@ -7,9 +10,16 @@ let roundRobinPointer = 0;
  * Load-balances and round-robins orders across approved fleet riders.
  * Guarantees that sequential orders rotate between different riders.
  */
-export function assignFleetRiderForOrder() {
-  const allUsers = db.get('users') || [];
-  const approvedRiders = allUsers.filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+export async function assignFleetRiderForOrder() {
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+  let approvedRiders = [];
+  if (isMongo) {
+    approvedRiders = await User.find({ role: 'rider', approvalStatus: 'approved' }).lean();
+  }
+  if (!approvedRiders || approvedRiders.length === 0) {
+    const allUsers = db.get('users') || [];
+    approvedRiders = allUsers.filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
+  }
 
   if (!approvedRiders || approvedRiders.length === 0) {
     return {
@@ -22,8 +32,17 @@ export function assignFleetRiderForOrder() {
     };
   }
 
-  // 1. Calculate active active deliveries for each rider
-  const allOrders = db.get('orders') || [];
+  // 1. Calculate active deliveries for each rider
+  let allOrders = [];
+  if (isMongo) {
+    allOrders = await Order.find({
+      riderId: { $ne: null },
+      orderStatus: { $nin: ['DELIVERED', 'COOLER_RETURNED', 'CANCELLED'] }
+    }).lean();
+  } else {
+    allOrders = db.get('orders') || [];
+  }
+
   const activeCounts = {};
   for (const r of approvedRiders) {
     activeCounts[r.id] = 0;

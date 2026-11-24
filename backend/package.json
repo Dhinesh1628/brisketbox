@@ -26,5 +26,11 @@
   "devDependencies": {
     "mongodb-memory-server": "^10.1.4",
     "supertest": "^7.0.0"
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": "1",
+      "systemBinary": "C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe"
+    }
   }
 }

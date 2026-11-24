@@ -13,6 +13,7 @@ const couponUsageSchema = new mongoose.Schema({
   strict: true
 });
 
+couponUsageSchema.index({ code: 1, userId: 1 }, { unique: true });
 couponUsageSchema.index({ code: 1, orderId: 1 }, { unique: true });
 
 export const CouponUsage = mongoose.models.CouponUsage || mongoose.model('CouponUsage', couponUsageSchema);

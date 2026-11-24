@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import crypto from 'crypto';
 import { db } from '../db.js';
 import { User } from '../models/User.js';
 import { Cooler } from '../models/Cooler.js';
@@ -9,27 +8,16 @@ import { CouponUsage } from '../models/CouponUsage.js';
 import { deductStock, releaseStock } from './stockService.js';
 import { creditWallet } from './walletService.js';
 
-let paymentMutex = Promise.resolve();
-function withPaymentLock(callback) {
-  const nextLock = paymentMutex.then(async () => {
-    try {
-      return await callback();
-    } catch (err) {
-      throw err;
-    }
-  });
-  paymentMutex = nextLock.catch(() => {});
-  return nextLock;
-}
-
 /**
  * Assigns an active, approved delivery executive for the order.
  */
-export async function assignRealRider() {
+export async function assignRealRider(session = null) {
   const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
   let riders = [];
   if (isMongo) {
-    riders = await User.find({ role: 'rider', approvalStatus: 'approved' }).lean();
+    const q = User.find({ role: 'rider', approvalStatus: 'approved' });
+    if (session) q.session(session);
+    riders = await q.lean();
   } else {
     riders = (db.get('users') || []).filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
   }
@@ -59,7 +47,7 @@ export async function assignRealRider() {
 /**
  * Assigns an available cooler box to an order upon payment capture or COD placement.
  */
-export async function assignAvailableCooler(orderId, userId, userName) {
+export async function assignAvailableCooler(orderId, userId, userName, session = null) {
   const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
   if (isMongo) {
     const cooler = await Cooler.findOneAndUpdate(
@@ -72,7 +60,7 @@ export async function assignAvailableCooler(orderId, userId, userName) {
           currentUserName: userName || null 
         } 
       },
-      { new: true }
+      { new: true, session }
     );
     return cooler ? { coolerId: cooler.id, coolerModel: cooler.model } : { coolerId: null, coolerModel: null };
   }
@@ -95,11 +83,13 @@ export async function assignAvailableCooler(orderId, userId, userName) {
  * Unified, idempotent payment finalizer used by both /verify and Razorpay Webhook.
  *
  * Requirements guaranteed:
- * 1. Idempotent: If already PAID, returns existing order.
- * 2. Assigns real approved rider.
- * 3. Never marks stockDeducted: true unless inventory deduction succeeded.
- * 4. If stock is unavailable post-payment, moves order to REFUND_REQUIRED state.
- * 5. Records PaymentEvent and CouponUsage.
+ * 1. Uses a MongoDB transaction and claims the state change atomically first.
+ *    Only the request that wins the claim may change stock, wallet, coupon, or cooler data.
+ * 2. Uses Razorpay's payment ID or event ID as the unique PaymentEvent key, never Date.now().
+ * 3. Assigns real approved rider.
+ * 4. Never marks stockDeducted: true unless inventory deduction succeeded.
+ * 5. If stock is unavailable post-payment, moves order to REFUND_REQUIRED state.
+ * 6. Records PaymentEvent and CouponUsage.
  */
 export async function finalizePayment({
   orderId,
@@ -108,221 +98,311 @@ export async function finalizePayment({
   razorpaySignature = 'SERVER_VERIFIED',
   amountInPaise = 0,
   currency = 'INR',
-  source = 'verify'
+  source = 'verify',
+  eventId = null
 }) {
-  return withPaymentLock(async () => {
-    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-    let order = null;
-    if (isMongo) {
-      order = await Order.findOne({
-        $or: [{ id: orderId }, { orderNumber: orderId }, { razorpayOrderId: razorpayOrderId || orderId }]
-      }).lean();
-    } else {
-      order = (db.get('orders') || []).find(o => 
-        o.id === orderId || o.orderNumber === orderId || (razorpayOrderId && o.razorpayOrderId === razorpayOrderId)
-      );
-    }
+  if (isMongo) {
+    const session = await mongoose.startSession();
+    try {
+      let finalOrder = null;
+      let alreadyPaid = false;
+      let refundRequired = false;
 
-    if (!order) {
-      return { success: false, notFound: true, error: `Order "${orderId}" not found for finalization` };
-    }
+      await session.withTransaction(async () => {
+        // Find order
+        const existing = await Order.findOne({
+          $or: [
+            { id: orderId },
+            { orderNumber: orderId },
+            ...(razorpayOrderId ? [{ razorpayOrderId }] : [])
+          ]
+        }).session(session);
 
-    // 1. Idempotency Check
-    if (order.paymentStatus === 'PAID') {
-      return { success: true, order, alreadyPaid: true };
-    }
+        if (!existing) {
+          const err = new Error(`Order "${orderId}" not found for finalization`);
+          err.notFound = true;
+          throw err;
+        }
 
-    // 2. Record Payment Event
-    const eventId = `pe_${razorpayPaymentId || order.id}_${Date.now()}`;
-    if (isMongo) {
-      try {
-        await PaymentEvent.create({
-          eventId,
+        // Idempotency: If already marked PAID, return existing order
+        if (existing.paymentStatus === 'PAID') {
+          finalOrder = existing.toObject();
+          alreadyPaid = true;
+          return;
+        }
+
+        // Unique PaymentEvent key: Razorpay event ID or payment ID, NEVER Date.now()!
+        const uniqueEventKey = eventId || razorpayPaymentId || `pay_${razorpayOrderId || existing.id}`;
+
+        // ATOMIC CLAIM: Only one request can transition paymentStatus from NOT PAID to 'PAID'
+        const claimed = await Order.findOneAndUpdate(
+          {
+            _id: existing._id,
+            paymentStatus: { $ne: 'PAID' }
+          },
+          {
+            $set: {
+              paymentStatus: 'PAID',
+              paidAt: new Date().toISOString(),
+              razorpayPaymentId: razorpayPaymentId || existing.razorpayPaymentId,
+              razorpayOrderId: razorpayOrderId || existing.razorpayOrderId,
+              razorpaySignature: razorpaySignature || existing.razorpaySignature
+            }
+          },
+          { new: true, session }
+        );
+
+        if (!claimed) {
+          // Concurrently claimed by another process
+          const refreshed = await Order.findById(existing._id).session(session);
+          finalOrder = refreshed ? refreshed.toObject() : existing.toObject();
+          alreadyPaid = true;
+          return;
+        }
+
+        // Record PaymentEvent with unique eventId in the SAME transaction
+        await PaymentEvent.create([{
+          id: `pe_${uniqueEventKey}`,
+          eventId: uniqueEventKey,
           eventType: 'payment.captured',
-          orderId: order.orderNumber || order.id,
+          orderId: claimed.orderNumber || claimed.id,
           paymentId: razorpayPaymentId,
-          amount: amountInPaise ? amountInPaise / 100 : order.totalAmount,
+          amount: amountInPaise ? amountInPaise / 100 : (claimed.totalAmount || claimed.total),
           currency,
           source,
           payload: { razorpayOrderId, razorpayPaymentId, razorpaySignature }
-        });
-      } catch (e) {
-        console.warn('[PaymentFinalizer] PaymentEvent duplicate or error:', e.message);
-      }
-    }
+        }], { session });
 
-    // 3. Atomically Deduct Stock
-    let stockDeducted = Boolean(order.stockDeducted);
-    if (!stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
-      try {
-        await deductStock(order.items);
-        stockDeducted = true;
-      } catch (stockErr) {
-        console.error('[PaymentFinalizer] Stock deduction failed post-payment:', stockErr.message);
-        
-        // Stock unavailable: Move order to REFUND_REQUIRED state
-        const refundUpdates = {
-          paymentStatus: 'PAID',
-          orderStatus: 'REFUND_REQUIRED',
-          status: 'Refund Required (Out of Stock)',
-          lifecycleStatus: 'REFUND_REQUIRED',
-          stockDeducted: false,
-          razorpayPaymentId: razorpayPaymentId || order.razorpayPaymentId,
-          notes: `Automatic refund required: Item out of stock after payment capture (${stockErr.message})`
-        };
-
-        let updatedOrder = null;
-        if (isMongo) {
-          updatedOrder = await Order.findOneAndUpdate(
-            { id: order.id },
-            { $set: refundUpdates },
-            { new: true }
-          ).lean();
-        } else {
-          updatedOrder = db.update('orders', order.id, refundUpdates);
+        // Record coupon usage in the SAME transaction
+        if (claimed.couponCode && claimed.userId) {
+          try {
+            await CouponUsage.create([{
+              id: `cp_${claimed.id}`,
+              code: claimed.couponCode.toUpperCase(),
+              userId: claimed.userId,
+              orderId: claimed.orderNumber || claimed.id,
+              discount: claimed.discountAmount || 0,
+              redeemedAt: new Date().toISOString()
+            }], { session });
+          } catch (e) {
+            console.warn('[PaymentFinalizer] CouponUsage duplicate or error:', e.message);
+          }
         }
 
+        // ONLY THE REQUEST THAT WINS THE CLAIM MAY CHANGE STOCK:
+        let stockDeducted = Boolean(claimed.stockDeducted);
+        if (!stockDeducted && Array.isArray(claimed.items) && claimed.items.length > 0) {
+          try {
+            await deductStock(claimed.items, { session });
+            claimed.stockDeducted = true;
+          } catch (stockErr) {
+            console.error('[PaymentFinalizer] Stock deduction failed post-payment:', stockErr.message);
+
+            // Stock unavailable post-payment: Move order to REFUND_REQUIRED state
+            claimed.orderStatus = 'REFUND_REQUIRED';
+            claimed.status = 'Refund Required (Out of Stock)';
+            claimed.lifecycleStatus = 'REFUND_REQUIRED';
+            claimed.stockDeducted = false;
+            claimed.notes = `Automatic refund required: Item out of stock after payment capture (${stockErr.message})`;
+            await claimed.save({ session });
+
+            finalOrder = claimed.toObject();
+            refundRequired = true;
+            return;
+          }
+        }
+
+        // Assign real approved rider & available cooler
+        const riderInfo = await assignRealRider(session);
+        let coolerInfo = { coolerId: claimed.coolerId, coolerModel: claimed.coolerModel };
+        if (!coolerInfo.coolerId) {
+          coolerInfo = await assignAvailableCooler(
+            claimed.orderNumber || claimed.id,
+            claimed.userId,
+            claimed.customerName,
+            session
+          );
+        }
+
+        claimed.riderId = riderInfo.riderId;
+        claimed.riderName = riderInfo.riderName;
+        claimed.deliveryExecutive = riderInfo.deliveryExecutive;
+        claimed.coolerId = coolerInfo.coolerId || claimed.coolerId;
+        claimed.coolerModel = coolerInfo.coolerModel || claimed.coolerModel;
+        claimed.orderStatus = 'CONFIRMED';
+        claimed.status = 'Confirmed & In Kitchen Prep';
+        claimed.lifecycleStatus = 'CONFIRMED';
+
+        await claimed.save({ session });
+        finalOrder = claimed.toObject();
+      });
+
+      if (refundRequired) {
         return {
           success: false,
           refundRequired: true,
-          error: `Item out of stock during payment capture. Order moved to refund-required state.`,
-          order: updatedOrder || { ...order, ...refundUpdates }
+          error: 'Item out of stock during payment capture. Order moved to refund-required state.',
+          order: finalOrder
         };
       }
+
+      return { success: true, order: finalOrder, alreadyPaid };
+    } finally {
+      await session.endSession();
     }
+  }
 
-    // 4. Assign real approved rider & available cooler
-    const riderInfo = await assignRealRider();
-    let coolerInfo = { coolerId: order.coolerId, coolerModel: order.coolerModel };
-    if (!coolerInfo.coolerId) {
-      coolerInfo = await assignAvailableCooler(order.orderNumber || order.id, order.userId, order.customerName);
+  // LowDB fallback (only active when MongoDB is not connected in local non-prod)
+  let order = (db.get('orders') || []).find(o => 
+    o.id === orderId || o.orderNumber === orderId || (razorpayOrderId && o.razorpayOrderId === razorpayOrderId)
+  );
+  if (!order) {
+    return { success: false, notFound: true, error: `Order "${orderId}" not found for finalization` };
+  }
+
+  if (order.paymentStatus === 'PAID') {
+    return { success: true, order, alreadyPaid: true };
+  }
+
+  // Claim
+  order.paymentStatus = 'PAID';
+  order.paidAt = new Date().toISOString();
+  order.razorpayPaymentId = razorpayPaymentId || order.razorpayPaymentId;
+  order.razorpayOrderId = razorpayOrderId || order.razorpayOrderId;
+  order.razorpaySignature = razorpaySignature || order.razorpaySignature;
+
+  // Deduct stock
+  let stockDeducted = Boolean(order.stockDeducted);
+  if (!stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
+    try {
+      await deductStock(order.items);
+      order.stockDeducted = true;
+    } catch (stockErr) {
+      order.orderStatus = 'REFUND_REQUIRED';
+      order.status = 'Refund Required (Out of Stock)';
+      order.lifecycleStatus = 'REFUND_REQUIRED';
+      order.stockDeducted = false;
+      db.update('orders', order.id, order);
+      return {
+        success: false,
+        refundRequired: true,
+        error: 'Item out of stock during payment capture. Order moved to refund-required state.',
+        order
+      };
     }
+  }
 
-    // 5. Record Coupon Usage
-    if (order.couponCode && isMongo) {
-      try {
-        await CouponUsage.create({
-          id: `cu_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
-          code: order.couponCode.toUpperCase(),
-          userId: order.userId || 'guest',
-          orderId: order.orderNumber || order.id,
-          discount: order.discount || 0
-        });
-      } catch (couponErr) {
-        console.warn('[PaymentFinalizer] Coupon record error:', couponErr.message);
-      }
-    }
+  const riderInfo = await assignRealRider();
+  let coolerInfo = { coolerId: order.coolerId, coolerModel: order.coolerModel };
+  if (!coolerInfo.coolerId) {
+    coolerInfo = await assignAvailableCooler(order.orderNumber || order.id, order.userId, order.customerName);
+  }
 
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  order.riderId = riderInfo.riderId;
+  order.riderName = riderInfo.riderName;
+  order.deliveryExecutive = riderInfo.deliveryExecutive;
+  order.coolerId = coolerInfo.coolerId || order.coolerId;
+  order.coolerModel = coolerInfo.coolerModel || order.coolerModel;
+  order.orderStatus = 'CONFIRMED';
+  order.status = 'Confirmed & In Kitchen Prep';
+  order.lifecycleStatus = 'CONFIRMED';
 
-    const finalUpdates = {
-      paymentStatus: 'PAID',
-      orderStatus: 'CONFIRMED',
-      status: 'Order Confirmed',
-      lifecycleStatus: 'CONFIRMED',
-      stockDeducted: true,
-      razorpayPaymentId: razorpayPaymentId || order.razorpayPaymentId,
-      razorpaySignature: razorpaySignature || order.razorpaySignature || 'SERVER_VERIFIED',
-      coolerId: coolerInfo.coolerId,
-      coolerModel: coolerInfo.coolerModel,
-      riderId: riderInfo.riderId,
-      riderFullName: riderInfo.riderFullName,
-      riderName: riderInfo.riderName,
-      riderPhone: riderInfo.riderPhone,
-      riderVehicle: riderInfo.riderVehicle,
-      deliveryExecutive: riderInfo.deliveryExecutive,
-      tempLog: [
-        ...(order.tempLog || []),
-        { 
-          time: timeStr, 
-          temp: 0.8, 
-          event: `Payment verified via ${source} (${razorpayPaymentId || 'PAID'}). Order confirmed and scheduled for butchering.` 
-        }
-      ]
-    };
-
-    let updatedOrder = null;
-    if (isMongo) {
-      updatedOrder = await Order.findOneAndUpdate(
-        { id: order.id },
-        { $set: finalUpdates },
-        { new: true }
-      ).lean();
-    } else {
-      updatedOrder = db.update('orders', order.id, finalUpdates);
-    }
-
-    return {
-      success: true,
-      order: updatedOrder || { ...order, ...finalUpdates }
-    };
-  });
+  db.update('orders', order.id, order);
+  return { success: true, order };
 }
 
 /**
- * Releases wallet reservation and cooler exactly once on failed or expired payment.
+ * Releases reserved wallet credits and cooler boxes when online payment fails or expires.
  */
-export async function releasePaymentReservations(orderId) {
-  return withPaymentLock(async () => {
-    const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+export async function releasePaymentReservations({ orderId, reason = 'Payment expired or failed' }) {
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-    let order = null;
-    if (isMongo) {
-      order = await Order.findOne({
-        $or: [{ id: orderId }, { orderNumber: orderId }]
-      }).lean();
-    } else {
-      order = (db.get('orders') || []).find(o => o.id === orderId || o.orderNumber === orderId);
+  if (isMongo) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const order = await Order.findOne({
+          $or: [{ id: orderId }, { orderNumber: orderId }]
+        }).session(session);
+
+        if (!order) return;
+
+        // Release cooler if assigned
+        if (order.coolerId && !order.coolerReleased) {
+          await Cooler.findOneAndUpdate(
+            { id: order.coolerId },
+            { $set: { status: 'available', currentOrderId: null, currentUserId: null } },
+            { session }
+          );
+          order.coolerReleased = true;
+        }
+
+        // Release wallet balance if debited and not yet refunded
+        if (order.walletDeduction > 0 && order.userId && !order.walletRefunded) {
+          await creditWallet({
+            userId: order.userId,
+            amount: order.walletDeduction,
+            idempotencyKey: `wallet_release_failed_pay_${order.id}`,
+            orderId: order.orderNumber || order.id,
+            title: `Refund for Failed Payment #${order.orderNumber || order.id}`,
+            description: reason
+          }, { session });
+          order.walletRefunded = true;
+        }
+
+        // Release stock if deducted
+        if (order.stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
+          await releaseStock(order.items, { session });
+          order.stockDeducted = false;
+        }
+
+        order.orderStatus = 'PAYMENT_FAILED';
+        order.paymentStatus = 'FAILED';
+        order.lifecycleStatus = 'CANCELLED';
+        await order.save({ session });
+      });
+    } finally {
+      await session.endSession();
     }
+    return;
+  }
 
-    if (!order) return { success: false, error: 'Order not found' };
+  // LowDB fallback
+  const order = (db.get('orders') || []).find(o => o.id === orderId || o.orderNumber === orderId);
+  if (!order) return;
 
-    // Release wallet reservation exactly once
-    if (order.walletDebited && !order.walletRefunded && order.walletDeduction > 0 && order.userId) {
-      try {
-        await creditWallet({
-          userId: order.userId,
-          amount: order.walletDeduction,
-          idempotencyKey: `wallet_release_failed_pay_${order.id}`,
-          orderId: order.orderNumber || order.id,
-          title: `Refund for Failed Payment #${order.orderNumber || order.id}`,
-          description: 'Store credit released after online payment failure or expiration.'
-        });
-      } catch (e) {
-        console.warn('[ReleaseReservations] Wallet release error:', e.message);
-      }
-    }
+  if (order.coolerId && !order.coolerReleased) {
+    db.update('coolers', order.coolerId, {
+      status: 'available',
+      currentOrderId: null,
+      currentUserId: null
+    });
+    order.coolerReleased = true;
+  }
 
-    // Release cooler exactly once
-    if (order.coolerId && !order.coolerReleased) {
-      if (isMongo) {
-        await Cooler.findOneAndUpdate(
-          { id: order.coolerId },
-          { $set: { status: 'available', currentOrderId: null, currentUserId: null } }
-        );
-      } else {
-        db.update('coolers', order.coolerId, {
-          status: 'available',
-          currentOrderId: null,
-          currentUserId: null
-        });
-      }
-    }
+  if (order.walletDeduction > 0 && order.userId && !order.walletRefunded) {
+    try {
+      await creditWallet({
+        userId: order.userId,
+        amount: order.walletDeduction,
+        idempotencyKey: `wallet_release_failed_pay_${order.id}`,
+        orderId: order.orderNumber || order.id,
+        title: `Refund for Failed Payment #${order.orderNumber || order.id}`,
+        description: reason
+      });
+      order.walletRefunded = true;
+    } catch (e) {}
+  }
 
-    const updates = {
-      paymentStatus: 'FAILED',
-      walletRefunded: true,
-      coolerReleased: true
-    };
+  if (order.stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
+    await releaseStock(order.items);
+    order.stockDeducted = false;
+  }
 
-    if (isMongo) {
-      await Order.findOneAndUpdate({ id: order.id }, { $set: updates });
-    } else {
-      db.update('orders', order.id, updates);
-    }
-
-    return { success: true };
-  });
+  order.orderStatus = 'PAYMENT_FAILED';
+  order.paymentStatus = 'FAILED';
+  order.lifecycleStatus = 'CANCELLED';
+  db.update('orders', order.id, order);
 }

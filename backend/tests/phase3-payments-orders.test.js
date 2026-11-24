@@ -43,20 +43,20 @@ try {
   assert.strictEqual(calculateItemUnitPrice(testEggProd, '30 Eggs'), Math.round(100 * 4.4)); // 440
 
   // Quantity validation: reject invalid quantities
-  assert.throws(() => {
-    calculateOrderPricing({
+  await assert.rejects(async () => {
+    await calculateOrderPricing({
       items: [{ productId: 'prod_test_seer', quantity: -2, selectedWeight: '500g' }]
     });
   }, /must be an integer between 1 and 20/);
 
-  assert.throws(() => {
-    calculateOrderPricing({
+  await assert.rejects(async () => {
+    await calculateOrderPricing({
       items: [{ productId: 'prod_test_seer', quantity: 2.5, selectedWeight: '500g' }]
     });
   }, /must be an integer between 1 and 20/);
 
-  assert.throws(() => {
-    calculateOrderPricing({
+  await assert.rejects(async () => {
+    await calculateOrderPricing({
       items: [{ productId: 'prod_test_seer', quantity: 99, selectedWeight: '500g' }]
     });
   }, /must be an integer between 1 and 20/);
@@ -70,18 +70,18 @@ try {
   const mockUser = { id: 'usr_coupon_tester', phone: '+91 99999 11111' };
 
   // Minimum order value check: WELCOME50 requires >= ₹299
-  const lowValResult = validateAndApplyCoupon('WELCOME50', mockUser, 200);
+  const lowValResult = await validateAndApplyCoupon('WELCOME50', mockUser, 200);
   assert.strictEqual(lowValResult.valid, false);
   assert(lowValResult.error.includes('minimum order value'));
 
   // Valid coupon application
-  const validResult = validateAndApplyCoupon('WELCOME50', mockUser, 600);
+  const validResult = await validateAndApplyCoupon('WELCOME50', mockUser, 600);
   assert.strictEqual(validResult.valid, true);
   assert.strictEqual(validResult.discount, 50);
 
   // Record usage and test per-user limit
-  recordCouponUsage('WELCOME50', mockUser, 'BB-TEST-001');
-  const secondUseResult = validateAndApplyCoupon('WELCOME50', mockUser, 600);
+  await recordCouponUsage('WELCOME50', mockUser, 'BB-TEST-001');
+  const secondUseResult = await validateAndApplyCoupon('WELCOME50', mockUser, 600);
   assert.strictEqual(secondUseResult.valid, false);
   assert(secondUseResult.error.includes('maximum number of times'));
 

@@ -1,3 +1,6 @@
+import mongoose from 'mongoose';
+import { Product } from '../models/Product.js';
+import { Order } from '../models/Order.js';
 import { db } from '../db.js';
 
 /**
@@ -10,9 +13,19 @@ export async function processCustomerMessage(userMessage, userPhone = '', cartSu
   const text = (userMessage || '').trim();
   const lower = text.toLowerCase();
 
-  // Load latest live catalog & active orders from database
-  const products = db.get('products') || [];
-  const orders = db.get('orders') || [];
+  // Load latest live catalog & active orders from database (MongoDB sole source of truth)
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
+  let products = [];
+  let orders = [];
+  if (isMongo) {
+    [products, orders] = await Promise.all([
+      Product.find().lean(),
+      Order.find().lean()
+    ]);
+  } else {
+    products = db.get('products') || [];
+    orders = db.get('orders') || [];
+  }
 
   // Helper product lookup
   const getProd = (id) => products.find(p => p.id === id);
