@@ -17,7 +17,7 @@
     "framer-motion": "^14.9.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.65.0",
-    "postcss": "^8.5.32",
+    "postcss": "^8.5.33",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
