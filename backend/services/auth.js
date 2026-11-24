@@ -7,18 +7,29 @@ export function validateProductionEnv() {
   if (process.env.NODE_ENV === 'production') {
     const requiredVars = [
       'JWT_SECRET',
-      'MONGODB_URI'
+      'MONGODB_URI',
+      'RAZORPAY_KEY_ID',
+      'RAZORPAY_KEY_SECRET',
+      'RAZORPAY_WEBHOOK_SECRET'
     ];
 
     const missing = requiredVars.filter(v => !process.env[v] || process.env[v].trim() === '');
     if (missing.length > 0) {
-      console.warn(`[CONFIGURATION WARNING] Recommended production environment variables missing: ${missing.join(', ')}`);
+      console.error(`[FATAL CONFIGURATION ERROR] Missing required production environment variables: ${missing.join(', ')}`);
+      console.error('[FATAL CONFIGURATION ERROR] Server cannot start in production mode without explicit secrets.');
+      throw new Error(`Production startup failed: missing required environment variables: ${missing.join(', ')}`);
     }
   }
 }
 
 export function getJwtSecret() {
-  return process.env.JWT_SECRET || 'brisketbox-production-secure-fallback-secret-2026';
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+      throw new Error('JWT_SECRET must be configured in production environment.');
+    }
+    return process.env.JWT_SECRET;
+  }
+  return process.env.JWT_SECRET || 'brisketbox-dev-local-secret-key-2026';
 }
 
 export function parseCookies(cookieHeader) {
