@@ -2426,9 +2426,10 @@ app.post('/api/coolers/inspect/:coolerId/flag-damage', authenticate, requireAdmi
 });
 
 app.get('/api/admin/cooler-analytics', authenticate, requireAdmin, async (req, res) => {
-  const [coolers, returns] = await Promise.all([
+  const [coolers, returns, orders] = await Promise.all([
     findCoolers(),
-    findCoolerReturns()
+    findCoolerReturns(),
+    findOrders()
   ]);
 
   const totalCoolers = coolers.length;
