@@ -722,4 +722,685 @@ describe('Multi-Process Production Hardening & Single Source of Truth Suite', { 
       );
     }
   });
+
+  // -------------------------------------------------------------------------
+  // 10. CANCEL, THEN LATE CAPTURED WEBHOOK
+  // A captured webhook for a CANCELLED order must never make it CONFIRMED,
+  // deduct stock, or keep a wallet refund. Record payment and move to REFUND_REQUIRED.
+  // -------------------------------------------------------------------------
+  it('10. Cancelled order receiving late captured webhook transitions to REFUND_REQUIRED without deducting stock', async () => {
+    const pId = `prod_late_${Date.now()}`;
+    await Product.create({
+      id: pId,
+      name: 'Late Webhook Cut',
+      description: 'Late cut',
+      price: 649,
+      mrp: 700,
+      stock: 15,
+      category: 'fish',
+      unit: '500g',
+      netWeight: '500g',
+      grossWeight: '550g',
+      inStock: true
+    });
+
+    const user = await User.create({
+      id: `usr_late_${Date.now()}`,
+      name: 'Late Webhook User',
+      email: `late_${Date.now()}@test.com`,
+      role: 'customer',
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    // Create online payment order on Process A
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: pId, quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay'
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    // Cancel order on Process A
+    const cancelRes = await fetch(`${URL_A}/api/orders/${orderId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason: 'Customer changed mind before payment' })
+    });
+    assert.strictEqual(cancelRes.status, 200);
+
+    const postCancelOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(postCancelOrder.orderStatus, 'CANCELLED');
+
+    // Deliver captured webhook to Process B for this cancelled order
+    const paymentId = `pay_late_${Date.now()}`;
+    const payloadStr = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: razorpayOrderId,
+            amount: amount || 64900,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+    const signature = makeWebhookSignature(payloadStr);
+
+    const whRes = await fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': signature },
+      body: payloadStr
+    });
+    assert.strictEqual(whRes.status, 200);
+
+    // Verify MongoDB state:
+    const finalOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(finalOrder.orderStatus, 'REFUND_REQUIRED', 'Order status must be REFUND_REQUIRED');
+    assert.strictEqual(finalOrder.paymentStatus, 'REFUND_REQUIRED', 'Payment status must be REFUND_REQUIRED');
+    assert.notStrictEqual(finalOrder.orderStatus, 'CONFIRMED', 'Must never make a cancelled order CONFIRMED');
+    assert.strictEqual(finalOrder.stockDeducted, false, 'Stock must not be marked deducted');
+
+    const finalProd = await Product.findOne({ id: pId }).lean();
+    assert.strictEqual(finalProd.stock, 15, 'Stock must remain untouched at 15');
+
+    const pe = await PaymentEvent.findOne({ eventId: paymentId }).lean();
+    assert.ok(pe, 'PaymentEvent must be recorded');
+  });
+
+  // -------------------------------------------------------------------------
+  // 11. FAILED EVENT, THEN SUCCESSFUL RETRY
+  // payment.failed releases wallet money. On retry, wallet money is re-debited before payment acceptance.
+  // -------------------------------------------------------------------------
+  it('11. payment.failed releases wallet money, and subsequent retry re-debits wallet before accepting payment', async () => {
+    const user = await User.create({
+      id: `usr_retry_${Date.now()}`,
+      name: 'Retry User',
+      email: `retry_${Date.now()}@test.com`,
+      role: 'customer',
+      walletBalance: 200,
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    // Create online order with ₹100 wallet deduction
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: 'prod_seer_steak', quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay',
+        useWallet: true
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    // Verify ₹200 wallet reservation occurred (all available balance deducted for order)
+    let dbUser = await User.findOne({ id: user.id }).lean();
+    assert.strictEqual(dbUser.walletBalance, 0);
+
+    // Deliver payment.failed webhook to Process A
+    const failPayload = JSON.stringify({
+      event: 'payment.failed',
+      payload: {
+        payment: {
+          entity: {
+            id: `pay_fail_${Date.now()}`,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'failed'
+          }
+        }
+      }
+    });
+    const failSig = makeWebhookSignature(failPayload);
+    const failRes = await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': failSig },
+      body: failPayload
+    });
+    assert.strictEqual(failRes.status, 200);
+
+    // Verify wallet money was released back to ₹200
+    dbUser = await User.findOne({ id: user.id }).lean();
+    assert.strictEqual(dbUser.walletBalance, 200, 'Wallet balance must be restored upon payment failure');
+
+    // Customer retries payment successfully: deliver payment.captured to Process B
+    const retryPaymentId = `pay_retry_${Date.now()}`;
+    const retryPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: retryPaymentId,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+    const retrySig = makeWebhookSignature(retryPayload);
+    const retryRes = await fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': retrySig },
+      body: retryPayload
+    });
+    assert.strictEqual(retryRes.status, 200);
+
+    // Verify wallet money was re-debited by ₹200 before accepting payment (back to ₹0)
+    dbUser = await User.findOne({ id: user.id }).lean();
+    assert.strictEqual(dbUser.walletBalance, 0, 'Wallet balance must be re-debited upon retry');
+
+    const finalOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(finalOrder.paymentStatus, 'PAID');
+    assert.strictEqual(finalOrder.orderStatus, 'CONFIRMED');
+  });
+
+  // -------------------------------------------------------------------------
+  // 12. OLD FAILED EVENT AFTER PAID
+  // An old failed event arriving after an order is already PAID must never alter the order.
+  // -------------------------------------------------------------------------
+  it('12. Delayed payment.failed webhook arriving after PAID order must not change order or release stock', async () => {
+    const user = await User.create({
+      id: `usr_oldfail_${Date.now()}`,
+      name: 'Old Fail User',
+      email: `oldfail_${Date.now()}@test.com`,
+      role: 'customer',
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: 'prod_seer_steak', quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay'
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    // Mark PAID on Process A
+    const paymentId = `pay_succ_${Date.now()}`;
+    const capPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+    await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(capPayload) },
+      body: capPayload
+    });
+
+    const paidOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(paidOrder.paymentStatus, 'PAID');
+
+    // Deliver delayed payment.failed webhook to Process B
+    const failPayload = JSON.stringify({
+      event: 'payment.failed',
+      payload: {
+        payment: {
+          entity: {
+            id: `pay_fail_delayed_${Date.now()}`,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'failed'
+          }
+        }
+      }
+    });
+    const failRes = await fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(failPayload) },
+      body: failPayload
+    });
+    assert.strictEqual(failRes.status, 200);
+
+    // Verify order in MongoDB REMAINS PAID and CONFIRMED
+    const orderAfterFail = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(orderAfterFail.paymentStatus, 'PAID', 'Order must stay PAID');
+    assert.strictEqual(orderAfterFail.orderStatus, 'CONFIRMED', 'Order must stay CONFIRMED');
+    assert.strictEqual(orderAfterFail.stockDeducted, true, 'Stock deduction must be preserved');
+  });
+
+  // -------------------------------------------------------------------------
+  // 13. PAID ONLINE CANCELLATION AND REFUND
+  // Cancelling a PAID order atomically creates a refund record and sets refund state.
+  // -------------------------------------------------------------------------
+  it('13. Cancelling a PAID online order atomically sets refund state and creates PaymentEvent refund record', async () => {
+    const pId = `prod_cancel_paid_${Date.now()}`;
+    await Product.create({
+      id: pId,
+      name: 'Paid Cancel Cut',
+      description: 'Paid cancel',
+      price: 649,
+      mrp: 700,
+      stock: 10,
+      category: 'fish',
+      unit: '500g',
+      netWeight: '500g',
+      grossWeight: '550g',
+      inStock: true
+    });
+
+    const user = await User.create({
+      id: `usr_cpaid_${Date.now()}`,
+      name: 'Cancel Paid User',
+      email: `cpaid_${Date.now()}@test.com`,
+      role: 'customer',
+      walletBalance: 100,
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    // Create order with ₹100 wallet + ₹549 gateway
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: pId, quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay',
+        useWallet: true
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    // Finalize payment on Process A
+    const payId = `pay_cpaid_${Date.now()}`;
+    const capPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: payId,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+    await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(capPayload) },
+      body: capPayload
+    });
+
+    // Check order is paid and stock deducted
+    const preCancelOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(preCancelOrder.paymentStatus, 'PAID');
+    const preStock = await Product.findOne({ id: pId }).lean();
+    assert.strictEqual(preStock.stock, 9);
+
+    // Cancel order on Process B
+    const cancelRes = await fetch(`${URL_B}/api/orders/${orderId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason: 'Need to cancel paid order' })
+    });
+    assert.strictEqual(cancelRes.status, 200);
+
+    // Verify MongoDB state:
+    const postCancelOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(postCancelOrder.orderStatus, 'CANCELLED');
+    assert.strictEqual(postCancelOrder.paymentStatus, 'REFUND_PENDING', 'Payment status must be REFUND_PENDING');
+    assert.strictEqual(postCancelOrder.refundAmount, postCancelOrder.totalAmount);
+
+    // Gateway refund record created in PaymentEvent
+    const refundEvent = await PaymentEvent.findOne({ orderId: postCancelOrder.orderNumber, eventType: 'refund.created' }).lean();
+    assert.ok(refundEvent, 'Gateway refund PaymentEvent record must exist');
+    assert.strictEqual(refundEvent.amount, postCancelOrder.totalAmount);
+
+    // Wallet refund record created in WalletLedger
+    const walletRefund = await WalletLedger.findOne({ orderId: postCancelOrder.orderNumber, type: 'credit' }).lean();
+    assert.ok(walletRefund, 'Wallet refund ledger entry must exist');
+    assert.strictEqual(walletRefund.amount, 100);
+
+    // Stock restored back to 10
+    const postStock = await Product.findOne({ id: pId }).lean();
+    assert.strictEqual(postStock.stock, 10);
+  });
+
+  // -------------------------------------------------------------------------
+  // 14. DUPLICATE FAILED WEBHOOKS
+  // Duplicate payment.failed webhooks return 200 and release wallet reservation once.
+  // -------------------------------------------------------------------------
+  it('14. Duplicate payment.failed webhooks sent to Process A and B release wallet exactly once', async () => {
+    const user = await User.create({
+      id: `usr_dupfail_${Date.now()}`,
+      name: 'Dup Fail User',
+      email: `dupfail_${Date.now()}@test.com`,
+      role: 'customer',
+      walletBalance: 150,
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: 'prod_seer_steak', quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay',
+        useWallet: true
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    const failPayload = JSON.stringify({
+      event: 'payment.failed',
+      payload: {
+        payment: {
+          entity: {
+            id: `pay_dupfail_${Date.now()}`,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'failed'
+          }
+        }
+      }
+    });
+    const sig = makeWebhookSignature(failPayload);
+
+    // Fire duplicate failed webhooks concurrently to Process A and Process B
+    const sendA = fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': sig },
+      body: failPayload
+    });
+    const sendB = fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': sig },
+      body: failPayload
+    });
+
+    const [resA, resB] = await Promise.all([sendA, sendB]);
+    assert.strictEqual(resA.status, 200);
+    assert.strictEqual(resB.status, 200);
+
+    // Verify wallet was restored to ₹150 EXACTLY ONCE (never ₹300)
+    const finalUser = await User.findOne({ id: user.id }).lean();
+    assert.strictEqual(finalUser.walletBalance, 150, 'Wallet balance must be restored once to 150');
+
+    // Exactly 1 refund entry in WalletLedger for this order
+    const ledgers = await WalletLedger.find({ orderId, type: 'credit' }).lean();
+    assert.strictEqual(ledgers.length, 1, 'Exactly one refund entry in WalletLedger');
+  });
+
+  // -------------------------------------------------------------------------
+  // 15. CONCURRENT HANDOVER ON A AND B (REPEATED 20 TIMES)
+  // Double handover across two processes must count cash once via $inc.
+  // -------------------------------------------------------------------------
+  it('15. Concurrent handover across Process A and Process B counts cash exactly once (tested 20 times)', { timeout: 60000 }, async () => {
+    const ITERATIONS = 20;
+
+    for (let i = 0; i < ITERATIONS; i++) {
+      const rider = await User.create({
+        id: `rider_handover_${i}_${Date.now()}`,
+        name: `Rider Handover ${i}`,
+        email: `rider_ho_${i}_${Date.now()}@test.com`,
+        role: 'rider',
+        approvalStatus: 'approved',
+        cashInHand: 0
+      });
+      const riderToken = createToken(rider);
+
+      const pin = '4321';
+      const order = await Order.create({
+        id: `ORD_HO_${i}_${Date.now()}`,
+        orderNumber: `ORD_HO_${i}_${Date.now()}`,
+        userId: `usr_ho_${i}`,
+        customerName: 'Handover Customer',
+        customerEmail: 'ho@test.com',
+        customerPhone: '+91 97412 88301',
+        items: [{ productId: 'prod_seer_steak', name: 'Seer Fish', price: 500, quantity: 1, unit: '500g' }],
+        subtotal: 500,
+        total: 500,
+        totalAmount: 500,
+        deliveryAddress: 'Delivery Address',
+        deliveryPin: pin,
+        orderStatus: 'OUT_FOR_DELIVERY',
+        lifecycleStatus: 'OUT_FOR_DELIVERY',
+        riderId: rider.id,
+        paymentMethod: 'cod',
+        paymentStatus: 'PENDING'
+      });
+
+      // Fire concurrent handover requests with correct PIN to Process A and Process B
+      const hoA = fetch(`${URL_A}/api/orders/${order.id}/handover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+        body: JSON.stringify({ pin, cashAmount: 500 })
+      });
+      const hoB = fetch(`${URL_B}/api/orders/${order.id}/handover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${riderToken}` },
+        body: JSON.stringify({ pin, cashAmount: 500 })
+      });
+
+      const [resA, resB] = await Promise.all([hoA, hoB]);
+      const statuses = [resA.status, resB.status];
+
+      // Exactly one must succeed with 200, the other must fail with 400
+      assert.ok(statuses.includes(200), `One handover must return 200, got ${statuses} (iteration ${i})`);
+      assert.ok(statuses.includes(400), `The duplicate handover must return 400, got ${statuses} (iteration ${i})`);
+
+      // Verify MongoDB state:
+      const finalOrder = await Order.findOne({ id: order.id }).lean();
+      assert.strictEqual(finalOrder.orderStatus, 'DELIVERED');
+
+      // Rider cashInHand must be incremented by ₹500 EXACTLY ONCE (never ₹1000)
+      const finalRider = await User.findOne({ id: rider.id }).lean();
+      assert.strictEqual(
+        finalRider.cashInHand,
+        500,
+        `Rider cashInHand must be 500, was ${finalRider.cashInHand} (iteration ${i})`
+      );
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // 16. MULTI-ITEM OUT-OF-STOCK FINALIZATION
+  // If any item is unavailable during payment finalization, no stock from that order
+  // may be deducted. Partial transaction must not be committed.
+  // -------------------------------------------------------------------------
+  it('16. Multi-item out-of-stock payment finalization aborts stock changes and deducts zero items', async () => {
+    const p1 = `prod_multi_1_${Date.now()}`;
+    const p2 = `prod_multi_2_${Date.now()}`;
+
+    await Product.create([
+      {
+        id: p1,
+        name: 'In-Stock Cut',
+        description: 'Multi cut 1',
+        price: 200,
+        mrp: 250,
+        stock: 10, // Stock is 10
+        category: 'fish',
+        unit: '500g',
+        netWeight: '500g',
+        grossWeight: '550g',
+        inStock: true
+      },
+      {
+        id: p2,
+        name: 'Scarce Cut',
+        description: 'Multi cut 2',
+        price: 300,
+        mrp: 350,
+        stock: 1, // Only 1 in stock!
+        category: 'fish',
+        unit: '500g',
+        netWeight: '500g',
+        grossWeight: '550g',
+        inStock: true
+      }
+    ]);
+
+    const user = await User.create({
+      id: `usr_multi_${Date.now()}`,
+      name: 'Multi Item User',
+      email: `multi_${Date.now()}@test.com`,
+      role: 'customer',
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    // Create online order requesting 2 of p1 and 5 of p2 (p2 is out of stock!)
+    const rzpOrderId = `rzp_oos_${Date.now()}`;
+    const order = await Order.create({
+      id: `ORD_OOS_${Date.now()}`,
+      orderNumber: `ORD_OOS_${Date.now()}`,
+      userId: user.id,
+      customerName: user.name,
+      customerEmail: user.email,
+      customerPhone: '+91 97412 88301',
+      items: [
+        { productId: p1, name: 'In-Stock Cut', price: 200, quantity: 2, unit: '500g' },
+        { productId: p2, name: 'Scarce Cut', price: 300, quantity: 5, unit: '500g' }
+      ],
+      subtotal: 1900,
+      total: 1900,
+      totalAmount: 1900,
+      amountInPaise: 190000,
+      deliveryAddress: 'Test Lane',
+      orderStatus: 'PENDING_PAYMENT',
+      paymentStatus: 'PENDING',
+      razorpayOrderId: rzpOrderId
+    });
+
+    const paymentId = `pay_oos_${Date.now()}`;
+    const capPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: rzpOrderId,
+            amount: 190000,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+
+    const res = await fetch(`${URL_A}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(capPayload) },
+      body: capPayload
+    });
+    assert.strictEqual(res.status, 200);
+
+    // Verify MongoDB state:
+    const finalOrder = await Order.findOne({ id: order.id }).lean();
+    assert.strictEqual(finalOrder.orderStatus, 'REFUND_REQUIRED');
+    assert.strictEqual(finalOrder.paymentStatus, 'REFUND_REQUIRED');
+    assert.strictEqual(finalOrder.stockDeducted, false);
+
+    // CRITICAL: ZERO stock must be deducted from product 1! (Previous 10 must remain 10)
+    const postP1 = await Product.findOne({ id: p1 }).lean();
+    assert.strictEqual(postP1.stock, 10, 'Product 1 stock must NOT be deducted; transaction must rollback completely');
+
+    // Product 2 stock must remain 1
+    const postP2 = await Product.findOne({ id: p2 }).lean();
+    assert.strictEqual(postP2.stock, 1, 'Product 2 stock must remain 1');
+  });
+
+  // -------------------------------------------------------------------------
+  // 17. NO AVAILABLE RIDER
+  // If no approved rider is available, keep riderId null and show order in admin dispatch queue.
+  // -------------------------------------------------------------------------
+  it('17. If no approved rider is available, keep riderId null without hardcoding fallback', async () => {
+    // Demote or remove approved status from all riders
+    await User.updateMany({ role: 'rider' }, { $set: { approvalStatus: 'pending_approval' } });
+
+    const user = await User.create({
+      id: `usr_norider_${Date.now()}`,
+      name: 'No Rider User',
+      email: `norider_${Date.now()}@test.com`,
+      role: 'customer',
+      approvalStatus: 'approved'
+    });
+    const token = createToken(user);
+
+    const createRes = await fetch(`${URL_A}/api/payments/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        items: [{ productId: 'prod_seer_steak', quantity: 1, selectedWeight: '500g' }],
+        paymentMethod: 'razorpay'
+      })
+    });
+    const { orderId, razorpayOrderId, amount } = await createRes.json();
+
+    const paymentId = `pay_norider_${Date.now()}`;
+    const capPayload = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: razorpayOrderId,
+            amount,
+            currency: 'INR',
+            status: 'captured'
+          }
+        }
+      }
+    });
+
+    const whRes = await fetch(`${URL_B}/api/payments/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': makeWebhookSignature(capPayload) },
+      body: capPayload
+    });
+    assert.strictEqual(whRes.status, 200);
+
+    // Verify MongoDB state:
+    const finalOrder = await Order.findOne({ id: orderId }).lean();
+    assert.strictEqual(finalOrder.orderStatus, 'CONFIRMED');
+    assert.strictEqual(finalOrder.riderId, null, 'riderId must be null when no approved rider is available');
+    assert.strictEqual(finalOrder.deliveryExecutive, null, 'deliveryExecutive must be null');
+
+    // Admin can view unassigned orders in dispatch queue
+    const adminUser = await User.create({
+      id: `admin_queue_${Date.now()}`,
+      name: 'Admin Queue',
+      email: `admin_q_${Date.now()}@test.com`,
+      role: 'admin',
+      approvalStatus: 'approved'
+    });
+    const adminToken = createToken(adminUser);
+
+    const adminOrdersRes = await fetch(`${URL_A}/api/orders`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    const adminOrders = await adminOrdersRes.json();
+    const unassignedOrder = adminOrders.find(o => o.id === orderId);
+    assert.ok(unassignedOrder, 'Unassigned order must appear in admin dispatch queue');
+    assert.strictEqual(unassignedOrder.riderId, null);
+  });
 });

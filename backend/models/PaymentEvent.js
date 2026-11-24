@@ -7,7 +7,7 @@ const paymentEventSchema = new mongoose.Schema({
   paymentId: { type: String, default: null, index: true },
   amount: { type: Number, default: 0 },
   currency: { type: String, default: 'INR' },
-  source: { type: String, enum: ['verify', 'webhook', 'refund', 'simulation'], default: 'verify' },
+  source: { type: String, enum: ['verify', 'webhook', 'refund', 'simulation', 'cancellation'], default: 'verify' },
   payload: { type: mongoose.Schema.Types.Mixed, default: {} },
   status: { type: String, default: 'PROCESSED' }
 }, {

@@ -2209,7 +2209,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Line Items Table */}
-            <div className="border border-gray-100 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="border border-gray-100 dark:border-slate-800 rounded-xl overflow-hidden overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 text-[10px] uppercase font-bold">
                   <tr>

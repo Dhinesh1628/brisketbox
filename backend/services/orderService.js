@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { db } from '../db.js';
 import { Order } from '../models/Order.js';
 import { Cooler } from '../models/Cooler.js';
+import { PaymentEvent } from '../models/PaymentEvent.js';
 import { releaseStock } from './stockService.js';
 import { creditWallet } from './walletService.js';
 
@@ -87,14 +88,57 @@ export async function cancelOrder({ orderId, user, reason = 'Customer requested 
 
         // ONLY THE REQUEST THAT WINS THE CLAIM MAY CHANGE STOCK, WALLET, OR COOLER DATA:
 
-        // 1. Restore Inventory Atomically (ONLY if stock was previously deducted)
+        // 1. Paid Online Cancellation & Refund Record:
+        // Cancelling a PAID online order must atomically set a refund state and create exactly one refund record.
+        // Include the correct amount. Wallet and Razorpay portions must be handled separately. Never leave it as PAID with no refund.
+        if (existing.paymentStatus === 'PAID') {
+          if (claimed.totalAmount > 0) {
+            claimed.paymentStatus = 'REFUND_PENDING';
+            claimed.refundAmount = claimed.totalAmount;
+            claimed.refundId = `rfnd_${claimed.razorpayPaymentId || claimed.id}`;
+            claimed.status = 'Cancelled & Refund Initiated';
+
+            const refundEventKey = `rfnd_${claimed.razorpayPaymentId || claimed.id}`;
+            await PaymentEvent.create([{
+              id: `pe_${refundEventKey}`,
+              eventId: refundEventKey,
+              eventType: 'refund.created',
+              orderId: claimed.orderNumber || claimed.id,
+              paymentId: claimed.razorpayPaymentId,
+              amount: claimed.totalAmount,
+              currency: 'INR',
+              source: 'cancellation',
+              payload: { reason, refundType: 'gateway', amount: claimed.totalAmount }
+            }], { session });
+
+            await Order.updateOne({ _id: claimed._id }, {
+              $set: {
+                paymentStatus: 'REFUND_PENDING',
+                refundAmount: claimed.totalAmount,
+                refundId: claimed.refundId,
+                status: claimed.status
+              }
+            }, { session });
+          } else if (claimed.walletDeduction > 0) {
+            claimed.paymentStatus = 'REFUNDED';
+            claimed.status = 'Cancelled & Store Credit Refunded';
+            await Order.updateOne({ _id: claimed._id }, {
+              $set: {
+                paymentStatus: 'REFUNDED',
+                status: claimed.status
+              }
+            }, { session });
+          }
+        }
+
+        // 2. Restore Inventory Atomically (ONLY if stock was previously deducted)
         if (claimed.stockDeducted && Array.isArray(claimed.items) && claimed.items.length > 0) {
           await releaseStock(claimed.items, { session });
           claimed.stockDeducted = false;
           await Order.updateOne({ _id: claimed._id }, { $set: { stockDeducted: false } }, { session });
         }
 
-        // 2. Refund Wallet Balance Atomically with unique WalletLedger entry
+        // 3. Refund Wallet Balance Atomically with unique WalletLedger entry (handled separately from gateway)
         if (claimed.walletDeduction > 0 && claimed.userId && !claimed.walletRefunded) {
           await creditWallet({
             userId: claimed.userId,
@@ -108,7 +152,7 @@ export async function cancelOrder({ orderId, user, reason = 'Customer requested 
           await Order.updateOne({ _id: claimed._id }, { $set: { walletRefunded: true } }, { session });
         }
 
-        // 3. Release Cooler back to available pool
+        // 4. Release Cooler back to available pool
         if (claimed.coolerId && !claimed.coolerReleased) {
           await Cooler.findOneAndUpdate(
             { id: claimed.coolerId },

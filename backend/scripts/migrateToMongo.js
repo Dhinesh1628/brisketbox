@@ -9,11 +9,28 @@ const __dirname = path.dirname(__filename);
 const DATA_FILE = path.join(__dirname, '../data.json');
 
 /**
+ * Rejects all demo records, test data, and fake phone numbers.
+ */
+export function isDemoRecord(doc) {
+  if (!doc) return false;
+  if (doc.isDemo) return true;
+  const str = JSON.stringify(doc).toLowerCase();
+  // Fake / dummy sequential phone numbers
+  if (/98765\s?43210|98765\s?00000|99999\s?99999|99999\s?11111|12345\s?67890/.test(str)) return true;
+  // Demo or test email domains
+  if (/@(example\.com|test\.com)/i.test(doc.email || doc.customerEmail || '')) return true;
+  // Demo order prefixes or notes
+  if (/^(ord-)?(demo|test|breach)/i.test(doc.id || doc.orderNumber || '')) return true;
+  if (doc.notes && /demo|test/i.test(doc.notes)) return true;
+  return false;
+}
+
+/**
  * Enterprise Safe MongoDB Migration Script
  * Migrates data from local data.json into MongoDB.
  * DRY-RUN by default; requires --commit flag to write.
  * IDEMPOTENT: Checks for existing documents and NEVER overwrites existing data.
- * Validates all records before writing.
+ * Validates all records before writing. Refuses all demo records.
  */
 export async function runMigration(options = {}) {
   const isCommit = options.commit !== undefined ? options.commit : process.argv.includes('--commit');
@@ -50,6 +67,11 @@ export async function runMigration(options = {}) {
   // 1. Migrate Users
   if (Array.isArray(sourceData.users)) {
     for (const u of sourceData.users) {
+      if (isDemoRecord(u)) {
+        console.warn(`[Migration Refused] Demo user record refused: ${u.id || u.email}`);
+        stats.users.refused = (stats.users.refused || 0) + 1;
+        continue;
+      }
       const { _id, ...cleanUser } = u;
       cleanUser.email = (cleanUser.email || '').toLowerCase();
       const userDoc = new User(cleanUser);
@@ -132,6 +154,11 @@ export async function runMigration(options = {}) {
   if (Array.isArray(sourceData.orders)) {
     for (const o of sourceData.orders) {
       const orderNum = o.orderNumber || o.id;
+      if (isDemoRecord(o)) {
+        console.warn(`[Migration Refused] Demo order record refused: ${orderNum}`);
+        stats.orders.refused = (stats.orders.refused || 0) + 1;
+        continue;
+      }
       const { _id, ...cleanOrder } = o;
       if (!cleanOrder.orderNumber) cleanOrder.orderNumber = orderNum;
       if (cleanOrder.totalAmount === undefined) cleanOrder.totalAmount = cleanOrder.total || 0;

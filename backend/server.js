@@ -48,6 +48,10 @@ import crypto from 'crypto';
 import { calculateOrderPricing } from './services/pricingService.js';
 import { recordCouponUsage } from './services/couponService.js';
 import { deductStock, releaseStock } from './services/stockService.js';
+import { Order } from './models/Order.js';
+import { User } from './models/User.js';
+import { Cooler } from './models/Cooler.js';
+import { Product } from './models/Product.js';
 import { debitWallet, creditWallet } from './services/walletService.js';
 import { createBackup } from './scripts/backup.js';
 import {
@@ -1347,24 +1351,7 @@ const handleOrderHandover = async (req, res) => {
 
   const isCod = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod');
   const collectedCashNum = Number(cashAmount || (isCod ? order.total : 0));
-
   const depositPaid = Number(order.coolerDeposit || 0);
-  let depositRefundedThisTime = false;
-  if (coolerReturned && depositPaid > 0 && !order.coolerDepositRefunded && order.userId) {
-    try {
-      await creditWallet({
-        userId: order.userId,
-        amount: depositPaid,
-        idempotencyKey: `refund_cooler_${order.id}`,
-        orderId: order.orderNumber || order.id,
-        title: 'Cold Box Deposit Refund',
-        description: `Doorstep cooler returned for Order #${order.orderNumber || order.id}`
-      });
-      depositRefundedThisTime = true;
-    } catch (walletErr) {
-      console.warn('[Handover] Wallet refund error:', walletErr.message);
-    }
-  }
 
   const updatedLog = [
     ...(order.tempLog || []),
@@ -1375,32 +1362,114 @@ const handleOrderHandover = async (req, res) => {
     }
   ];
 
-  const updatedOrder = await updateOrder(order.id, {
-    status: 'Delivered',
-    orderStatus: 'DELIVERED',
-    lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
-    lifecycleTimestamps: timestamps,
-    coolerReturned: !!coolerReturned,
-    coolerDepositRefunded: (depositPaid > 0 && (depositRefundedThisTime || order.coolerDepositRefunded)),
-    podImage: podImage || order.podImage,
-    handoverNotes: notes || order.handoverNotes,
-    deliveredAt: nowIso,
-    cashCollected: collectedCashNum,
-    paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
-    liveTemp: 1.8,
-    tempLog: updatedLog
-  });
+  let updatedOrder = null;
+  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
 
-  if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
-    const rider = await findUserById(req.user.id);
-    if (rider) {
-      const currentCash = rider.cashInHand || 0;
-      await updateUser(rider.id, { cashInHand: currentCash + collectedCashNum });
+  if (isMongo) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // ATOMIC CLAIM: Only one request can transition orderStatus from OUT_FOR_DELIVERY / ARRIVED to DELIVERED
+        const claimed = await Order.findOneAndUpdate(
+          {
+            _id: order._id,
+            orderStatus: { $in: ['OUT_FOR_DELIVERY', 'ARRIVED'] }
+          },
+          {
+            $set: {
+              status: 'Delivered',
+              orderStatus: 'DELIVERED',
+              lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
+              lifecycleTimestamps: timestamps,
+              coolerReturned: Boolean(coolerReturned),
+              coolerDepositRefunded: (depositPaid > 0 && !order.coolerDepositRefunded),
+              podImage: podImage || order.podImage,
+              handoverNotes: notes || order.handoverNotes,
+              deliveredAt: nowIso,
+              cashCollected: collectedCashNum,
+              paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
+              liveTemp: 1.8,
+              tempLog: updatedLog,
+              pinAttempts: 0,
+              pinLockedUntil: null
+            }
+          },
+          { new: true, session }
+        );
+
+        if (!claimed) {
+          const err = new Error('Order has already been handed over and completed.');
+          err.statusCode = 400;
+          throw err;
+        }
+
+        // ONLY THE WINNER MAY RECORD CASH, USING $inc:
+        if (collectedCashNum > 0 && req.user && req.user.id) {
+          await User.updateOne(
+            { id: req.user.id },
+            { $inc: { cashInHand: collectedCashNum } },
+            { session }
+          );
+        }
+
+        // Release cooler if returned
+        if (coolerReturned && claimed.coolerId) {
+          await Cooler.findOneAndUpdate(
+            { id: claimed.coolerId },
+            { $set: { status: 'available', currentOrderId: null, currentUserId: null } },
+            { session }
+          );
+        }
+
+        // Refund deposit if paid and cooler returned
+        if (depositPaid > 0 && coolerReturned && !claimed.coolerDepositRefunded && claimed.userId) {
+          await creditWallet({
+            userId: claimed.userId,
+            amount: depositPaid,
+            idempotencyKey: `refund_cooler_${claimed.id}`,
+            orderId: claimed.orderNumber || claimed.id,
+            title: 'Cold Box Deposit Refund',
+            description: `Doorstep cooler returned for Order #${claimed.orderNumber || claimed.id}`
+          }, { session });
+        }
+
+        updatedOrder = claimed.toObject();
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 400).json({ error: err.message });
+    } finally {
+      await session.endSession();
     }
-  }
+  } else {
+    // LowDB fallback
+    updatedOrder = await updateOrder(order.id, {
+      status: 'Delivered',
+      orderStatus: 'DELIVERED',
+      lifecycleStatus: coolerReturned ? 'COOLER_RETURNED' : 'DELIVERED',
+      lifecycleTimestamps: timestamps,
+      coolerReturned: !!coolerReturned,
+      coolerDepositRefunded: depositPaid > 0,
+      podImage: podImage || order.podImage,
+      handoverNotes: notes || order.handoverNotes,
+      deliveredAt: nowIso,
+      cashCollected: collectedCashNum,
+      paymentStatus: collectedCashNum > 0 ? 'PAID' : order.paymentStatus,
+      liveTemp: 1.8,
+      tempLog: updatedLog,
+      pinAttempts: 0,
+      pinLockedUntil: null
+    });
 
-  if (coolerReturned && order.coolerId) {
-    await updateCooler(order.coolerId, { status: 'available' });
+    if (collectedCashNum > 0 && req.user && req.user.role === 'rider') {
+      const rider = await findUserById(req.user.id);
+      if (rider) {
+        await updateUser(rider.id, { cashInHand: (rider.cashInHand || 0) + collectedCashNum });
+      }
+    }
+
+    if (coolerReturned && order.coolerId) {
+      await updateCooler(order.coolerId, { status: 'available' });
+    }
   }
 
   const sanitized = { ...updatedOrder };

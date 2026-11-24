@@ -6,42 +6,15 @@ import { Order } from '../models/Order.js';
 import { PaymentEvent } from '../models/PaymentEvent.js';
 import { CouponUsage } from '../models/CouponUsage.js';
 import { deductStock, releaseStock } from './stockService.js';
-import { creditWallet } from './walletService.js';
+import { creditWallet, debitWallet } from './walletService.js';
+import { assignFleetRiderForOrder } from '../dispatch.js';
 
 /**
  * Assigns an active, approved delivery executive for the order.
+ * If no approved rider is available, keeps riderId null so it displays in admin dispatch queue.
  */
 export async function assignRealRider(session = null) {
-  const isMongo = mongoose.connection && mongoose.connection.readyState === 1;
-  let riders = [];
-  if (isMongo) {
-    const q = User.find({ role: 'rider', approvalStatus: 'approved' });
-    if (session) q.session(session);
-    riders = await q.lean();
-  } else {
-    riders = (db.get('users') || []).filter(u => u.role === 'rider' && u.approvalStatus === 'approved');
-  }
-
-  if (riders.length > 0) {
-    const selected = riders[0];
-    return {
-      riderId: selected.id,
-      riderName: selected.name ? selected.name.split(' ')[0] : 'Rider',
-      riderFullName: selected.name || 'Fleet Delivery Executive',
-      riderPhone: selected.phone || '+91 97412 88301',
-      riderVehicle: selected.vehicleType ? `${selected.vehicleType} (${selected.vehicleNumber || 'KA-04-EV'})` : 'EV 2-Wheeler',
-      deliveryExecutive: `${selected.name || 'Fleet Executive'} (${selected.phone || '+91 97412 88301'})`
-    };
-  }
-
-  return {
-    riderId: 'usr_rider_1',
-    riderName: 'Suresh',
-    riderFullName: 'Suresh Patil',
-    riderPhone: '+91 97412 88301',
-    riderVehicle: 'EV 2-Wheeler (KA-04-EV-819)',
-    deliveryExecutive: 'Suresh Patil (EV Fleet #14, +91 97412 88301)'
-  };
+  return await assignFleetRiderForOrder(session);
 }
 
 /**
@@ -105,6 +78,10 @@ export async function finalizePayment({
 
   if (isMongo) {
     const session = await mongoose.startSession();
+    let stockFailureError = null;
+    let targetOrderForRecovery = null;
+    let uniqueEventKeyForRecovery = null;
+
     try {
       let finalOrder = null;
       let alreadyPaid = false;
@@ -126,6 +103,8 @@ export async function finalizePayment({
           throw err;
         }
 
+        targetOrderForRecovery = existing;
+
         // Idempotency: If already marked PAID, return existing order
         if (existing.paymentStatus === 'PAID') {
           finalOrder = existing.toObject();
@@ -135,6 +114,41 @@ export async function finalizePayment({
 
         // Unique PaymentEvent key: Razorpay event ID or payment ID, NEVER Date.now()!
         const uniqueEventKey = eventId || razorpayPaymentId || `pay_${razorpayOrderId || existing.id}`;
+        uniqueEventKeyForRecovery = uniqueEventKey;
+
+        // 1. LATE PAYMENT AFTER CANCEL / EXPIRED:
+        // A captured webhook for a CANCELLED or expired order must never make it CONFIRMED,
+        // deduct stock, or keep a wallet refund. Record the payment and move the order to REFUND_REQUIRED.
+        const isCancelledOrDead = ['CANCELLED', 'EXPIRED'].includes(existing.orderStatus) || 
+                                  ['CANCELLED', 'EXPIRED', 'REFUND_REQUIRED'].includes(existing.paymentStatus);
+
+        if (isCancelledOrDead) {
+          await PaymentEvent.create([{
+            id: `pe_${uniqueEventKey}`,
+            eventId: uniqueEventKey,
+            eventType: 'payment.captured',
+            orderId: existing.orderNumber || existing.id,
+            paymentId: razorpayPaymentId,
+            amount: amountInPaise ? amountInPaise / 100 : (existing.totalAmount || existing.total),
+            currency,
+            source,
+            payload: { razorpayOrderId, razorpayPaymentId, razorpaySignature, latePayment: true }
+          }], { session });
+
+          existing.orderStatus = 'REFUND_REQUIRED';
+          existing.paymentStatus = 'REFUND_REQUIRED';
+          existing.lifecycleStatus = 'REFUND_REQUIRED';
+          existing.status = 'Payment Captured on Cancelled Order (Refund Required)';
+          existing.refundAmount = amountInPaise ? amountInPaise / 100 : (existing.totalAmount || existing.total);
+          existing.notes = 'Late payment captured after order was cancelled or expired. Auto-refund required.';
+          existing.razorpayPaymentId = razorpayPaymentId || existing.razorpayPaymentId;
+          existing.razorpayOrderId = razorpayOrderId || existing.razorpayOrderId;
+          await existing.save({ session });
+
+          finalOrder = existing.toObject();
+          refundRequired = true;
+          return;
+        }
 
         // ATOMIC CLAIM: Only one request can transition paymentStatus from NOT PAID to 'PAID'
         const claimed = await Order.findOneAndUpdate(
@@ -191,27 +205,27 @@ export async function finalizePayment({
           }
         }
 
-        // ONLY THE REQUEST THAT WINS THE CLAIM MAY CHANGE STOCK:
+        // RE-DEBIT WALLET ON RETRY: If wallet money was released on failure/expiry, re-debit it before accepting payment
+        if (claimed.walletDeduction > 0 && claimed.walletRefunded) {
+          await debitWallet({
+            userId: claimed.userId,
+            amount: claimed.walletDeduction,
+            idempotencyKey: `wallet_redebit_retry_${claimed.id}`,
+            orderId: claimed.orderNumber || claimed.id,
+            title: `Payment Retry for Order #${claimed.orderNumber || claimed.id}`,
+            description: `Re-applied ₹${claimed.walletDeduction} wallet balance on payment retry.`
+          }, { session });
+          claimed.walletRefunded = false;
+          claimed.walletDebited = true;
+        }
+
+        // MULTI-ITEM ATOMIC STOCK DEDUCTION:
+        // If any item is unavailable during payment finalization, no stock from that order may be deducted.
+        // We let deductStock throw so the transaction aborts and rolls back completely!
         let stockDeducted = Boolean(claimed.stockDeducted);
         if (!stockDeducted && Array.isArray(claimed.items) && claimed.items.length > 0) {
-          try {
-            await deductStock(claimed.items, { session });
-            claimed.stockDeducted = true;
-          } catch (stockErr) {
-            console.error('[PaymentFinalizer] Stock deduction failed post-payment:', stockErr.message);
-
-            // Stock unavailable post-payment: Move order to REFUND_REQUIRED state
-            claimed.orderStatus = 'REFUND_REQUIRED';
-            claimed.status = 'Refund Required (Out of Stock)';
-            claimed.lifecycleStatus = 'REFUND_REQUIRED';
-            claimed.stockDeducted = false;
-            claimed.notes = `Automatic refund required: Item out of stock after payment capture (${stockErr.message})`;
-            await claimed.save({ session });
-
-            finalOrder = claimed.toObject();
-            refundRequired = true;
-            return;
-          }
+          await deductStock(claimed.items, { session });
+          claimed.stockDeducted = true;
         }
 
         // Assign real approved rider & available cooler
@@ -243,14 +257,86 @@ export async function finalizePayment({
         return {
           success: false,
           refundRequired: true,
-          error: 'Item out of stock during payment capture. Order moved to refund-required state.',
+          error: 'Order in refund-required state.',
           order: finalOrder
         };
       }
 
       return { success: true, order: finalOrder, alreadyPaid };
+    } catch (txErr) {
+      if (txErr.message && txErr.message.includes('Insufficient stock')) {
+        stockFailureError = txErr;
+      } else {
+        throw txErr;
+      }
     } finally {
       await session.endSession();
+    }
+
+    // MULTI-ITEM STOCK OUT OF STOCK RECOVERY:
+    // The previous transaction was aborted, so ZERO items had their stock deducted.
+    // Now record the PaymentEvent and atomically mark the order as REFUND_REQUIRED.
+    if (stockFailureError && targetOrderForRecovery) {
+      const recoverySession = await mongoose.startSession();
+      let recoveryOrder = null;
+      try {
+        await recoverySession.withTransaction(async () => {
+          const uniqueKey = uniqueEventKeyForRecovery || `pay_oos_${targetOrderForRecovery.id}`;
+          await PaymentEvent.create([{
+            id: `pe_${uniqueKey}`,
+            eventId: uniqueKey,
+            eventType: 'payment.captured',
+            orderId: targetOrderForRecovery.orderNumber || targetOrderForRecovery.id,
+            paymentId: razorpayPaymentId,
+            amount: amountInPaise ? amountInPaise / 100 : (targetOrderForRecovery.totalAmount || targetOrderForRecovery.total),
+            currency,
+            source,
+            payload: { razorpayOrderId, razorpayPaymentId, razorpaySignature, outOfStock: true }
+          }], { session: recoverySession });
+
+          const updated = await Order.findOneAndUpdate(
+            { _id: targetOrderForRecovery._id },
+            {
+              $set: {
+                paymentStatus: 'REFUND_REQUIRED',
+                orderStatus: 'REFUND_REQUIRED',
+                lifecycleStatus: 'REFUND_REQUIRED',
+                status: 'Refund Required (Out of Stock)',
+                stockDeducted: false,
+                refundAmount: amountInPaise ? amountInPaise / 100 : (targetOrderForRecovery.totalAmount || targetOrderForRecovery.total),
+                notes: `Automatic refund required: Item out of stock after payment capture (${stockFailureError.message})`,
+                razorpayPaymentId: razorpayPaymentId || targetOrderForRecovery.razorpayPaymentId,
+                razorpayOrderId: razorpayOrderId || targetOrderForRecovery.razorpayOrderId
+              }
+            },
+            { new: true, session: recoverySession }
+          );
+
+          if (updated && updated.walletDebited && updated.walletDeduction > 0 && !updated.walletRefunded) {
+            await creditWallet({
+              userId: updated.userId,
+              amount: updated.walletDeduction,
+              idempotencyKey: `wallet_refund_stock_fail_${updated.id}`,
+              orderId: updated.orderNumber || updated.id,
+              title: `Refund for Out-of-Stock Order #${updated.orderNumber || updated.id}`,
+              description: 'Wallet store credit refunded because items were out of stock.'
+            }, { session: recoverySession });
+            updated.walletRefunded = true;
+            await updated.save({ session: recoverySession });
+          }
+
+          recoveryOrder = updated ? updated.toObject() : targetOrderForRecovery.toObject();
+        });
+      } finally {
+        await recoverySession.endSession();
+      }
+
+      return {
+        success: false,
+        refundRequired: true,
+        error: 'Item out of stock during payment capture. Order moved to refund-required state.',
+        order: recoveryOrder
+      };
     }
   }
 
@@ -329,39 +415,66 @@ export async function releasePaymentReservations({ orderId, reason = 'Payment ex
 
         if (!order) return;
 
+        // Strictly act ONLY on an unpaid pending order!
+        // An old failed event must NEVER change a PAID or confirmed order!
+        if (order.paymentStatus === 'PAID' || ['CONFIRMED', 'DELIVERED', 'COOLER_RETURNED'].includes(order.orderStatus)) {
+          console.log(`[ReleasePayment] Order ${order.id} is already PAID/CONFIRMED. Ignoring payment failure/expiry.`);
+          return;
+        }
+
+        // Atomic claim: Only transition from unpaid pending statuses to 'FAILED'
+        const claimed = await Order.findOneAndUpdate(
+          {
+            _id: order._id,
+            paymentStatus: { $ne: 'PAID' },
+            orderStatus: { $in: ['PENDING_PAYMENT', 'CREATED', 'PLACED'] }
+          },
+          {
+            $set: {
+              orderStatus: 'FAILED',
+              paymentStatus: 'FAILED',
+              lifecycleStatus: 'CANCELLED',
+              status: 'Payment Failed or Expired'
+            }
+          },
+          { new: true, session }
+        );
+
+        if (!claimed) {
+          return;
+        }
+
         // Release cooler if assigned
-        if (order.coolerId && !order.coolerReleased) {
+        if (claimed.coolerId && !claimed.coolerReleased) {
           await Cooler.findOneAndUpdate(
-            { id: order.coolerId },
+            { id: claimed.coolerId },
             { $set: { status: 'available', currentOrderId: null, currentUserId: null } },
             { session }
           );
-          order.coolerReleased = true;
+          claimed.coolerReleased = true;
+          await Order.updateOne({ _id: claimed._id }, { $set: { coolerReleased: true } }, { session });
         }
 
-        // Release wallet balance if debited and not yet refunded
-        if (order.walletDeduction > 0 && order.userId && !order.walletRefunded) {
+        // Release wallet balance exactly once if debited and not yet refunded
+        if (claimed.walletDeduction > 0 && claimed.userId && !claimed.walletRefunded) {
           await creditWallet({
-            userId: order.userId,
-            amount: order.walletDeduction,
-            idempotencyKey: `wallet_release_failed_pay_${order.id}`,
-            orderId: order.orderNumber || order.id,
-            title: `Refund for Failed Payment #${order.orderNumber || order.id}`,
+            userId: claimed.userId,
+            amount: claimed.walletDeduction,
+            idempotencyKey: `wallet_release_failed_pay_${claimed.id}`,
+            orderId: claimed.orderNumber || claimed.id,
+            title: `Refund for Failed Payment #${claimed.orderNumber || claimed.id}`,
             description: reason
           }, { session });
-          order.walletRefunded = true;
+          claimed.walletRefunded = true;
+          await Order.updateOne({ _id: claimed._id }, { $set: { walletRefunded: true } }, { session });
         }
 
         // Release stock if deducted
-        if (order.stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
-          await releaseStock(order.items, { session });
-          order.stockDeducted = false;
+        if (claimed.stockDeducted && Array.isArray(claimed.items) && claimed.items.length > 0) {
+          await releaseStock(claimed.items, { session });
+          claimed.stockDeducted = false;
+          await Order.updateOne({ _id: claimed._id }, { $set: { stockDeducted: false } }, { session });
         }
-
-        order.orderStatus = 'PAYMENT_FAILED';
-        order.paymentStatus = 'FAILED';
-        order.lifecycleStatus = 'CANCELLED';
-        await order.save({ session });
       });
     } finally {
       await session.endSession();

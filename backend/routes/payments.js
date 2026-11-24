@@ -610,9 +610,12 @@ router.post('/webhook', async (req, res) => {
         return res.status(404).json({ error: 'Order not found for captured payment' });
       }
 
-      // Idempotency: If already marked PAID, acknowledge duplicate webhook safely
+      // Idempotency: If already marked PAID or REFUND_REQUIRED, acknowledge duplicate webhook safely
       if (order.paymentStatus === 'PAID') {
         return res.status(200).json({ status: 'ok', received: true, alreadyPaid: true });
+      }
+      if (order.orderStatus === 'REFUND_REQUIRED' || order.paymentStatus === 'REFUND_REQUIRED') {
+        return res.status(200).json({ status: 'ok', received: true, refundRequired: true });
       }
 
       // 1. Verify currency
@@ -667,6 +670,8 @@ router.post('/webhook', async (req, res) => {
         await releasePaymentReservations({ orderId: order.id });
         console.log(`[Webhook] Order ${order.id} payment failed/expired. Released reservations.`);
       }
+
+      return res.status(200).json({ status: 'ok', received: true });
     } else if (event === 'refund.processed') {
       const refund = payload.refund.entity;
       const paymentId = refund.payment_id;

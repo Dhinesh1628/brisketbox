@@ -83,7 +83,9 @@ const orderSchema = new mongoose.Schema({
       'REFUND_PENDING',
       'REFUND_REQUIRED',
       'REFUNDED',
-      'CANCELLED'
+      'CANCELLED',
+      'FAILED',
+      'EXPIRED'
     ],
     default: 'PENDING_PAYMENT',
     index: true
@@ -104,7 +106,9 @@ const orderSchema = new mongoose.Schema({
       'REFUND_PENDING',
       'REFUND_REQUIRED',
       'REFUNDED',
-      'CANCELLED'
+      'CANCELLED',
+      'FAILED',
+      'EXPIRED'
     ],
     default: 'PENDING_PAYMENT',
     index: true
