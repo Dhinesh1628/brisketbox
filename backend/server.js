@@ -909,18 +909,26 @@ app.patch('/api/rider/orders/:id/lifecycle', authenticate, requireRole('rider'),
   const timestamps = { ...(order.lifecycleTimestamps || {}) };
 
   let statusLabel = order.status;
+  let targetOrderStatus = order.orderStatus;
   if (lifecycleStatus === 'PICKED_UP') {
     timestamps.pickedUpAt = timestamps.pickedUpAt || nowIso;
     statusLabel = 'Picked Up from Hub';
+    targetOrderStatus = 'READY_FOR_PICKUP';
   } else if (lifecycleStatus === 'OUT_FOR_DELIVERY') {
     timestamps.outForDeliveryAt = timestamps.outForDeliveryAt || nowIso;
     statusLabel = 'Out for Delivery';
+    targetOrderStatus = 'OUT_FOR_DELIVERY';
+  } else if (lifecycleStatus === 'ARRIVED') {
+    timestamps.arrivedAt = timestamps.arrivedAt || nowIso;
+    statusLabel = 'Arrived at Customer Doorstep';
+    targetOrderStatus = 'ARRIVED';
   } else if (lifecycleStatus === 'COOLER_RETURNED') {
     timestamps.coolerReturnedAt = timestamps.coolerReturnedAt || nowIso;
     statusLabel = 'Cooler Returned';
   }
 
   const updates = {
+    orderStatus: targetOrderStatus,
     lifecycleStatus: lifecycleStatus || order.lifecycleStatus,
     status: statusLabel,
     riderId: req.user.id,
@@ -1248,7 +1256,8 @@ app.patch('/api/admin/orders/:id/assign', authenticate, requireAdmin, async (req
       updates.riderVehicle = rider.vehicleType ? `${rider.vehicleType} (${rider.vehicleNumber || ''})` : 'EV 2-Wheeler';
       updates.deliveryExecutive = `${rider.name} (${rider.phone || ''})`;
       updates.lifecycleStatus = 'RIDER_ASSIGNED';
-      updates.status = 'Rider Assigned';
+      updates.orderStatus = 'OUT_FOR_DELIVERY';
+      updates.status = 'Out for Delivery';
       updates.lifecycleTimestamps = {
         ...(order.lifecycleTimestamps || {}),
         assignedAt: new Date().toISOString()
@@ -1476,7 +1485,7 @@ const handleOrderHandover = async (req, res) => {
         const claimed = await Order.findOneAndUpdate(
           {
             _id: order._id,
-            orderStatus: { $in: ['CONFIRMED', 'PREPARING', 'QUALITY_CHECK', 'PACKED', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'ARRIVED'] }
+            orderStatus: { $ne: 'DELIVERED' }
           },
           {
             $set: {
