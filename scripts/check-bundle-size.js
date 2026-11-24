@@ -128,7 +128,12 @@ async function main() {
         if (process.platform === 'win32') {
           execSync(`taskkill /pid ${serverProc.pid} /T /F`, { stdio: 'ignore' });
         } else {
-          serverProc.kill('SIGTERM');
+          try {
+            execSync(`fuser -k 4173/tcp 2>/dev/null || kill -9 ${serverProc.pid}`, { stdio: 'ignore' });
+          } catch {}
+          try {
+            serverProc.kill('SIGKILL');
+          } catch {}
         }
       } catch {}
     }
