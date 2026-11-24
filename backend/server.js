@@ -211,6 +211,20 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+// Ensure MongoDB connection is established for serverless / cold-start requests
+if (process.env.VERCEL || (process.env.NODE_ENV === 'production' && process.env.NODE_ENV !== 'test')) {
+  app.use(async (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectMongoDB();
+      } catch (e) {
+        // Handled downstream by ensureOnline or error handler
+      }
+    }
+    next();
+  });
+}
+
 // Serve frontend static assets (for monolith build)
 const clientDist = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(clientDist)) {
@@ -252,6 +266,11 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/db/status', async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectMongoDB();
+    } catch (e) {}
+  }
   const [products, orders, coolers, users, returns] = await Promise.all([
     findProducts(),
     findOrders(),
