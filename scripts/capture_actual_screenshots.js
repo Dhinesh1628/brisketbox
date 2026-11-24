@@ -113,7 +113,7 @@ async function run() {
     // 8. CUSTOMER DASHBOARD (Logged in as Pooja Sundaram)
     // ==========================================
     console.log('Capturing 08_customer_dashboard.png...');
-    const customerToken = await getLoginToken('pooja.sundaram@gmail.com', 'customer123');
+    const customerToken = await getLoginToken('pooja.sundaram@gmail.com', process.env.TEST_PASSWORD || '');
     await page.goto('http://localhost:5173/');
     await page.evaluate((tok) => {
       localStorage.setItem('frost_token', tok);
@@ -152,7 +152,7 @@ async function run() {
     // 11. ADMIN DASHBOARD (Logged in as Rajeshwar Rao)
     // ==========================================
     console.log('Capturing 11_admin_dashboard_kpis.png...');
-    const adminToken = await getLoginToken('ops@brisketbox.in', 'admin123');
+    const adminToken = await getLoginToken('ops@brisketbox.in', process.env.TEST_PASSWORD || '');
     await page.evaluate((tok) => {
       localStorage.setItem('frost_token', tok);
     }, adminToken);

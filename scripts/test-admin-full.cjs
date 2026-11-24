@@ -35,7 +35,7 @@ if (!fs.existsSync(screenshotDir)) {
   await new Promise(r => setTimeout(r, 1500));
 
   console.log('3. Submitting the Admin Login Modal...');
-  // The login modal is prefilled with ops@gomeat.in / admin123!
+  // The login modal credentials
   const submitted = await page.evaluate(() => {
     const form = document.querySelector('form');
     if (form) {
