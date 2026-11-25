@@ -187,8 +187,30 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-splash-logo {
+  .animate-splash-logo,
+  .animate-reload-progress {
     animation: none !important;
   }
 }
+
+/* Reload Sleek Progress Line Animation */
+@keyframes reloadProgressBar {
+  0% {
+    width: 0%;
+    transform: translateX(-100%);
+  }
+  50% {
+    width: 65%;
+    transform: translateX(0%);
+  }
+  100% {
+    width: 100%;
+    transform: translateX(0%);
+  }
+}
+
+.animate-reload-progress {
+  animation: reloadProgressBar 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 
