@@ -107,7 +107,8 @@ export async function getAvailableDeliverySlots(options = {}) {
 
   // Generate for Today (day offset 0) and Tomorrow (day offset 1)
   const days = [0, 1];
-  const allSlots = [];
+  const allSlotDefs = [];
+  const futureSlotIds = [];
 
   for (const dayOffset of days) {
     const targetDate = new Date(now.getTime() + (dayOffset * 24 * 60 * 60 * 1000));
@@ -128,31 +129,72 @@ export async function getAvailableDeliverySlots(options = {}) {
 
       const isPastCutoff = now.getTime() >= cutoffTime;
 
-      // Only evaluate capacity for future slots
-      let bookedCount = 0;
       if (!isPastCutoff) {
-        bookedCount = await getBookedCount(slotId, now);
+        futureSlotIds.push(slotId);
       }
 
-      const availableCapacity = Math.max(0, maxOrders - bookedCount);
-      const isFull = availableCapacity <= 0;
-
-      const slotObj = {
-        id: slotId,
-        date: istTarget.dateStr,
-        startTime: `${String(win.startHour).padStart(2, '0')}:00`,
-        endTime: `${String(win.endHour).padStart(2, '0')}:00`,
+      allSlotDefs.push({
+        slotId,
+        dateStr: istTarget.dateStr,
+        startHour: win.startHour,
+        endHour: win.endHour,
         isToday,
         label,
-        bookedCount,
-        maxCapacity: maxOrders,
-        availableCapacity,
-        isFull,
         isPastCutoff
-      };
-
-      allSlots.push(slotObj);
+      });
     }
+  }
+
+  // Batch-fetch booked counts in a single DeliverySlot.find query across all future slots
+  const bookedCountsMap = new Map();
+  const isMongo = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+
+  if (futureSlotIds.length > 0) {
+    if (isMongo) {
+      const slotDocs = await DeliverySlot.find({ slotId: { $in: futureSlotIds } }).lean();
+      for (const slotDoc of slotDocs) {
+        const confirmed = Number(slotDoc.confirmedCount || 0);
+        const unexpiredHolds = (slotDoc.holds || []).filter(h => new Date(h.expiresAt) > now).length;
+        bookedCountsMap.set(slotDoc.slotId, confirmed + unexpiredHolds);
+      }
+    } else {
+      // In-memory fallback
+      for (const sId of futureSlotIds) {
+        const mem = inMemorySlotBookings.get(sId);
+        if (mem) {
+          if (typeof mem === 'number') {
+            bookedCountsMap.set(sId, mem);
+          } else {
+            const confirmed = Number(mem.confirmedCount || 0);
+            const unexpiredHolds = (mem.holds || []).filter(h => new Date(h.expiresAt) > now).length;
+            bookedCountsMap.set(sId, confirmed + unexpiredHolds);
+          }
+        }
+      }
+    }
+  }
+
+  const allSlots = [];
+  for (const def of allSlotDefs) {
+    const bookedCount = def.isPastCutoff ? 0 : (bookedCountsMap.get(def.slotId) || 0);
+    const availableCapacity = Math.max(0, maxOrders - bookedCount);
+    const isFull = availableCapacity <= 0;
+
+    const slotObj = {
+      id: def.slotId,
+      date: def.dateStr,
+      startTime: `${String(def.startHour).padStart(2, '0')}:00`,
+      endTime: `${String(def.endHour).padStart(2, '0')}:00`,
+      isToday: def.isToday,
+      label: def.label,
+      bookedCount,
+      maxCapacity: maxOrders,
+      availableCapacity,
+      isFull,
+      isPastCutoff: def.isPastCutoff
+    };
+
+    allSlots.push(slotObj);
   }
 
   // Future available slots: not past cut-off, and not full (unless includeFull is requested)
