@@ -83,9 +83,7 @@ export const SplashIntro: React.FC = () => {
         />
       </div>
 
-      <div className="absolute bottom-5 text-[10px] text-gray-400 dark:text-gray-500 font-mono tracking-wider">
-        Click anywhere to skip
-      </div>
+      <span className="sr-only">Click anywhere or press any key to skip intro</span>
     </div>
   );
 };
