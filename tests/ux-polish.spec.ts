@@ -249,4 +249,143 @@ test.describe('UX Polish & 3-Colour System Integrity', () => {
     await expect(stickyBar.locator('text=₹').first()).toBeVisible();
   });
 
+  test('11. Full e-commerce flow: Search typo -> QuantityStepper -> Cart -> 3-step checkout -> Order Confirmation -> Reorder', async ({ page }) => {
+    // Set authenticated customer session so checkout opens directly
+    await page.addInitScript(() => {
+      localStorage.setItem('brisketbox_token', 'test_token');
+    });
+
+    await page.route('**/api/auth/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'cust_test',
+          name: 'Test Customer',
+          email: 'test@example.com',
+          phone: '9876543210',
+          role: 'customer',
+          walletBalance: 0
+        })
+      });
+    });
+
+    // Intercept checkout API to simulate instant order placement
+    await page.route('**/api/payments/create-order', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          orderId: 'BB-FLOW-999',
+          orderNumber: 'BB-FLOW-999',
+          isCod: true,
+          amount: 299,
+          order: {
+            id: 'BB-FLOW-999',
+            orderNumber: 'BB-FLOW-999',
+            userId: 'cust_test',
+            customerName: 'Test Customer',
+            customerEmail: 'test@example.com',
+            customerPhone: '9876543210',
+            deliveryAddress: 'Flat 101, Test Residency, Outer Ring Road, Bengaluru, Karnataka - 560037',
+            deliverySlot: 'Express Chilled Delivery (Live Courier)',
+            items: [
+              {
+                productId: 'prod_1',
+                name: 'Fresh Chicken Curry Cut',
+                price: 299,
+                quantity: 1,
+                unit: '500g',
+                netWeight: '500g'
+              }
+            ],
+            subtotal: 299,
+            coolerDeposit: 0,
+            shippingFee: 0,
+            total: 299,
+            status: 'CONFIRMED',
+            paymentMethod: 'cod'
+          }
+        })
+      });
+    });
+
+    // 1. Visit Catalog
+    await page.goto('/catalog', { waitUntil: 'networkidle' });
+    await expect(page).toHaveURL(/\/catalog/);
+
+    // 2. Typo Search in catalog
+    const searchInput = page.locator('main input[placeholder*="Search chicken"]').first();
+    await searchInput.fill('chikn');
+    await page.waitForTimeout(400);
+
+    // Typo banner shown
+    await expect(page.locator('text=Showing results for').first()).toBeVisible();
+
+    // 3. Add item using Add button
+    const addBtn = page.locator('[data-testid^="catalog-card-"] button:has-text("Add")').first();
+    await addBtn.click();
+    await page.waitForTimeout(500);
+
+    // 4. Cart Drawer opens automatically upon adding item
+    const drawer = page.locator('div[role="dialog"][aria-label="Shopping Cart"]').first();
+    await expect(drawer).toBeVisible();
+
+    // Check express chilled delivery banner is visible in cart
+    await expect(drawer.locator('text=Express Chilled Delivery').first()).toBeVisible();
+
+    // Click Continue to Checkout
+    const checkoutBtn = drawer.locator('button:has-text("Continue")').first();
+    await checkoutBtn.click();
+    await page.waitForTimeout(500);
+
+    // 5. Checkout Modal Step 1: Contact & Address
+    const checkoutModal = page.locator('div[role="dialog"] h2:has-text("Checkout")');
+    await expect(checkoutModal).toBeVisible();
+
+    // Fill form fields
+    await page.locator('input[placeholder*="Full Name"]').fill('Test Customer');
+    await page.locator('input[placeholder*="name@example.com"]').fill('test@example.com');
+    await page.locator('input[placeholder*="98XXXXXXXX"]').fill('9876543210');
+    await page.locator('input[placeholder*="Flat 101"]').fill('Flat 101');
+    await page.locator('input[placeholder*="Sunrise Apartments"]').fill('Test Residency');
+    await page.locator('input[placeholder*="Outer Ring Road"]').fill('Outer Ring Road');
+    await page.locator('input[placeholder="560037"]').fill('560037');
+
+    // Click Continue to Delivery Slot
+    const toSlotBtn = page.locator('button:has-text("Continue to Delivery Slot")');
+    await toSlotBtn.click();
+    await page.waitForTimeout(300);
+
+    // Step 2: Delivery Slot
+    await expect(page.locator('text=Choose Delivery Time').first()).toBeVisible();
+    const toPaymentBtn = page.locator('button:has-text("Continue to Payment")');
+    await toPaymentBtn.click();
+    await page.waitForTimeout(300);
+
+    // Step 3: Payment
+    await expect(page.locator('text=Choose Payment Method').first()).toBeVisible();
+    // Select Cash on Delivery
+    await page.locator('text=Cash on Delivery').first().click();
+
+    // Place Order
+    const placeOrderBtn = page.locator('button[type="submit"]:has-text("Place Order")').first();
+    await placeOrderBtn.click();
+    await page.waitForTimeout(500);
+
+    // 6. Order Confirmation Modal
+    const orderConfirmedModal = page.locator('#order-confirmation-title');
+    await expect(orderConfirmedModal).toBeVisible();
+    await expect(page.locator('text=#BB-FLOW-999')).toBeVisible();
+
+    // 7. Click Reorder Items
+    const reorderBtn = page.locator('button:has-text("Reorder Items")');
+    await expect(reorderBtn).toBeVisible();
+    await reorderBtn.click();
+    await page.waitForTimeout(400);
+
+    // Toast appears
+    await expect(page.locator('[role="status"]').filter({ hasText: /reorder/i })).toBeVisible();
+  });
+
 });

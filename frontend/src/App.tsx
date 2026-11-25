@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SoundProvider } from './context/SoundContext';
+import { ToastProvider } from './context/ToastContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
@@ -467,7 +468,7 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-neutral-900 dark:text-white font-bold mb-3">Fresh Categories</h4>
+              <p className="text-neutral-900 dark:text-white font-bold mb-3">Fresh Categories</p>
               <ul className="space-y-1.5 text-neutral-600 dark:text-neutral-400 text-xs">
                 <li>Daily Fish & Seafood (Surmai, Pomfret)</li>
                 <li>Fresh Chicken</li>
@@ -478,7 +479,7 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-neutral-900 dark:text-white font-bold mb-3">Quality & Service</h4>
+              <p className="text-neutral-900 dark:text-white font-bold mb-3">Quality & Service</p>
               <ul className="space-y-1.5 text-neutral-600 dark:text-neutral-400 text-xs">
                 <li>Zero Security Deposit (Free Packaging)</li>
                 <li>EPP Insulated Box with Ice Gel Packs</li>
@@ -488,7 +489,7 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-gray-950 dark:text-white font-bold mb-3">Customer & Legal</h4>
+              <p className="text-gray-950 dark:text-white font-bold mb-3">Customer & Legal</p>
               <ul className="space-y-1 text-xs">
                 <li>
                   <button 
@@ -620,6 +621,7 @@ const MainApp: React.FC = () => {
               setIsConfirmationOpen(false);
               handleTabChange('coolers');
             }}
+            onOpenCart={() => setIsCartOpen(true)}
           />
         )}
 
@@ -676,9 +678,11 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <SoundProvider>
-            <CartProvider>
-              <MainApp />
-            </CartProvider>
+            <ToastProvider>
+              <CartProvider>
+                <MainApp />
+              </CartProvider>
+            </ToastProvider>
           </SoundProvider>
         </AuthProvider>
       </ThemeProvider>

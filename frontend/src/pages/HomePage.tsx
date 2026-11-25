@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, ArrowRight } from 'lucide-react';
+import { Plus, ArrowRight } from 'lucide-react';
 import type { Product } from '../types';
 import { api } from '../api';
 import { useCart } from '../context/CartContext';
 import { useSound } from '../context/SoundContext';
 import { HeroSection } from '../components/HeroSection';
 import { CategorySection } from '../components/CategorySection';
+import { QuantityStepper } from '../components/QuantityStepper';
+import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
 import { DEFAULT_HONEST_PRODUCTS } from '../data/honestProducts';
 
 interface HomePageProps {
@@ -20,6 +22,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigateToReturns
 }) => {
   const [products, setProducts] = useState<Product[]>(DEFAULT_HONEST_PRODUCTS);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isTouchDevice, setIsTouchDevice] = useState<boolean>(false);
   const [mobileDishView, setMobileDishView] = useState<Record<string, boolean>>({});
@@ -37,7 +40,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           setProducts(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const filteredProducts = selectedCategory === 'All'
@@ -94,15 +98,22 @@ export const HomePage: React.FC<HomePageProps> = ({
           data-testid="homepage-product-grid" 
           className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
         >
-          {filteredProducts.map((product) => {
-            const inCartItem = items.find(i => i.product.id === product.id);
-            const inCartQty = inCartItem?.quantity || 0;
-            const isDishActive = mobileDishView[product.id] || false;
-            const imgSrc = product.image || product.imageUrl || `/images/products/${product.id}.webp`;
-            const savings = product.mrp && product.mrp > product.price ? product.mrp - product.price : 0;
-            const savingsPercent = product.mrp && product.mrp > product.price
-              ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
-              : 0;
+          {isLoading ? (
+            <ProductCardSkeleton count={8} />
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-neutral-500">
+              No products found in this category.
+            </div>
+          ) : (
+            filteredProducts.map((product) => {
+              const inCartItem = items.find(i => i.product.id === product.id);
+              const inCartQty = inCartItem?.quantity || 0;
+              const isDishActive = mobileDishView[product.id] || false;
+              const imgSrc = product.image || product.imageUrl || `/images/products/${product.id}.webp`;
+              const savings = product.mrp && product.mrp > product.price ? product.mrp - product.price : 0;
+              const savingsPercent = product.mrp && product.mrp > product.price
+                ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
+                : 0;
 
             return (
               <article
@@ -179,30 +190,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                     {/* Buy Action: Primary Red (Rule 8) */}
                     <div>
                       {inCartQty > 0 ? (
-                        <div 
-                          className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 p-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
-                            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            aria-label={`Decrease ${product.name} quantity`}
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="px-2 text-sm font-black text-neutral-900 dark:text-white">
-                            {inCartQty}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
-                            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            aria-label={`Increase ${product.name} quantity`}
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <QuantityStepper
+                          quantity={inCartQty}
+                          onIncrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
+                          onDecrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
+                          itemName={product.name}
+                        />
                       ) : (
                         <button
                           type="button"
@@ -223,7 +216,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </div>
               </article>
             );
-          })}
+          }))}
         </div>
       </section>
     </div>

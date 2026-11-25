@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Minus, ArrowUpDown, ChevronRight, X, RotateCcw } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, ChevronRight, X, RotateCcw } from 'lucide-react';
 import type { Product } from '../types';
 import { api } from '../api';
 import { useCart } from '../context/CartContext';
 import { useSound } from '../context/SoundContext';
+import { QuantityStepper } from '../components/QuantityStepper';
+import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
+import { searchProductsWithTypoTolerance } from '../utils/searchUtils';
 import { DEFAULT_HONEST_PRODUCTS } from '../data/honestProducts';
 
 interface CatalogPageProps {
@@ -39,12 +42,23 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc'>('featured');
   const [localSearch, setLocalSearch] = useState<string>(propSearchQuery);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { items, addItem, updateQuantity } = useCart();
   const { playPopSound } = useSound();
 
   const searchQuery = onSetSearchQuery ? propSearchQuery : localSearch;
   const setSearchQuery = onSetSearchQuery || setLocalSearch;
+
+  // Typo-tolerant search resolution (Item 9)
+  const typoSearchResult = React.useMemo(() => {
+    if (!searchQuery.trim()) return { products: [], suggestedTerm: null, isTypoCorrected: false };
+    return searchProductsWithTypoTolerance(searchQuery, products, 100);
+  }, [searchQuery, products]);
+
+  const typoMatchedIds = React.useMemo(() => {
+    return new Set(typoSearchResult.products.map(p => p.id));
+  }, [typoSearchResult]);
 
   useEffect(() => {
     if (initialCategory) {
@@ -53,24 +67,22 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   }, [initialCategory]);
 
   useEffect(() => {
+    setIsLoading(true);
     api.getProducts()
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setProducts(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   // Filter products based on search, category, cut style, price budget, stock
   const filteredProducts = products.filter((p) => {
-    // 1. Search filter
+    // 1. Search filter with typo tolerance
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = p.name.toLowerCase().includes(q);
-      const matchCat = p.category?.toLowerCase().includes(q);
-      const matchDesc = p.description?.toLowerCase().includes(q);
-      if (!matchName && !matchCat && !matchDesc) return false;
+      if (!typoMatchedIds.has(p.id)) return false;
     }
 
     // 2. Category filter
@@ -455,13 +467,31 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         </div>
       )}
 
+      {/* Typo Tolerance Suggestion Banner (Item 9) */}
+      {typoSearchResult.isTypoCorrected && typoSearchResult.suggestedTerm && (
+        <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-700 dark:text-neutral-300 flex items-center justify-between gap-2">
+          <span>Showing results for <strong>{typoSearchResult.suggestedTerm}</strong> (searched for "{searchQuery}")</span>
+          <button
+            type="button"
+            onClick={() => setSearchQuery(typoSearchResult.suggestedTerm!)}
+            className="text-xs font-bold text-neutral-900 dark:text-white underline hover:no-underline cursor-pointer"
+          >
+            Search {typoSearchResult.suggestedTerm}
+          </button>
+        </div>
+      )}
+
       {/* Results Header */}
       <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 px-1">
         <span>Showing <strong>{sortedProducts.length}</strong> available {sortedProducts.length === 1 ? 'cut' : 'cuts'}</span>
       </div>
 
       {/* Product Grid */}
-      {sortedProducts.length > 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="catalog-skeletons">
+          <ProductCardSkeleton count={8} />
+        </div>
+      ) : sortedProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {sortedProducts.map((product) => {
             const inCartItem = items.find(i => i.product.id === product.id);
@@ -533,30 +563,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     {/* Buy Action Button */}
                     <div>
                       {inCartQty > 0 ? (
-                        <div 
-                          className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 p-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
-                            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            aria-label={`Decrease ${product.name} quantity`}
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="px-2 text-sm font-black text-neutral-900 dark:text-white">
-                            {inCartQty}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
-                            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                            aria-label={`Increase ${product.name} quantity`}
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <QuantityStepper
+                          quantity={inCartQty}
+                          onIncrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
+                          onDecrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
+                          itemName={product.name}
+                        />
                       ) : (
                         <button
                           type="button"
@@ -580,15 +592,43 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-12 text-center space-y-3">
-          <p className="text-sm font-bold text-neutral-900 dark:text-white">No cuts match your current filters</p>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400">Try adjusting your filters, searching for a different cut, or reset filters.</p>
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold text-xs rounded-xl cursor-pointer"
-          >
-            Clear All Filters
-          </button>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 sm:p-12 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 mx-auto">
+            <Search className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-neutral-900 dark:text-white">
+              {searchQuery.trim() ? `No fresh cuts found matching "${searchQuery}"` : 'No cuts match your current filters'}
+            </p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 max-w-sm mx-auto">
+              Try searching with popular cuts or reset filters to browse all fresh meats.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-center pt-1">
+            {['Chicken', 'Mutton', 'Seafood', 'Steaks', 'Boneless'].map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => {
+                  setSearchQuery(term);
+                  setSelectedCategory('All');
+                }}
+                className="px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-medium border border-neutral-200 dark:border-neutral-700 cursor-pointer"
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={resetFilters}
+              className="px-5 py-2.5 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold text-xs rounded-xl cursor-pointer hover:bg-black dark:hover:bg-white transition"
+            >
+              Clear All Filters
+            </button>
+          </div>
         </div>
       )}
     </div>

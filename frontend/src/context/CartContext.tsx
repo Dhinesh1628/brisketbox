@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Product, CartItem } from '../types';
 import { useSound } from './SoundContext';
+import { useToast } from './ToastContext';
 import { api } from '../api';
 
 export interface ActiveCoupon {
@@ -44,6 +45,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { playPopSound } = useSound();
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('brisketbox_cart') || localStorage.getItem('sagar_cart');
@@ -98,12 +100,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setCouponCode(matched.code);
     setCouponDiscount(disc);
-    return { success: true, message: `Discount of ₹${disc} applied with ${matched.code}!` };
+    const msg = `Discount of ₹${disc} applied with ${matched.code}!`;
+    showToast(msg, 'success');
+    return { success: true, message: msg };
   };
 
   const removeCoupon = () => {
     setCouponCode(null);
     setCouponDiscount(0);
+    showToast('Coupon removed', 'info');
   };
 
   const addItem = (
@@ -148,11 +153,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       ];
     });
+    showToast(`Added ${product.name} (${weight}) to cart`, 'success');
     setIsCartOpen(true);
   };
 
   const removeItem = (itemIdOrProductId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemIdOrProductId && item.product.id !== itemIdOrProductId));
+    showToast('Item removed from cart', 'info');
   };
 
   const updateQuantity = (itemIdOrProductId: string, quantity: number) => {

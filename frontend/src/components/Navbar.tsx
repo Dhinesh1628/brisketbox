@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { searchProductsWithTypoTolerance } from '../utils/searchUtils';
 import { 
   ShoppingBag, 
   MapPin, 
@@ -279,19 +280,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Live matching cuts
-  const matchingProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
-    return allProducts.filter(p =>
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.category && p.category.toLowerCase().includes(q)) ||
-      (p.cutStyle && p.cutStyle.toLowerCase().includes(q)) ||
-      (p.description && p.description.toLowerCase().includes(q)) ||
-      (p.origin && p.origin.toLowerCase().includes(q)) ||
-      (p.chillingMethod && p.chillingMethod.toLowerCase().includes(q))
-    ).slice(0, 5);
+  // Live matching cuts with typo tolerance (Item 9)
+  const searchResult = useMemo(() => {
+    return searchProductsWithTypoTolerance(searchQuery, allProducts, 6);
   }, [allProducts, searchQuery]);
+
+  const matchingProducts = searchResult.products;
+  const typoSuggestion = searchResult.isTypoCorrected ? searchResult.suggestedTerm : null;
 
   const handleSelectSearchTerm = (term: string) => {
     const cleanTerm = term.replace(/^[^\w]+/, '').trim();
@@ -452,6 +447,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
+
+            {typoSuggestion && (
+              <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                <span>Did you mean:</span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSearchTerm(typoSuggestion)}
+                  className="font-bold text-neutral-900 dark:text-white underline hover:no-underline cursor-pointer"
+                >
+                  {typoSuggestion}
+                </button>
+              </div>
+            )}
 
             {matchingProducts.length === 0 ? (
               <div className="p-6 text-center space-y-2">

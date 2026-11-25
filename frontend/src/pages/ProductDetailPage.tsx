@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ChevronRight, Plus, Minus, Check, ArrowRight, Utensils
+  ChevronRight, Plus, Check, ArrowRight, Utensils
 } from 'lucide-react';
 import type { Product } from '../types';
 import { api } from '../api';
 import { useCart } from '../context/CartContext';
 import { useSound } from '../context/SoundContext';
+import { QuantityStepper } from '../components/QuantityStepper';
 import { DEFAULT_HONEST_PRODUCTS } from '../data/honestProducts';
 import { getProductWeightOptions } from '../utils/weightUtils';
 import { getProductVisual } from '../data/productVisuals';
@@ -256,27 +257,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="pt-2 flex items-center gap-3">
             {inCartQty > 0 ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 p-1">
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
-                    className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="px-4 text-base font-black text-neutral-900 dark:text-white">
-                    {inCartQty} in Cart
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
-                    className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer rounded-lg hover:bg-neutral-200"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+                <QuantityStepper
+                  quantity={inCartQty}
+                  onIncrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
+                  onDecrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
+                  itemName={product.name}
+                />
 
                 <button
                   type="button"
@@ -342,27 +328,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="flex items-center gap-2">
           {inCartQty > 0 ? (
             <div className="flex items-center gap-2">
-              <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
-                  className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 cursor-pointer"
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="px-2.5 text-sm font-black text-neutral-900 dark:text-white">
-                  {inCartQty}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
-                  className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-neutral-700 dark:text-neutral-300 cursor-pointer"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              <QuantityStepper
+                quantity={inCartQty}
+                onIncrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty + 1)}
+                onDecrement={() => updateQuantity(inCartItem!.id || product.id, inCartQty - 1)}
+                itemName={product.name}
+              />
               <button
                 type="button"
                 onClick={onOpenCart}

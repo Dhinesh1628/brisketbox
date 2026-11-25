@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2, Info, ChevronDown, ChevronUp, Truck, Sparkles } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2, Info, ChevronDown, ChevronUp, Truck, Sparkles, Clock } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { QuantityStepper } from './QuantityStepper';
 
 interface CartDrawerProps {
   onCheckout: () => void;
@@ -159,7 +160,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   onClick={() => setIsCartOpen(false)}
                   className="mt-5 px-5 py-2.5 bg-[#d11243] hover:bg-[#b80f3b] text-white rounded-xl text-xs font-extrabold shadow-sm transition cursor-pointer"
                 >
-                  Shop Now
+                  Start shopping
                 </button>
               </div>
             ) : (
@@ -215,31 +216,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                             ₹{itemPrice * item.quantity}
                           </span>
 
-                          <div className="flex items-center border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-900/60">
-                            <button
-                              onClick={() => updateQuantity(item.id || item.product.id, item.quantity - 1)}
-                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
-                              title="Decrease quantity"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="px-2 text-xs font-extrabold text-gray-900 dark:text-white">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.id || item.product.id, item.quantity + 1)}
-                              className="p-1 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
-                              title="Increase quantity"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => removeItem(item.id || item.product.id)}
-                            className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition cursor-pointer"
-                            title="Remove item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <QuantityStepper
+                            quantity={item.quantity}
+                            onIncrement={() => updateQuantity(item.id || item.product.id, item.quantity + 1)}
+                            onDecrement={() => updateQuantity(item.id || item.product.id, item.quantity - 1)}
+                            itemName={item.product.name}
+                            showTrashOnOne={true}
+                          />
                         </div>
                       </div>
                     );
@@ -342,6 +325,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Delivery Slot Display (Item 10) */}
+                <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold text-neutral-900 dark:text-white">
+                        Express Chilled Delivery
+                      </div>
+                      <div className="text-neutral-500 dark:text-neutral-400">
+                        Today • Live courier dispatch
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-xs shrink-0">
+                    Cold Chain
+                  </span>
                 </div>
 
                 {/* Detailed Bill Breakdown */}
