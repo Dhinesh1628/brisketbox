@@ -5,6 +5,7 @@ import { Cooler } from '../models/Cooler.js';
 import { PaymentEvent } from '../models/PaymentEvent.js';
 import { releaseStock } from './stockService.js';
 import { creditWallet } from './walletService.js';
+import { releaseDeliverySlot } from './deliverySlotService.js';
 
 /**
  * Unified order cancellation service.
@@ -163,6 +164,18 @@ export async function cancelOrder({ orderId, user, reason = 'Customer requested 
           await Order.updateOne({ _id: claimed._id }, { $set: { coolerReleased: true } }, { session });
         }
 
+        // 5. Release Delivery Slot atomically and idempotently
+        if (claimed.deliverySlotId && !claimed.slotReleased) {
+          const isConfirmed = claimed.paymentStatus === 'PAID' || (claimed.paymentMethod && claimed.paymentMethod.toLowerCase().includes('cash on delivery'));
+          await releaseDeliverySlot({
+            slotId: claimed.deliverySlotId,
+            orderId: claimed.orderNumber || claimed.id,
+            isConfirmed
+          });
+          claimed.slotReleased = true;
+          await Order.updateOne({ _id: claimed._id }, { $set: { slotReleased: true } }, { session });
+        }
+
         cancelledOrder = claimed.toObject();
       });
 
@@ -225,6 +238,16 @@ export async function cancelOrder({ orderId, user, reason = 'Customer requested 
       currentUserId: null
     });
     order.coolerReleased = true;
+  }
+
+  if (order.deliverySlotId && !order.slotReleased) {
+    const isConfirmed = order.paymentStatus === 'PAID' || (order.paymentMethod && order.paymentMethod.toLowerCase().includes('cash on delivery'));
+    await releaseDeliverySlot({
+      slotId: order.deliverySlotId,
+      orderId: order.orderNumber || order.id,
+      isConfirmed
+    });
+    order.slotReleased = true;
   }
 
   db.update('orders', order.id, order);

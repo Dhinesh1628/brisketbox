@@ -59,6 +59,7 @@ export const orderCreateSchema = z.object({
   deliveryAddress: z.string().min(5, 'Delivery address is required'),
   addressDetails: z.any().optional(),
   city: z.string().optional(),
+  deliverySlotId: z.string().optional(),
   deliverySlot: z.string().optional(),
   deliveryNotes: z.string().max(500).optional(),
   paymentMethod: z.enum(['ONLINE', 'COD', 'WALLET', 'UPI']),

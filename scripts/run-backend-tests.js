@@ -9,6 +9,8 @@ process.env.RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_ci_placeh
 process.env.RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'ci_fake_razorpay_secret_placeholder';
 process.env.RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'ci_fake_webhook_secret_placeholder';
 process.env.MONGOMS_VERSION = process.env.MONGOMS_VERSION || '7.0.14';
+process.env.MAX_ORDERS_PER_SLOT = process.env.MAX_ORDERS_PER_SLOT || '1000';
+process.env.MAX_USER_ACTIVE_HOLDS = process.env.MAX_USER_ACTIVE_HOLDS || '1000';
 
 const localBinaryPath = 'C:\\Users\\dines\\.cache\\mongodb-binaries\\mongod-x64-win32-5.0.19.exe';
 const systemBinary = process.env.MONGOMS_SYSTEM_BINARY || (fs.existsSync(localBinaryPath) ? localBinaryPath : undefined);

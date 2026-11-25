@@ -239,9 +239,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
 
     const fullAddress = `${flatNo}, ${building}, ${street}, ${city}, ${state} - ${pincode} (${addressType.toUpperCase()})`;
-    const computedSlot = slotMode === 'express'
-      ? (slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery')
-      : (selectedSlotTime || slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery');
+    const chosenSlot = slotMode === 'express'
+      ? slotsData?.nextAvailableSlot
+      : (slotsData?.slots?.find(s => s.id === selectedSlotId) || slotsData?.nextAvailableSlot);
+
+    const deliverySlotId = chosenSlot?.id || selectedSlotId || slotsData?.nextAvailableSlot?.id;
+    const computedSlot = chosenSlot?.label || selectedSlotTime || slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery';
 
     const instructionsSummary = selectedInstructionPills.join(' • ');
     const finalNotes = customNotes.trim() 
@@ -271,6 +274,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       })),
       deliveryAddress: fullAddress,
       addressDetails,
+      deliverySlotId,
       deliverySlot: computedSlot,
       deliveryNotes: finalNotes,
       city,

@@ -244,9 +244,19 @@ describe('Real Delivery Slots & Tip Capping Test Suite', () => {
 
   it('5.2 Order with tip within MAX_TIP_INR (₹0, ₹20, ₹30, ₹50, ₹200) succeeds', async () => {
     for (const validTip of [0, 20, 30, 50, 200]) {
+      const tipUser = {
+        id: `cust_tip_${validTip}_${Date.now().toString(36)}`,
+        name: `Tip User ${validTip}`,
+        email: `tip.${validTip}.${Date.now().toString(36)}@example.com`,
+        role: 'customer',
+        walletBalance: 0
+      };
+      db.insert('users', tipUser);
+      const tipToken = makeToken(tipUser);
+
       const res = await request('/api/payments/create-order', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${customerToken}` },
+        headers: { Authorization: `Bearer ${tipToken}` },
         body: {
           items: [{ productId: testProduct.id, quantity: 1 }],
           tipAmount: validTip,

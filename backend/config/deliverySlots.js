@@ -23,3 +23,5 @@ export const DELIVERY_CONFIG = {
 };
 
 export const MAX_TIP_INR = Number(process.env.MAX_TIP_INR) || 200;
+export const SLOT_HOLD_MINUTES = Number(process.env.SLOT_HOLD_MINUTES) || 15;
+export const MAX_USER_ACTIVE_HOLDS = Number(process.env.MAX_USER_ACTIVE_HOLDS) || 2;

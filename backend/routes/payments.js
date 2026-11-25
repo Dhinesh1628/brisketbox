@@ -124,18 +124,38 @@ router.post('/create-order', async (req, res) => {
       processedItems
     } = pricing;
 
+    const isCod = paymentMethod === 'cod';
+    // Cryptographically secure, collision-safe order number, PIN, and guestToken
+    const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const deliveryPin = crypto.randomInt(1000, 10000).toString();
+    const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : null;
+
     // Real Delivery Slot: Atomic reservation & validation based on India time (Asia/Kolkata)
     let reservedSlot = null;
+    const requestedSlotId = (req.body.deliverySlotId || deliverySlot || '').trim();
+
     try {
-      if (deliverySlot) {
-        const slotRes = await reserveDeliverySlot(deliverySlot);
+      if (requestedSlotId) {
+        const slotRes = await reserveDeliverySlot({
+          slotId: requestedSlotId,
+          orderId: orderNumber,
+          orderNumber,
+          userId: user.id,
+          isCod
+        });
         reservedSlot = slotRes.slot;
       } else {
         const { nextAvailableSlot } = await getAvailableDeliverySlots();
         if (!nextAvailableSlot) {
           return res.status(400).json({ error: 'No delivery slots are currently available. Please select another slot.' });
         }
-        const slotRes = await reserveDeliverySlot(nextAvailableSlot.id);
+        const slotRes = await reserveDeliverySlot({
+          slotId: nextAvailableSlot.id,
+          orderId: orderNumber,
+          orderNumber,
+          userId: user.id,
+          isCod
+        });
         reservedSlot = slotRes.slot;
       }
     } catch (slotErr) {
@@ -143,11 +163,13 @@ router.post('/create-order', async (req, res) => {
     }
 
     const assignedDeliverySlot = reservedSlot ? reservedSlot.label : (deliverySlot || 'Today, Express Delivery');
+    const assignedDeliverySlotId = reservedSlot ? reservedSlot.id : null;
+    const assignedHoldExpiresAt = reservedSlot ? reservedSlot.holdExpiresAt : null;
 
     // Upfront Wallet Balance Check & Debit (Prevents simultaneous multi-tab double spending)
     if (walletDeduction > 0) {
       if (isGuest) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         return res.status(400).json({ error: 'Please sign in to use BrisketBox Wallet balance' });
       }
       let availableBalance = 0;
@@ -160,17 +182,12 @@ router.post('/create-order', async (req, res) => {
       }
 
       if (availableBalance < walletDeduction) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         return res.status(400).json({ 
           error: `Insufficient wallet balance. Available: ₹${availableBalance}, requested: ₹${walletDeduction}` 
         });
       }
     }
-
-    // Cryptographically secure, collision-safe order number, PIN, and guestToken
-    const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-    const deliveryPin = crypto.randomInt(1000, 10000).toString();
-    const guestToken = isGuest ? crypto.randomBytes(24).toString('hex') : null;
 
     // 2. CASE A: 100% Wallet Paid (Fully paid via store credit)
     if (walletDeduction > 0 && netPayable === 0) {
@@ -186,7 +203,7 @@ router.post('/create-order', async (req, res) => {
           description: 'Order paid in full using BrisketBox Wallet store credit.'
         });
       } catch (walletErr) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         return res.status(400).json({ error: walletErr.message });
       }
 
@@ -194,7 +211,7 @@ router.post('/create-order', async (req, res) => {
       try {
         await deductStock(processedItems);
       } catch (stockErr) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         // Rollback debited wallet if stock fails
         await creditWallet({
           userId: user.id,
@@ -227,7 +244,9 @@ router.post('/create-order', async (req, res) => {
         walletDeduction,
         deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
         addressDetails,
+        deliverySlotId: assignedDeliverySlotId,
         deliverySlot: assignedDeliverySlot,
+        holdExpiresAt: assignedHoldExpiresAt,
         deliveryNotes,
         city: city || 'Bengaluru',
         paymentMethod: 'BrisketBox Wallet (Fully Paid)',
@@ -262,7 +281,7 @@ router.post('/create-order', async (req, res) => {
             description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`
           });
         } catch (walletErr) {
-          if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+          if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
           return res.status(400).json({ error: walletErr.message });
         }
       }
@@ -271,7 +290,7 @@ router.post('/create-order', async (req, res) => {
       try {
         await deductStock(processedItems);
       } catch (stockErr) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         if (walletDeduction > 0) {
           await creditWallet({
             userId: user.id,
@@ -305,7 +324,9 @@ router.post('/create-order', async (req, res) => {
         walletDeduction,
         deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
         addressDetails,
+        deliverySlotId: assignedDeliverySlotId,
         deliverySlot: assignedDeliverySlot,
+        holdExpiresAt: assignedHoldExpiresAt,
         deliveryNotes,
         city: city || 'Bengaluru',
         paymentMethod: 'Cash on Delivery (Pay at Doorstep)',
@@ -340,7 +361,7 @@ router.post('/create-order', async (req, res) => {
           description: `₹${walletDeduction} reserved for order payment.`
         });
       } catch (walletErr) {
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         return res.status(400).json({ error: walletErr.message });
       }
     }
@@ -364,7 +385,7 @@ router.post('/create-order', async (req, res) => {
         razorpayOrderId = rzpOrder.id;
       } catch (rzpErr) {
         console.error('[Razorpay Order Creation Failed]:', rzpErr);
-        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+        if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
         if (walletDeduction > 0) {
           await creditWallet({
             userId: user.id,
@@ -398,7 +419,9 @@ router.post('/create-order', async (req, res) => {
       walletDeduction,
       deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
       addressDetails,
+      deliverySlotId: assignedDeliverySlotId,
       deliverySlot: assignedDeliverySlot,
+      holdExpiresAt: assignedHoldExpiresAt,
       deliveryNotes,
       city: city || 'Bengaluru',
       paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + Razorpay (₹${netPayable})` : 'razorpay',
@@ -430,7 +453,11 @@ router.post('/create-order', async (req, res) => {
     });
   } catch (err) {
     if (typeof reservedSlot !== 'undefined' && reservedSlot?.id) {
-      await releaseDeliverySlot(reservedSlot.id).catch(() => {});
+      await releaseDeliverySlot({
+        slotId: reservedSlot.id,
+        orderId: typeof orderNumber !== 'undefined' ? orderNumber : null,
+        isConfirmed: typeof isCod !== 'undefined' ? isCod : false
+      }).catch(() => {});
     }
     console.error('[Payments] Create order error:', err);
     res.status(500).json({ error: err.message || 'Internal payment error' });
@@ -449,7 +476,11 @@ router.post('/verify', authenticateOptional, async (req, res) => {
       orderId 
     } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id) {
+    const razorpayOrderId = req.body.razorpayOrderId || razorpay_order_id;
+    const razorpayPaymentId = req.body.razorpayPaymentId || razorpay_payment_id;
+    const razorpaySignature = req.body.razorpaySignature || razorpay_signature;
+
+    if (!razorpayOrderId || !razorpayPaymentId) {
       return res.status(400).json({ error: 'Missing payment verification parameters (razorpay_order_id and razorpay_payment_id are required)' });
     }
 
@@ -1041,7 +1072,9 @@ async function createOrderRecord(params) {
     walletDeduction,
     deliveryAddress,
     addressDetails,
+    deliverySlotId = null,
     deliverySlot,
+    holdExpiresAt = null,
     deliveryNotes,
     city,
     paymentMethod,
@@ -1136,7 +1169,10 @@ async function createOrderRecord(params) {
     riderVehicle: assignedRider?.riderVehicle || null,
     deliveryExecutive: assignedRider?.deliveryExecutive || null,
     tempLog: [],
+    deliverySlotId: deliverySlotId || null,
     deliverySlot: deliverySlot || 'Scheduled Delivery',
+    holdExpiresAt: holdExpiresAt || null,
+    slotReleased: false,
     trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     pinAttempts: 0,
     pinLockedUntil: null,

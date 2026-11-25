@@ -558,18 +558,35 @@ app.post('/api/orders', authenticate, async (req, res) => {
     netPayable
   } = pricing;
 
+  const isCod = paymentMethod === 'cash' || paymentMethod === 'cod';
+  const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const deliveryPin = crypto.randomInt(1000, 10000).toString();
+  const requestedSlotId = (req.body.deliverySlotId || deliverySlot || '').trim();
+
   // Real Delivery Slot: Atomic reservation & validation based on India time (Asia/Kolkata)
   let reservedSlot = null;
   try {
-    if (deliverySlot) {
-      const slotRes = await reserveDeliverySlot(deliverySlot);
+    if (requestedSlotId) {
+      const slotRes = await reserveDeliverySlot({
+        slotId: requestedSlotId,
+        orderId: orderNumber,
+        orderNumber,
+        userId: req.user.id,
+        isCod
+      });
       reservedSlot = slotRes.slot;
     } else {
       const { nextAvailableSlot } = await getAvailableDeliverySlots();
       if (!nextAvailableSlot) {
         return res.status(400).json({ error: 'No delivery slots are currently available. Please select another slot.' });
       }
-      const slotRes = await reserveDeliverySlot(nextAvailableSlot.id);
+      const slotRes = await reserveDeliverySlot({
+        slotId: nextAvailableSlot.id,
+        orderId: orderNumber,
+        orderNumber,
+        userId: req.user.id,
+        isCod
+      });
       reservedSlot = slotRes.slot;
     }
   } catch (slotErr) {
@@ -577,17 +594,16 @@ app.post('/api/orders', authenticate, async (req, res) => {
   }
 
   const assignedDeliverySlot = reservedSlot ? reservedSlot.label : (deliverySlot || 'Today, Express Delivery');
+  const assignedDeliverySlotId = reservedSlot ? reservedSlot.id : null;
+  const assignedHoldExpiresAt = reservedSlot ? reservedSlot.holdExpiresAt : null;
 
   // Deduct inventory atomically
   try {
     await deductStock(processedItems);
   } catch (stockErr) {
-    if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+    if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
     return res.status(409).json({ error: stockErr.message });
   }
-
-  const orderNumber = `BB-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-  const deliveryPin = crypto.randomInt(1000, 10000).toString();
 
   // If wallet deduction used, execute atomic ledger debit
   if (walletDeduction > 0) {
@@ -601,7 +617,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
         description: `Store credit used for Order #${orderNumber}`
       });
     } catch (walletErr) {
-      if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
+      if (reservedSlot?.id) await releaseDeliverySlot({ slotId: reservedSlot.id, orderId: orderNumber, isConfirmed: isCod });
       await releaseStock(processedItems);
       return res.status(400).json({ error: walletErr.message });
     }
@@ -669,7 +685,10 @@ app.post('/api/orders', authenticate, async (req, res) => {
       assignedAt: now.toISOString()
     },
     tempLog: [],
+    deliverySlotId: assignedDeliverySlotId,
     deliverySlot: assignedDeliverySlot,
+    holdExpiresAt: assignedHoldExpiresAt,
+    slotReleased: false,
     trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     pinAttempts: 0,
     pinLockedUntil: null,
