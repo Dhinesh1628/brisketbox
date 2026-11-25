@@ -268,4 +268,59 @@ describe('Real Delivery Slots & Tip Capping Test Suite', () => {
       assert.ok(res.data.orderId);
     }
   });
+
+  // =========================================================================
+  // 6. Delivery slots batch query and in-memory fallback
+  // =========================================================================
+  it('6.1 getAvailableDeliverySlots batches booked counts and preserves exact structure & counts', async () => {
+    const { slots: initialSlots } = await getAvailableDeliverySlots();
+    assert.ok(Array.isArray(initialSlots) && initialSlots.length > 0, 'Must return array of slots');
+
+    // Pick two tomorrow slots to modify
+    const tomorrowSlots = initialSlots.filter(s => !s.isToday);
+    assert.ok(tomorrowSlots.length >= 2, 'Must have at least two tomorrow slots');
+
+    const slotA = tomorrowSlots[0];
+    const slotB = tomorrowSlots[1];
+
+    // Set slotA bookedCount to 3 and slotB bookedCount to 7
+    await _setSlotBookedCount(slotA.id, 3);
+    await _setSlotBookedCount(slotB.id, 7);
+
+    // Call getAvailableDeliverySlots which performs the batch lookup
+    const res = await getAvailableDeliverySlots();
+    assert.ok(res.currentTimeIST, 'Must contain currentTimeIST');
+    assert.equal(typeof res.hasTodaySlots, 'boolean', 'Must contain boolean hasTodaySlots');
+    assert.ok(Array.isArray(res.slots), 'Must contain slots array');
+
+    const updatedSlotA = res.slots.find(s => s.id === slotA.id);
+    const updatedSlotB = res.slots.find(s => s.id === slotB.id);
+
+    assert.ok(updatedSlotA, 'Slot A must be returned');
+    assert.equal(updatedSlotA.bookedCount, 3, 'Slot A bookedCount must be 3');
+    assert.equal(updatedSlotA.availableCapacity, updatedSlotA.maxCapacity - 3, 'Slot A availableCapacity must match');
+
+    assert.ok(updatedSlotB, 'Slot B must be returned');
+    assert.equal(updatedSlotB.bookedCount, 7, 'Slot B bookedCount must be 7');
+    assert.equal(updatedSlotB.availableCapacity, updatedSlotB.maxCapacity - 7, 'Slot B availableCapacity must match');
+
+    // Verify all slot objects have the required schema fields
+    for (const s of res.slots) {
+      assert.ok(s.id, 'Slot must have id');
+      assert.ok(s.date, 'Slot must have date');
+      assert.ok(s.startTime, 'Slot must have startTime');
+      assert.ok(s.endTime, 'Slot must have endTime');
+      assert.equal(typeof s.isToday, 'boolean', 'Slot must have boolean isToday');
+      assert.ok(s.label, 'Slot must have label');
+      assert.equal(typeof s.bookedCount, 'number', 'Slot must have number bookedCount');
+      assert.equal(typeof s.maxCapacity, 'number', 'Slot must have number maxCapacity');
+      assert.equal(typeof s.availableCapacity, 'number', 'Slot must have number availableCapacity');
+      assert.equal(typeof s.isFull, 'boolean', 'Slot must have boolean isFull');
+      assert.equal(typeof s.isPastCutoff, 'boolean', 'Slot must have boolean isPastCutoff');
+    }
+
+    // Clean up
+    await _setSlotBookedCount(slotA.id, 0);
+    await _setSlotBookedCount(slotB.id, 0);
+  });
 });
