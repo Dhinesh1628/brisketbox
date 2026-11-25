@@ -31,8 +31,32 @@ export function levenshteinDistance(a: string, b: string): number {
   return matrix[an][bn];
 }
 
+// Regional language search aliases (Requirement 3: koli, kodi, kozhi → chicken; mamsam, mutton, gosht → mutton; royyalu, jhinga, eral → prawns; meen, machli, chepa → fish)
+export const REGIONAL_SEARCH_ALIASES: Record<string, string> = {
+  // Chicken aliases
+  koli: 'chicken',
+  kodi: 'chicken',
+  kozhi: 'chicken',
+
+  // Mutton aliases
+  mamsam: 'mutton',
+  mutton: 'mutton',
+  gosht: 'mutton',
+
+  // Prawns aliases
+  royyalu: 'prawns',
+  jhinga: 'prawns',
+  eral: 'prawns',
+
+  // Fish aliases
+  meen: 'fish',
+  machli: 'fish',
+  chepa: 'fish'
+};
+
 // Common meat & cut synonyms/typo dictionary
 const COMMON_TYPO_MAP: Record<string, string> = {
+  ...REGIONAL_SEARCH_ALIASES,
   chikn: 'chicken',
   chiken: 'chicken',
   chickn: 'chicken',
@@ -43,11 +67,12 @@ const COMMON_TYPO_MAP: Record<string, string> = {
   moton: 'mutton',
   motton: 'mutton',
   lamp: 'lamb',
-  prwn: 'prawn',
-  prawns: 'prawn',
-  prawnz: 'prawn',
-  proms: 'prawn',
-  shrimp: 'prawn',
+  prwn: 'prawns',
+  prawn: 'prawns',
+  prawns: 'prawns',
+  prawnz: 'prawns',
+  proms: 'prawns',
+  shrimp: 'prawns',
   surmye: 'surmai',
   surmi: 'surmai',
   searfis: 'seer fish',
@@ -65,7 +90,7 @@ export interface SearchMatchResult {
 }
 
 /**
- * Searches products with live suggestions and typo tolerance
+ * Searches products with live suggestions, regional aliases, and typo tolerance
  */
 export function searchProductsWithTypoTolerance(
   query: string,
@@ -77,9 +102,29 @@ export function searchProductsWithTypoTolerance(
     return { products: [], suggestedTerm: null, isTypoCorrected: false };
   }
 
-  // 1. Check direct typo dictionary substitution
-  const mappedTerm = COMMON_TYPO_MAP[cleanQuery] || null;
-  const effectiveQuery = mappedTerm || cleanQuery;
+  // 1. Check direct typo / regional alias substitution
+  let effectiveQuery = cleanQuery;
+  let mappedTerm: string | null = null;
+
+  if (COMMON_TYPO_MAP[cleanQuery]) {
+    mappedTerm = COMMON_TYPO_MAP[cleanQuery];
+    effectiveQuery = mappedTerm;
+  } else {
+    // Check word-by-word substitution for phrases like "fresh kodi" or "tasty meen"
+    const words = cleanQuery.split(/\s+/);
+    let replacedAny = false;
+    const mappedWords = words.map(w => {
+      if (COMMON_TYPO_MAP[w]) {
+        replacedAny = true;
+        return COMMON_TYPO_MAP[w];
+      }
+      return w;
+    });
+    if (replacedAny) {
+      mappedTerm = mappedWords.join(' ');
+      effectiveQuery = mappedTerm;
+    }
+  }
 
   // 2. Exact & Prefix Matches
   const exactMatches: Product[] = [];

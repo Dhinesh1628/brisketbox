@@ -3,6 +3,7 @@ import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Zap, Tag, CheckCircle2
 import { useCart } from '../context/CartContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { QuantityStepper } from './QuantityStepper';
+import { api, type DeliverySlotsResponse } from '../api';
 
 interface CartDrawerProps {
   onCheckout: () => void;
@@ -32,10 +33,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [slotsData, setSlotsData] = useState<DeliverySlotsResponse | null>(null);
 
   useEffect(() => {
     if (isCartOpen) {
       window.history.pushState({ modal: 'cart' }, '');
+      api.getDeliverySlots()
+        .then(setSlotsData)
+        .catch(() => {});
     }
   }, [isCartOpen]);
 
@@ -327,7 +332,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                   </div>
                 </div>
 
-                {/* Delivery Slot Display (Item 10) */}
+                {/* Delivery Slot Display (Real Asia/Kolkata Endpoint) */}
                 <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -336,7 +341,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onCheckout }) => {
                         Express Chilled Delivery
                       </div>
                       <div className="text-neutral-500 dark:text-neutral-400">
-                        Today • Live courier dispatch
+                        {slotsData ? (
+                          slotsData.hasTodaySlots
+                            ? 'Today • Live courier dispatch'
+                            : 'Tomorrow • Next available courier dispatch'
+                        ) : (
+                          'Today • Live courier dispatch'
+                        )}
                       </div>
                     </div>
                   </div>

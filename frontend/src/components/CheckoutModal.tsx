@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api';
+import { api, type DeliverySlotsResponse } from '../api';
 import type { Order, DeliveryAddress } from '../types';
 
 interface CheckoutModalProps {
@@ -91,10 +91,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   }, [currentAddress]);
 
-  // Delivery Slot State
+  // Delivery Slot State (Dynamic from GET /api/delivery/slots)
+  const [slotsData, setSlotsData] = useState<DeliverySlotsResponse | null>(null);
   const [slotMode, setSlotMode] = useState<'express' | 'scheduled'>('express');
   const [scheduledDay, setScheduledDay] = useState<'Today' | 'Tomorrow'>('Today');
-  const [selectedSlotTime, setSelectedSlotTime] = useState('05:30 PM - 08:00 PM (Evening)');
+  const [selectedSlotTime, setSelectedSlotTime] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      api.getDeliverySlots()
+        .then((data) => {
+          setSlotsData(data);
+          if (data.hasTodaySlots) {
+            setScheduledDay('Today');
+          } else {
+            setScheduledDay('Tomorrow');
+          }
+          if (data.nextAvailableSlot) {
+            setSelectedSlotId(data.nextAvailableSlot.id);
+            setSelectedSlotTime(data.nextAvailableSlot.label);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   // Swiggy 1-Tap Delivery Notes State
   const deliveryPills = [
@@ -109,9 +130,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [customNotes, setCustomNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
 
-  // Swiggy Delivery Partner Tip State
+  // Delivery Partner Tip State (Capped at ₹200)
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [customTipInput, setCustomTipInput] = useState<string>('');
+  const [customTipConfirmed, setCustomTipConfirmed] = useState<boolean>(false);
 
   // BrisketBox In-App Vault Wallet State & Calculations
   const [useWallet, setUseWallet] = useState<boolean>(true);
@@ -158,12 +180,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const scheduledSlots = [
-    { label: 'Morning Fresh Lot', time: '07:00 AM - 09:30 AM' },
-    { label: 'Lunch Prep', time: '11:30 AM - 02:00 PM' },
-    { label: 'Evening Cook', time: '05:30 PM - 08:00 PM' },
-    { label: 'Late Dinner Slot', time: '08:00 PM - 10:00 PM' }
-  ];
+  const availableDays: Array<'Today' | 'Tomorrow'> = slotsData?.hasTodaySlots
+    ? ['Today', 'Tomorrow']
+    : ['Tomorrow'];
+
+  const filteredSlots = (slotsData?.slots || []).filter(
+    s => s.isToday === (scheduledDay === 'Today')
+  );
 
   const deliveryInstructionOptions = [
     'Leave with security guard',
@@ -209,10 +232,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setError(null);
     setPaymentFailedModal(null);
 
+    if (tipAmount > 100 && !customTipConfirmed) {
+      setError(`Please confirm your tip of ₹${tipAmount} before proceeding.`);
+      setIsSubmitting(false);
+      return;
+    }
+
     const fullAddress = `${flatNo}, ${building}, ${street}, ${city}, ${state} - ${pincode} (${addressType.toUpperCase()})`;
     const computedSlot = slotMode === 'express'
-      ? 'Express Chilled Delivery (Live Courier)'
-      : `${scheduledDay}, ${selectedSlotTime}`;
+      ? (slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery')
+      : (selectedSlotTime || slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery');
 
     const instructionsSummary = selectedInstructionPills.join(' • ');
     const finalNotes = customNotes.trim() 
@@ -790,13 +819,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                 {slotMode === 'scheduled' && (
                   <div className="p-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200 dark:border-slate-700 space-y-3">
-                    <div className="flex gap-2">
-                      {(['Today', 'Tomorrow'] as const).map(day => (
+                    <div className="flex items-center gap-2">
+                      {availableDays.map(day => (
                         <button
                           key={day}
                           type="button"
                           onClick={() => setScheduledDay(day)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                             scheduledDay === day
                               ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-900'
                               : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
@@ -805,23 +834,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           {day}
                         </button>
                       ))}
+                      {!slotsData?.hasTodaySlots && (
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                          (Today's ordering cut-off has passed)
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {scheduledSlots.map(slot => (
-                        <div
-                          key={slot.time}
-                          onClick={() => setSelectedSlotTime(`${slot.time} (${slot.label})`)}
-                          className={`p-2.5 rounded-lg border text-left cursor-pointer text-xs transition ${
-                            selectedSlotTime.startsWith(slot.time)
-                              ? 'border-[#d11243] bg-white dark:bg-slate-800 font-bold text-gray-950 dark:text-white ring-1 ring-[#d11243]'
-                              : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
-                          }`}
-                        >
-                          <div className="font-bold text-gray-900 dark:text-white">{slot.time}</div>
-                          <div className="text-[10px] text-gray-500 dark:text-gray-400">{slot.label}</div>
-                        </div>
-                      ))}
+                      {filteredSlots.length === 0 ? (
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 col-span-2 py-2">
+                          No more delivery slots available for {scheduledDay}.
+                        </p>
+                      ) : (
+                        filteredSlots.map(slot => (
+                          <div
+                            key={slot.id}
+                            onClick={() => {
+                              setSelectedSlotId(slot.id);
+                              setSelectedSlotTime(slot.label);
+                            }}
+                            className={`p-2.5 rounded-lg border text-left cursor-pointer text-xs transition ${
+                              selectedSlotTime === slot.label || selectedSlotId === slot.id
+                                ? 'border-[#d11243] bg-white dark:bg-slate-800 font-bold text-gray-950 dark:text-white ring-1 ring-[#d11243]'
+                                : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <div className="font-bold text-gray-900 dark:text-white">{slot.startTime} - {slot.endTime}</div>
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center justify-between mt-0.5">
+                              <span>{slot.label.split(', ')[1] || slot.label}</span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{slot.availableCapacity} slots left</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -899,7 +945,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                 <div className="flex items-center gap-2 pt-0.5">
                   {[
-                    { amount: 0, label: 'No Tip' },
+                    { amount: 0, label: '₹0' },
                     { amount: 20, label: '₹20' },
                     { amount: 30, label: '₹30' },
                     { amount: 50, label: '₹50' }
@@ -910,6 +956,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       onClick={() => {
                         setTipAmount(t.amount);
                         setCustomTipInput('');
+                        setCustomTipConfirmed(false);
+                        setError(null);
                       }}
                       className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition cursor-pointer border ${
                         tipAmount === t.amount && !customTipInput
@@ -925,13 +973,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <input
                       type="number"
                       min="0"
-                      max="500"
+                      max="200"
                       placeholder="Custom"
                       value={customTipInput}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
-                        setCustomTipInput(e.target.value);
-                        setTipAmount(isNaN(val) || val < 0 ? 0 : val);
+                        if (val > 200) {
+                          setCustomTipInput('200');
+                          setTipAmount(200);
+                        } else {
+                          setCustomTipInput(e.target.value);
+                          setTipAmount(isNaN(val) || val < 0 ? 0 : val);
+                        }
+                        setCustomTipConfirmed(false);
                       }}
                       className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold bg-gray-50 dark:bg-slate-900 border text-center focus:outline-none focus:border-[#d11243] text-gray-900 dark:text-white ${
                         customTipInput
@@ -941,6 +995,32 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     />
                   </div>
                 </div>
+
+                {/* Custom Tip Confirmation over ₹100 */}
+                {tipAmount > 100 && (
+                  <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-slate-900 border border-neutral-300 dark:border-slate-700 flex items-center justify-between gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="text-xs text-neutral-800 dark:text-neutral-200">
+                        Confirm custom tip of <strong>₹{tipAmount}</strong> to rider?
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomTipConfirmed(true);
+                        setError(null);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition min-h-[32px] ${
+                        customTipConfirmed
+                          ? 'bg-emerald-700 text-white'
+                          : 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90'
+                      }`}
+                    >
+                      {customTipConfirmed ? '✓ Confirmed' : 'Confirm Tip'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Step 2 Navigation Buttons */}
@@ -955,6 +1035,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    if (tipAmount > 100 && !customTipConfirmed) {
+                      setError(`Please confirm your custom tip of ₹${tipAmount} to your delivery partner before continuing.`);
+                      return;
+                    }
                     setError(null);
                     setCheckoutStep(3);
                   }}

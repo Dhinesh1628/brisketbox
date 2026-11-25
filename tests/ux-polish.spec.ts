@@ -388,4 +388,24 @@ test.describe('UX Polish & 3-Colour System Integrity', () => {
     await expect(page.locator('[role="status"]').filter({ hasText: /reorder/i })).toBeVisible();
   });
 
+  test('12. Search aliases correctly resolve regional terms to product results', async ({ page }) => {
+    await page.goto('/catalog', { waitUntil: 'networkidle' });
+    const searchInput = page.locator('main input[placeholder*="Search chicken"]').first();
+
+    // 1. kodi -> chicken
+    await searchInput.fill('kodi');
+    await page.waitForTimeout(300);
+    await expect(page.locator('main h2:has-text("Chicken")').first()).toBeVisible();
+
+    // 2. gosht -> mutton
+    await searchInput.fill('gosht');
+    await page.waitForTimeout(300);
+    await expect(page.locator('main h2:has-text("Mutton")').first()).toBeVisible();
+
+    // 3. meen -> fish
+    await searchInput.fill('meen');
+    await page.waitForTimeout(300);
+    await expect(page.locator('main h2:has-text("Steak"), main h2:has-text("Fish"), main h2:has-text("Surmai")').first()).toBeVisible();
+  });
+
 });

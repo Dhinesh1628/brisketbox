@@ -13,6 +13,7 @@ import { recordCouponUsage } from '../services/couponService.js';
 import { debitWallet, creditWallet } from '../services/walletService.js';
 import { deductStock, releaseStock } from '../services/stockService.js';
 import { finalizePayment, releasePaymentReservations } from '../services/paymentFinalizer.js';
+import { reserveDeliverySlot, releaseDeliverySlot, getAvailableDeliverySlots } from '../services/deliverySlotService.js';
 
 const router = express.Router();
 
@@ -123,9 +124,30 @@ router.post('/create-order', async (req, res) => {
       processedItems
     } = pricing;
 
+    // Real Delivery Slot: Atomic reservation & validation based on India time (Asia/Kolkata)
+    let reservedSlot = null;
+    try {
+      if (deliverySlot) {
+        const slotRes = await reserveDeliverySlot(deliverySlot);
+        reservedSlot = slotRes.slot;
+      } else {
+        const { nextAvailableSlot } = await getAvailableDeliverySlots();
+        if (!nextAvailableSlot) {
+          return res.status(400).json({ error: 'No delivery slots are currently available. Please select another slot.' });
+        }
+        const slotRes = await reserveDeliverySlot(nextAvailableSlot.id);
+        reservedSlot = slotRes.slot;
+      }
+    } catch (slotErr) {
+      return res.status(400).json({ error: slotErr.message });
+    }
+
+    const assignedDeliverySlot = reservedSlot ? reservedSlot.label : (deliverySlot || 'Today, Express Delivery');
+
     // Upfront Wallet Balance Check & Debit (Prevents simultaneous multi-tab double spending)
     if (walletDeduction > 0) {
       if (isGuest) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         return res.status(400).json({ error: 'Please sign in to use BrisketBox Wallet balance' });
       }
       let availableBalance = 0;
@@ -138,6 +160,7 @@ router.post('/create-order', async (req, res) => {
       }
 
       if (availableBalance < walletDeduction) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         return res.status(400).json({ 
           error: `Insufficient wallet balance. Available: ₹${availableBalance}, requested: ₹${walletDeduction}` 
         });
@@ -163,6 +186,7 @@ router.post('/create-order', async (req, res) => {
           description: 'Order paid in full using BrisketBox Wallet store credit.'
         });
       } catch (walletErr) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         return res.status(400).json({ error: walletErr.message });
       }
 
@@ -170,6 +194,7 @@ router.post('/create-order', async (req, res) => {
       try {
         await deductStock(processedItems);
       } catch (stockErr) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         // Rollback debited wallet if stock fails
         await creditWallet({
           userId: user.id,
@@ -202,7 +227,7 @@ router.post('/create-order', async (req, res) => {
         walletDeduction,
         deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
         addressDetails,
-        deliverySlot,
+        deliverySlot: assignedDeliverySlot,
         deliveryNotes,
         city: city || 'Bengaluru',
         paymentMethod: 'BrisketBox Wallet (Fully Paid)',
@@ -237,6 +262,7 @@ router.post('/create-order', async (req, res) => {
             description: `₹${walletDeduction} store credit deducted from BrisketBox Wallet.`
           });
         } catch (walletErr) {
+          if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
           return res.status(400).json({ error: walletErr.message });
         }
       }
@@ -245,6 +271,7 @@ router.post('/create-order', async (req, res) => {
       try {
         await deductStock(processedItems);
       } catch (stockErr) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         if (walletDeduction > 0) {
           await creditWallet({
             userId: user.id,
@@ -278,7 +305,7 @@ router.post('/create-order', async (req, res) => {
         walletDeduction,
         deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
         addressDetails,
-        deliverySlot,
+        deliverySlot: assignedDeliverySlot,
         deliveryNotes,
         city: city || 'Bengaluru',
         paymentMethod: 'Cash on Delivery (Pay at Doorstep)',
@@ -313,6 +340,7 @@ router.post('/create-order', async (req, res) => {
           description: `₹${walletDeduction} reserved for order payment.`
         });
       } catch (walletErr) {
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         return res.status(400).json({ error: walletErr.message });
       }
     }
@@ -336,6 +364,7 @@ router.post('/create-order', async (req, res) => {
         razorpayOrderId = rzpOrder.id;
       } catch (rzpErr) {
         console.error('[Razorpay Order Creation Failed]:', rzpErr);
+        if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
         if (walletDeduction > 0) {
           await creditWallet({
             userId: user.id,
@@ -369,7 +398,7 @@ router.post('/create-order', async (req, res) => {
       walletDeduction,
       deliveryAddress: deliveryAddress || `${addressDetails?.flatNo || ''}, ${addressDetails?.building || ''}, ${addressDetails?.street || ''}, ${city || 'Bengaluru'} - ${addressDetails?.pincode || ''}`,
       addressDetails,
-      deliverySlot,
+      deliverySlot: assignedDeliverySlot,
       deliveryNotes,
       city: city || 'Bengaluru',
       paymentMethod: walletDeduction > 0 ? `Wallet (₹${walletDeduction}) + Razorpay (₹${netPayable})` : 'razorpay',
@@ -400,6 +429,9 @@ router.post('/create-order', async (req, res) => {
       }
     });
   } catch (err) {
+    if (typeof reservedSlot !== 'undefined' && reservedSlot?.id) {
+      await releaseDeliverySlot(reservedSlot.id).catch(() => {});
+    }
     console.error('[Payments] Create order error:', err);
     res.status(500).json({ error: err.message || 'Internal payment error' });
   }

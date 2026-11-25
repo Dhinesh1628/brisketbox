@@ -54,7 +54,37 @@ async function safeFetchJson<T = any>(url: string, init?: RequestInit, fallbackE
   return (data ?? {}) as T;
 }
 
+export interface DeliverySlotItem {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isToday: boolean;
+  label: string;
+  bookedCount: number;
+  maxCapacity: number;
+  availableCapacity: number;
+  isFull: boolean;
+  isPastCutoff: boolean;
+}
+
+export interface DeliverySlotsResponse {
+  currentTimeIST: string;
+  hasTodaySlots: boolean;
+  nextAvailableSlot: DeliverySlotItem | null;
+  slots: DeliverySlotItem[];
+}
+
 export const api = {
+  async getDeliverySlots(): Promise<DeliverySlotsResponse> {
+    const res = await fetch(`${API_BASE}/delivery/slots`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      throw new Error('Failed to fetch available delivery slots');
+    }
+    return res.json();
+  },
   // Auth
   async googleLogin(credential: string): Promise<{ user: User; token: string }> {
     return safeFetchJson<{ user: User; token: string }>(

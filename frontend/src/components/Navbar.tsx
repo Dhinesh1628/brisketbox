@@ -896,7 +896,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Ding Sound Toggle Button: Visible on sm+ screens */}
+            {/* Sound Effects Toggle Button: Visible on sm+ screens */}
             <button
               onClick={toggleSound}
               className={`hidden sm:flex h-8 sm:h-10 w-8 sm:w-10 rounded-xl border transition-all duration-200 cursor-pointer items-center justify-center shrink-0 active:scale-95 ${
@@ -904,8 +904,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700/80 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
                   : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
               }`}
-              title={isSoundEnabled ? 'Ding Chime is ON (Click to mute)' : 'Sound is Muted (Click to unmute)'}
-              aria-label="Toggle chime sound"
+              title={isSoundEnabled ? 'Sound effects are ON (Click to mute)' : 'Sound effects are OFF (Click to unmute)'}
+              aria-label="Toggle sound effects"
             >
               {isSoundEnabled ? (
                 <Bell className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-600 dark:text-emerald-400" />
@@ -1269,24 +1269,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Sound Chime Toggle in Mobile */}
+          {/* Sound Effects Toggle in Menu */}
           <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
             <span className="font-bold text-gray-700 dark:text-gray-300 text-xs flex items-center gap-1.5">
-              <span>Chime Sound:</span>
-              <span className={`text-xs font-bold ${isSoundEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                {isSoundEnabled ? 'ON' : 'MUTED'}
+              <span>Sound Effects:</span>
+              <span className={`text-xs font-bold ${isSoundEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'}`}>
+                {isSoundEnabled ? 'On' : 'Off'}
               </span>
             </span>
             <button
               onClick={toggleSound}
-              className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs ${
+              className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ${
                 isSoundEnabled
                   ? 'bg-emerald-50 dark:bg-emerald-950 border-emerald-300 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500'
+                  : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300'
               }`}
+              aria-label={isSoundEnabled ? 'Turn sound effects off' : 'Turn sound effects on'}
             >
               {isSoundEnabled ? <Bell className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-gray-400" />}
-              <span>{isSoundEnabled ? 'Mute' : 'Enable'}</span>
+              <span>{isSoundEnabled ? 'Turn Off' : 'Turn On'}</span>
             </button>
           </div>
 

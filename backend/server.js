@@ -44,6 +44,7 @@ import whatsappWebhookRouter from './routes/whatsappWebhook.js';
 import paymentsRouter from './routes/payments.js';
 import analyticsRouter from './routes/analytics.js';
 import couponsRouter from './routes/coupons.js';
+import deliveryRouter from './routes/delivery.js';
 import { handleGoogleAuth } from './routes/googleAuth.js';
 import crypto from 'crypto';
 import { calculateOrderPricing } from './services/pricingService.js';
@@ -57,6 +58,7 @@ import { Refund } from './models/Refund.js';
 import { CashDeposit } from './models/CashDeposit.js';
 import { getRefundQueue, processOrderRefund, checkRefundStatus } from './services/refundService.js';
 import { debitWallet, creditWallet } from './services/walletService.js';
+import { reserveDeliverySlot, releaseDeliverySlot, getAvailableDeliverySlots } from './services/deliverySlotService.js';
 import { createBackup } from './scripts/backup.js';
 import {
   findCooler,
@@ -237,6 +239,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/whatsapp', whatsappWebhookRouter);
 app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
 app.use('/api/coupons', couponsRouter);
+app.use('/api/delivery', deliveryRouter);
 
 // Cold-chain telemetry route for IoT gateway
 app.post('/api/iot/coldchain-ping', (req, res) => {
@@ -555,10 +558,31 @@ app.post('/api/orders', authenticate, async (req, res) => {
     netPayable
   } = pricing;
 
+  // Real Delivery Slot: Atomic reservation & validation based on India time (Asia/Kolkata)
+  let reservedSlot = null;
+  try {
+    if (deliverySlot) {
+      const slotRes = await reserveDeliverySlot(deliverySlot);
+      reservedSlot = slotRes.slot;
+    } else {
+      const { nextAvailableSlot } = await getAvailableDeliverySlots();
+      if (!nextAvailableSlot) {
+        return res.status(400).json({ error: 'No delivery slots are currently available. Please select another slot.' });
+      }
+      const slotRes = await reserveDeliverySlot(nextAvailableSlot.id);
+      reservedSlot = slotRes.slot;
+    }
+  } catch (slotErr) {
+    return res.status(400).json({ error: slotErr.message });
+  }
+
+  const assignedDeliverySlot = reservedSlot ? reservedSlot.label : (deliverySlot || 'Today, Express Delivery');
+
   // Deduct inventory atomically
   try {
     await deductStock(processedItems);
   } catch (stockErr) {
+    if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
     return res.status(409).json({ error: stockErr.message });
   }
 
@@ -577,6 +601,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
         description: `Store credit used for Order #${orderNumber}`
       });
     } catch (walletErr) {
+      if (reservedSlot?.id) await releaseDeliverySlot(reservedSlot.id);
       await releaseStock(processedItems);
       return res.status(400).json({ error: walletErr.message });
     }
@@ -644,7 +669,7 @@ app.post('/api/orders', authenticate, async (req, res) => {
       assignedAt: now.toISOString()
     },
     tempLog: [],
-    deliverySlot: deliverySlot || 'Scheduled Delivery',
+    deliverySlot: assignedDeliverySlot,
     trackingCode: `BB-TRK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
     pinAttempts: 0,
     pinLockedUntil: null,
