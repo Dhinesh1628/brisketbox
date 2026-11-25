@@ -265,7 +265,8 @@ export async function finalizePayment({
         claimed.status = 'Confirmed & In Kitchen Prep';
         claimed.lifecycleStatus = 'CONFIRMED';
 
-        // Convert slot hold to confirmed permanent booking
+        // Convert slot hold to confirmed permanent booking and reset slotReleased on successful payment
+        claimed.slotReleased = false;
         if (claimed.deliverySlotId) {
           await confirmDeliverySlotHold({
             slotId: claimed.deliverySlotId,
@@ -419,6 +420,7 @@ export async function finalizePayment({
   order.status = 'Confirmed & In Kitchen Prep';
   order.lifecycleStatus = 'CONFIRMED';
 
+  order.slotReleased = false;
   if (order.deliverySlotId) {
     await confirmDeliverySlotHold({
       slotId: order.deliverySlotId,
