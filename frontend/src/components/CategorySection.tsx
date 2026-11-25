@@ -17,15 +17,13 @@ export const CATEGORIES: CategoryCircleItem[] = [
     value: 'Fresh Chicken',
     image: '/images/products/prod_6.webp',
     badge: 'Fresh Cuts',
-    badgeColor: 'bg-emerald-800'
+    badgeColor: 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900'
   },
   {
     id: 'mutton',
     name: 'Mutton',
     value: 'Tender Mutton',
-    image: '/images/products/prod_4.webp',
-    badge: 'Popular',
-    badgeColor: 'bg-[#d11243]'
+    image: '/images/products/prod_4.webp'
   },
   {
     id: 'fish',
@@ -33,7 +31,7 @@ export const CATEGORIES: CategoryCircleItem[] = [
     value: 'Fish & Seafood',
     image: '/images/products/prod_1.webp',
     badge: 'Daily Catch',
-    badgeColor: 'bg-blue-700'
+    badgeColor: 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900'
   },
   {
     id: 'ready_to_cook',
@@ -41,7 +39,7 @@ export const CATEGORIES: CategoryCircleItem[] = [
     value: 'Ready to Cook',
     image: '/images/products/prod_7.webp',
     badge: 'NEW',
-    badgeColor: 'bg-[#d11243]'
+    badgeColor: 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900'
   },
   {
     id: 'combos',
@@ -49,7 +47,7 @@ export const CATEGORIES: CategoryCircleItem[] = [
     value: 'Combo Box',
     image: '/images/products/prod_8.webp',
     badge: 'Save More',
-    badgeColor: 'bg-purple-800'
+    badgeColor: 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900'
   },
   {
     id: 'all',
@@ -71,7 +69,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onViewAllSpecs
 }) => {
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 max-w-5xl mx-auto">
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -85,7 +83,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
 
         <button
           onClick={onViewAllSpecs}
-          className="min-h-[44px] px-2 text-xs font-bold text-[#d11243] hover:text-[#b80f3b] flex items-center gap-1 cursor-pointer transition"
+          className="min-h-[44px] px-2 text-xs font-bold text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white flex items-center gap-1 cursor-pointer transition"
         >
           <span>View All</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -107,9 +105,9 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
               >
                 {/* Circular Platter Plate Container */}
                 <div className="relative pt-4 pb-0.5">
-                  {/* Floating Badge (e.g. "NEW", "POPULAR") - Clean pill above platter without clipping or ripping */}
+                  {/* Floating Badge - Neutral style (Rule 9) */}
                   {cat.badge && (
-                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-md ring-2 ring-white dark:ring-slate-900 pointer-events-none whitespace-nowrap leading-tight ${cat.badgeColor || 'bg-[#d11243]'}`}>
+                    <span className={`absolute top-0 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-xs ring-1 ring-neutral-300 dark:ring-neutral-700 pointer-events-none whitespace-nowrap leading-tight ${cat.badgeColor || 'bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900'}`}>
                       {cat.badge}
                     </span>
                   )}
@@ -118,7 +116,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                   <div
                     className={`w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-full overflow-hidden transition-all duration-300 relative bg-neutral-100 dark:bg-neutral-800 border-2 ${
                       isSelected
-                        ? 'border-[#d11243] ring-4 ring-[#d11243]/20 dark:ring-rose-500/20 shadow-md scale-105'
+                        ? 'border-neutral-900 dark:border-white ring-2 ring-neutral-900/20 dark:ring-white/20 shadow-md scale-105'
                         : 'border-slate-200/90 dark:border-slate-700 shadow-xs group-hover:shadow-lg group-hover:scale-105 group-hover:border-gray-300 dark:group-hover:border-slate-600'
                     }`}
                   >
@@ -140,14 +138,14 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
                   <span
                     className={`block text-xs sm:text-sm tracking-tight transition-colors line-clamp-1 ${
                       isSelected
-                        ? 'font-black text-[#d11243] dark:text-rose-400'
-                        : 'font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#d11243] dark:group-hover:text-rose-400'
+                        ? 'font-black text-neutral-900 dark:text-white'
+                        : 'font-semibold text-gray-800 dark:text-gray-200 group-hover:text-black dark:group-hover:text-white'
                     }`}
                   >
                     {cat.name}
                   </span>
                   {isSelected && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#d11243] mx-auto animate-pulse" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-neutral-900 dark:bg-white mx-auto animate-pulse" />
                   )}
                 </div>
               </button>

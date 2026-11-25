@@ -115,7 +115,12 @@ export async function calculateOrderPricing({
   // 2. Shipping & Deposit Fees
   const COOLER_DEPOSIT = 0; // Deposit is ₹0 as verified across all portals
   const shippingFee = subtotal >= 499 ? 0 : 40;
-  const tip = Math.max(0, Math.floor(Number(tipAmount) || 0));
+  const MAX_TIP_INR = Number(process.env.MAX_TIP_INR) || 200;
+  const rawTip = Number(tipAmount) || 0;
+  if (rawTip > MAX_TIP_INR) {
+    throw new Error(`Tip cannot exceed ₹${MAX_TIP_INR}`);
+  }
+  const tip = Math.max(0, Math.floor(rawTip));
 
   // 3. Gross Total before wallet deduction
   const grossTotal = Math.max(0, subtotal - discountAmount + COOLER_DEPOSIT + shippingFee + tip);

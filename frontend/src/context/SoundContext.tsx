@@ -12,10 +12,10 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('brisketbox_sound_enabled');
-    // Default state: Sound ON
-    return saved !== null ? saved === 'true' : true;
+    // Default state: Sound effects OFF by default
+    return saved !== null ? saved === 'true' : false;
   });
 
   const audioCtxRef = useRef<AudioContext | null>(null);

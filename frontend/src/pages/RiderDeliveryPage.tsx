@@ -586,7 +586,6 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
         <main className="flex-1 max-w-md w-full mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1.5">
             <h1 className="text-xl font-black text-slate-900">Delivery Partner Portal</h1>
-            <p className="text-xs text-slate-500">ThermalVault Cold-Chain Express Logistics</p>
           </div>
 
           
@@ -607,7 +606,7 @@ export const RiderDeliveryPage: React.FC<RiderDeliveryPageProps> = ({ onBackToSt
                 authMode === 'register' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Partner Registration
+              Rider Registration
             </button>
           </div>
 

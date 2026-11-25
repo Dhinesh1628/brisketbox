@@ -8,6 +8,7 @@ import { CouponUsage } from '../models/CouponUsage.js';
 import { deductStock, releaseStock } from './stockService.js';
 import { creditWallet, debitWallet } from './walletService.js';
 import { assignFleetRiderForOrder } from '../dispatch.js';
+import { confirmDeliverySlotHold, releaseDeliverySlot } from './deliverySlotService.js';
 
 /**
  * Assigns an active, approved delivery executive for the order.
@@ -264,6 +265,15 @@ export async function finalizePayment({
         claimed.status = 'Confirmed & In Kitchen Prep';
         claimed.lifecycleStatus = 'CONFIRMED';
 
+        // Convert slot hold to confirmed permanent booking and reset slotReleased on successful payment
+        claimed.slotReleased = false;
+        if (claimed.deliverySlotId) {
+          await confirmDeliverySlotHold({
+            slotId: claimed.deliverySlotId,
+            orderId: claimed.orderNumber || claimed.id
+          });
+        }
+
         await claimed.save({ session });
         finalOrder = claimed.toObject();
       });
@@ -410,6 +420,14 @@ export async function finalizePayment({
   order.status = 'Confirmed & In Kitchen Prep';
   order.lifecycleStatus = 'CONFIRMED';
 
+  order.slotReleased = false;
+  if (order.deliverySlotId) {
+    await confirmDeliverySlotHold({
+      slotId: order.deliverySlotId,
+      orderId: order.orderNumber || order.id
+    });
+  }
+
   db.update('orders', order.id, order);
   return { success: true, order };
 }
@@ -490,6 +508,17 @@ export async function releasePaymentReservations({ orderId, reason = 'Payment ex
           claimed.stockDeducted = false;
           await Order.updateOne({ _id: claimed._id }, { $set: { stockDeducted: false } }, { session });
         }
+
+        // Release delivery slot hold immediately on payment failure
+        if (claimed.deliverySlotId && !claimed.slotReleased) {
+          await releaseDeliverySlot({
+            slotId: claimed.deliverySlotId,
+            orderId: claimed.orderNumber || claimed.id,
+            isConfirmed: false
+          });
+          claimed.slotReleased = true;
+          await Order.updateOne({ _id: claimed._id }, { $set: { slotReleased: true } }, { session });
+        }
       });
     } finally {
       await session.endSession();
@@ -527,6 +556,15 @@ export async function releasePaymentReservations({ orderId, reason = 'Payment ex
   if (order.stockDeducted && Array.isArray(order.items) && order.items.length > 0) {
     await releaseStock(order.items);
     order.stockDeducted = false;
+  }
+
+  if (order.deliverySlotId && !order.slotReleased) {
+    await releaseDeliverySlot({
+      slotId: order.deliverySlotId,
+      orderId: order.orderNumber || order.id,
+      isConfirmed: false
+    });
+    order.slotReleased = true;
   }
 
   order.orderStatus = 'PAYMENT_FAILED';

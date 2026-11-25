@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api';
+import { api, type DeliverySlotsResponse } from '../api';
 import type { Order, DeliveryAddress } from '../types';
 
 interface CheckoutModalProps {
@@ -91,10 +91,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   }, [currentAddress]);
 
-  // Delivery Slot State
+  // Delivery Slot State (Dynamic from GET /api/delivery/slots)
+  const [slotsData, setSlotsData] = useState<DeliverySlotsResponse | null>(null);
   const [slotMode, setSlotMode] = useState<'express' | 'scheduled'>('express');
   const [scheduledDay, setScheduledDay] = useState<'Today' | 'Tomorrow'>('Today');
-  const [selectedSlotTime, setSelectedSlotTime] = useState('05:30 PM - 08:00 PM (Evening)');
+  const [selectedSlotTime, setSelectedSlotTime] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      api.getDeliverySlots()
+        .then((data) => {
+          setSlotsData(data);
+          if (data.hasTodaySlots) {
+            setScheduledDay('Today');
+          } else {
+            setScheduledDay('Tomorrow');
+          }
+          if (data.nextAvailableSlot) {
+            setSelectedSlotId(data.nextAvailableSlot.id);
+            setSelectedSlotTime(data.nextAvailableSlot.label);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   // Swiggy 1-Tap Delivery Notes State
   const deliveryPills = [
@@ -109,9 +130,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [customNotes, setCustomNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
 
-  // Swiggy Delivery Partner Tip State
+  // Delivery Partner Tip State (Capped at ₹200)
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [customTipInput, setCustomTipInput] = useState<string>('');
+  const [customTipConfirmed, setCustomTipConfirmed] = useState<boolean>(false);
 
   // BrisketBox In-App Vault Wallet State & Calculations
   const [useWallet, setUseWallet] = useState<boolean>(true);
@@ -123,6 +145,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const isFullyWalletPaid = walletDeduction > 0 && finalPayable === 0;
 
   // Processing & Verification States
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,12 +180,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const scheduledSlots = [
-    { label: 'Morning Fresh Lot', time: '07:00 AM - 09:30 AM' },
-    { label: 'Lunch Prep', time: '11:30 AM - 02:00 PM' },
-    { label: 'Evening Cook (Popular)', time: '05:30 PM - 08:00 PM' },
-    { label: 'Late Dinner Slot', time: '08:00 PM - 10:00 PM' }
-  ];
+  const availableDays: Array<'Today' | 'Tomorrow'> = slotsData?.hasTodaySlots
+    ? ['Today', 'Tomorrow']
+    : ['Tomorrow'];
+
+  const filteredSlots = (slotsData?.slots || []).filter(
+    s => s.isToday === (scheduledDay === 'Today')
+  );
 
   const deliveryInstructionOptions = [
     'Leave with security guard',
@@ -199,16 +223,28 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      setCheckoutStep(1);
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
     setPaymentFailedModal(null);
 
+    if (tipAmount > 100 && !customTipConfirmed) {
+      setError(`Please confirm your tip of ₹${tipAmount} before proceeding.`);
+      setIsSubmitting(false);
+      return;
+    }
+
     const fullAddress = `${flatNo}, ${building}, ${street}, ${city}, ${state} - ${pincode} (${addressType.toUpperCase()})`;
-    const computedSlot = slotMode === 'express'
-      ? 'Express Chilled Delivery (Live Courier)'
-      : `${scheduledDay}, ${selectedSlotTime}`;
+    const chosenSlot = slotMode === 'express'
+      ? slotsData?.nextAvailableSlot
+      : (slotsData?.slots?.find(s => s.id === selectedSlotId) || slotsData?.nextAvailableSlot);
+
+    const deliverySlotId = chosenSlot?.id || selectedSlotId || slotsData?.nextAvailableSlot?.id;
+    const computedSlot = chosenSlot?.label || selectedSlotTime || slotsData?.nextAvailableSlot?.label || 'Today, Express Delivery';
 
     const instructionsSummary = selectedInstructionPills.join(' • ');
     const finalNotes = customNotes.trim() 
@@ -238,6 +274,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       })),
       deliveryAddress: fullAddress,
       addressDetails,
+      deliverySlotId,
       deliverySlot: computedSlot,
       deliveryNotes: finalNotes,
       city,
@@ -473,627 +510,785 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleCheckoutSubmit} className="mt-5 space-y-6 text-xs">
-          
-          {/* Section 1: Customer Contact Details */}
-          <div className="space-y-3">
-            <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-              <span>1. Contact Details</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Your Full Name"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. name@example.com"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Mobile Number *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98XXXXXXXX"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Delivery Slot Picker */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#d11243]" />
-                <span>2. Choose Delivery Time</span>
-              </label>
-              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Arrives Fresh</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Express Delivery Card */}
-              <div
-                onClick={() => setSlotMode('express')}
-                className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
-                  slotMode === 'express'
-                    ? 'border-[#d11243] bg-rose-50/70 dark:bg-rose-950/40 ring-1 ring-[#d11243]'
-                    : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-black text-xs text-gray-950 dark:text-white">
-                    <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    <span>Express Delivery</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold bg-[#d11243] text-white px-1.5 py-0.5 rounded">
-                    Recommended
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                  Packed immediately and dispatched to your door in cold packaging.
-                </p>
-              </div>
-
-              {/* Scheduled Delivery Card */}
-              <div
-                onClick={() => setSlotMode('scheduled')}
-                className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
-                  slotMode === 'scheduled'
-                    ? 'border-[#d11243] bg-rose-50/70 dark:bg-rose-950/40 ring-1 ring-[#d11243]'
-                    : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-gray-950 dark:text-white">
-                    <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                    <span>Schedule for Later</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Flexible</span>
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                  Pick a convenient morning, afternoon, or evening time.
-                </p>
-              </div>
-            </div>
-
-            {slotMode === 'scheduled' && (
-              <div className="p-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200 dark:border-slate-700 space-y-3">
-                <div className="flex gap-2">
-                  {(['Today', 'Tomorrow'] as const).map(day => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => setScheduledDay(day)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                        scheduledDay === day
-                          ? 'bg-gray-950 dark:bg-rose-600 text-white'
-                          : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {scheduledSlots.map(slot => (
-                    <div
-                      key={slot.time}
-                      onClick={() => setSelectedSlotTime(`${slot.time} (${slot.label})`)}
-                      className={`p-2.5 rounded-lg border text-left cursor-pointer text-xs transition ${
-                        selectedSlotTime.startsWith(slot.time)
-                          ? 'border-[#d11243] bg-white dark:bg-slate-800 font-bold text-gray-950 dark:text-white ring-1 ring-[#d11243]'
-                          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
-                      }`}
-                    >
-                      <div className="font-bold text-gray-900 dark:text-white">{slot.time}</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400">{slot.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Section 3: Delivery Address */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#d11243]" />
-                <span>3. Delivery Address</span>
-              </label>
-
-              <div className="flex items-center gap-2">
-                {onOpenLocationModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenLocationModal}
-                    className="text-[11px] font-bold text-[#d11243] hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>Change / Saved Addresses</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
+        {/* 3-Step Progress Indicator */}
+        <div className="mt-4 flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+          {[
+            { step: 1, title: 'Contact & Address' },
+            { step: 2, title: 'Delivery Slot' },
+            { step: 3, title: 'Payment' }
+          ].map((s, idx) => {
+            const isCurrent = checkoutStep === s.step;
+            const isDone = checkoutStep > s.step;
+            return (
+              <React.Fragment key={s.step}>
+                {idx > 0 && (
+                  <div className={`flex-1 h-0.5 mx-2 transition-colors ${
+                    checkoutStep >= s.step ? 'bg-[#d11243]' : 'bg-gray-200 dark:bg-slate-700'
+                  }`} />
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isDone) {
+                      setCheckoutStep(s.step as 1 | 2 | 3);
+                    }
+                  }}
+                  disabled={!isDone && !isCurrent}
+                  className={`flex items-center gap-2 text-xs font-bold transition min-h-[36px] ${
+                    isCurrent
+                      ? 'text-[#d11243] font-black'
+                      : isDone
+                      ? 'text-gray-900 dark:text-gray-200 cursor-pointer hover:underline'
+                      : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-colors ${
+                    isCurrent
+                      ? 'bg-[#d11243] text-white shadow-xs'
+                      : isDone
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-500 border border-gray-200 dark:border-slate-700'
+                  }`}>
+                    {isDone ? '✓' : s.step}
+                  </span>
+                  <span className="hidden sm:inline">{s.title}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
 
-                <div className="flex gap-1.5">
-                  {[
-                    { id: 'home', label: 'Home', icon: Home },
-                    { id: 'work', label: 'Work', icon: Briefcase },
-                    { id: 'other', label: 'Other', icon: Building }
-                  ].map(item => {
-                    const Icon = item.icon;
+        <form onSubmit={handleCheckoutSubmit} className="mt-5 space-y-6 text-xs">
+          {/* STEP 1: CONTACT DETAILS & DELIVERY ADDRESS */}
+          {checkoutStep === 1 && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Section 1: Customer Contact Details */}
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <span>1. Contact Details</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Your Full Name"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. name@example.com"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Mobile Number *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98XXXXXXXX"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Delivery Address */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-gray-500" />
+                    <span>2. Delivery Address</span>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    {onOpenLocationModal && (
+                      <button
+                        type="button"
+                        onClick={onOpenLocationModal}
+                        className="text-[11px] font-bold text-gray-700 dark:text-gray-300 hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <span>Change / Saved Addresses</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    <div className="flex gap-1.5">
+                      {[
+                        { id: 'home', label: 'Home', icon: Home },
+                        { id: 'work', label: 'Work', icon: Briefcase },
+                        { id: 'other', label: 'Other', icon: Building }
+                      ].map(item => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setAddressType(item.id as any)}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition ${
+                              addressType === item.id
+                                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                                : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            <Icon className="w-3 h-3" />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Flat / House / Villa Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={flatNo}
+                      onChange={(e) => setFlatNo(e.target.value)}
+                      placeholder="e.g. Flat 101, Block A"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Apartment / Building Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={building}
+                      onChange={(e) => setBuilding(e.target.value)}
+                      placeholder="e.g. Sunrise Apartments"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                      Street / Area / Landmark *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      placeholder="e.g. Outer Ring Road, Doddanekkundi"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
+                        Pincode *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value)}
+                        placeholder="560037"
+                        className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 1 Continue CTA */}
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validateForm()) {
+                      setError(null);
+                      setCheckoutStep(2);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition active:scale-98 min-h-[44px]"
+                >
+                  <span>Continue to Delivery Slot</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: DELIVERY SLOT & INSTRUCTIONS */}
+          {checkoutStep === 2 && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Delivery Slot Picker */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Choose Delivery Time</span>
+                  </label>
+                  <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Arrives Fresh</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Express Delivery Card */}
+                  <div
+                    onClick={() => setSlotMode('express')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
+                      slotMode === 'express'
+                        ? 'border-[#d11243] bg-gray-50 dark:bg-slate-800 ring-1 ring-[#d11243]'
+                        : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-black text-xs text-gray-950 dark:text-white">
+                        <Zap className="w-4 h-4 text-gray-900 dark:text-white" />
+                        <span>Express Delivery</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-1.5 py-0.5 rounded">
+                        Fastest
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                      Packed immediately and dispatched to your door in chilled packaging.
+                    </p>
+                  </div>
+
+                  {/* Scheduled Delivery Card */}
+                  <div
+                    onClick={() => setSlotMode('scheduled')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
+                      slotMode === 'scheduled'
+                        ? 'border-[#d11243] bg-gray-50 dark:bg-slate-800 ring-1 ring-[#d11243]'
+                        : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-gray-950 dark:text-white">
+                        <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        <span>Schedule for Later</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Flexible</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                      Pick a convenient morning, afternoon, or evening time.
+                    </p>
+                  </div>
+                </div>
+
+                {slotMode === 'scheduled' && (
+                  <div className="p-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200 dark:border-slate-700 space-y-3">
+                    <div className="flex items-center gap-2">
+                      {availableDays.map(day => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => setScheduledDay(day)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            scheduledDay === day
+                              ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-900'
+                              : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                      {!slotsData?.hasTodaySlots && (
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                          (Today's ordering cut-off has passed)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {filteredSlots.length === 0 ? (
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 col-span-2 py-2">
+                          No more delivery slots available for {scheduledDay}.
+                        </p>
+                      ) : (
+                        filteredSlots.map(slot => (
+                          <div
+                            key={slot.id}
+                            onClick={() => {
+                              setSelectedSlotId(slot.id);
+                              setSelectedSlotTime(slot.label);
+                            }}
+                            className={`p-2.5 rounded-lg border text-left cursor-pointer text-xs transition ${
+                              selectedSlotTime === slot.label || selectedSlotId === slot.id
+                                ? 'border-[#d11243] bg-white dark:bg-slate-800 font-bold text-gray-950 dark:text-white ring-1 ring-[#d11243]'
+                                : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <div className="font-bold text-gray-900 dark:text-white">{slot.startTime} - {slot.endTime}</div>
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center justify-between mt-0.5">
+                              <span>{slot.label.split(', ')[1] || slot.label}</span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{slot.availableCapacity} slots left</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Delivery Instructions */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-gray-700 dark:text-gray-300 text-[11px] font-bold">
+                    Delivery Instructions
+                  </label>
+                  <span className="text-[10px] text-gray-400">Tap to select / deselect</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {deliveryPills.map(opt => {
+                    const isSelected = selectedInstructionPills.includes(opt.label);
+                    const Icon = opt.icon;
                     return (
                       <button
-                        key={item.id}
+                        key={opt.id}
                         type="button"
-                        onClick={() => setAddressType(item.id as any)}
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition ${
-                          addressType === item.id
-                            ? 'bg-[#d11243] text-white'
-                            : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                        onClick={() => {
+                          setSelectedInstructionPills(prev => 
+                            prev.includes(opt.label)
+                              ? prev.filter(p => p !== opt.label)
+                              : [...prev, opt.label]
+                          );
+                        }}
+                        className={`px-3 py-2 rounded-xl text-left text-[11px] font-bold transition flex items-center gap-2 cursor-pointer border ${
+                          isSelected
+                            ? 'bg-gray-100 dark:bg-slate-800 border-gray-400 dark:border-slate-600 text-gray-900 dark:text-white'
+                            : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-700'
                         }`}
                       >
-                        <Icon className="w-3 h-3" />
-                        <span>{item.label}</span>
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Flat / House / Villa Number *
-                </label>
                 <input
                   type="text"
-                  required
-                  value={flatNo}
-                  onChange={(e) => setFlatNo(e.target.value)}
-                  placeholder="e.g. Flat 101, Block A"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
+                  value={customNotes}
+                  onChange={(e) => setCustomNotes(e.target.value)}
+                  placeholder="Add other instructions (e.g. Landmark, gate number)"
+                  className="w-full mt-1.5 px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
                 />
               </div>
 
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Apartment / Building Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={building}
-                  onChange={(e) => setBuilding(e.target.value)}
-                  placeholder="e.g. Sunrise Apartments"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                  Street / Area / Landmark *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  placeholder="e.g. Outer Ring Road, Doddanekkundi"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200"
-                  />
+              {/* Delivery Partner Tip */}
+              <div className="p-3.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Bike className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-gray-900 dark:text-white">
+                          Tip your delivery partner
+                        </span>
+                        {tipAmount > 0 && (
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-black text-[10px]">
+                            ₹{tipAmount} added
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        100% of your tip goes directly to your partner.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-600 dark:text-gray-300 text-[11px] font-bold mb-1">
-                    Pincode *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    placeholder="560037"
-                    className="w-full px-2.5 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Swiggy Style 1-Tap Delivery Notes (Icon Pills) */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between">
-                <label className="block text-gray-700 dark:text-gray-300 text-[11px] font-bold">
-                  1-Tap Delivery Instructions
-                </label>
-                <span className="text-[10px] text-gray-400">Tap to select / deselect</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {deliveryPills.map(opt => {
-                  const isSelected = selectedInstructionPills.includes(opt.label);
-                  const Icon = opt.icon;
-                  return (
+                <div className="flex items-center gap-2 pt-0.5">
+                  {[
+                    { amount: 0, label: '₹0' },
+                    { amount: 20, label: '₹20' },
+                    { amount: 30, label: '₹30' },
+                    { amount: 50, label: '₹50' }
+                  ].map(t => (
                     <button
-                      key={opt.id}
+                      key={t.amount}
                       type="button"
                       onClick={() => {
-                        setSelectedInstructionPills(prev => 
-                          prev.includes(opt.label)
-                            ? prev.filter(p => p !== opt.label)
-                            : [...prev, opt.label]
-                        );
+                        setTipAmount(t.amount);
+                        setCustomTipInput('');
+                        setCustomTipConfirmed(false);
+                        setError(null);
                       }}
-                      className={`px-3 py-2 rounded-xl text-left text-[11px] font-bold transition flex items-center gap-2 cursor-pointer border ${
-                        isSelected
-                          ? 'bg-rose-50 dark:bg-rose-950/70 border-[#d11243] text-[#d11243] dark:text-rose-400 shadow-2xs ring-1 ring-[#d11243]/30'
-                          : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition cursor-pointer border ${
+                        tipAmount === t.amount && !customTipInput
+                          ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white shadow-xs'
+                          : 'bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{opt.label}</span>
+                      {t.label}
                     </button>
-                  );
-                })}
-              </div>
+                  ))}
 
-              {/* Optional custom note input */}
-              <input
-                type="text"
-                value={customNotes}
-                onChange={(e) => setCustomNotes(e.target.value)}
-                placeholder="Add other instructions (e.g. Landmark, gate number)"
-                className="w-full mt-1.5 px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#d11243]"
-              />
-            </div>
-          </div>
-
-          {/* BrisketBox Wallet Card */}
-          <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shrink-0">
-                  <Wallet className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-extrabold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <span>Pay using BrisketBox Wallet</span>
-                    <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-[10px] rounded font-bold">
-                      Available: ₹{userWalletBalance}
-                    </span>
+                  <div className="relative w-24">
+                    <input
+                      type="number"
+                      min="0"
+                      max="200"
+                      placeholder="Custom"
+                      value={customTipInput}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (val > 200) {
+                          setCustomTipInput('200');
+                          setTipAmount(200);
+                        } else {
+                          setCustomTipInput(e.target.value);
+                          setTipAmount(isNaN(val) || val < 0 ? 0 : val);
+                        }
+                        setCustomTipConfirmed(false);
+                      }}
+                      className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold bg-gray-50 dark:bg-slate-900 border text-center focus:outline-none focus:border-[#d11243] text-gray-900 dark:text-white ${
+                        customTipInput
+                          ? 'border-[#d11243] ring-1 ring-[#d11243]'
+                          : 'border-gray-200 dark:border-slate-700'
+                      }`}
+                    />
                   </div>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-300">
-                    {userWalletBalance > 0
-                      ? 'Available wallet store credit.'
-                      : 'Available wallet balance.'}
-                  </p>
                 </div>
-              </div>
 
-              {userWalletBalance > 0 && (
-                <label className="flex items-center gap-2 cursor-pointer select-none bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 shadow-2xs">
-                  <input
-                    type="checkbox"
-                    checked={useWallet}
-                    onChange={(e) => setUseWallet(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    {useWallet ? 'Applied' : 'Use'}
-                  </span>
-                </label>
-              )}
-            </div>
-
-            {useWallet && userWalletBalance > 0 && (
-              <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-800/60 flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                <span>Wallet Discount Deducted:</span>
-                <span>-₹{walletDeduction}</span>
-              </div>
-            )}
-            {isFullyWalletPaid && (
-              <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-emerald-300/60">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Full amount covered by your wallet! You pay ₹0.</span>
-              </div>
-            )}
-          </div>
-
-          {/* Section 4: Choose Payment Method */}
-          {!isFullyWalletPaid ? (
-            <div className="space-y-3">
-              <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-[#d11243]" />
-                <span>4. Choose Payment Method (₹{finalPayable})</span>
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Online Payment (UPI, Cards, NetBanking) */}
-                <div
-                  onClick={() => setPaymentMethod('razorpay')}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
-                    paymentMethod === 'razorpay'
-                      ? 'border-[#d11243] bg-rose-50/70 dark:bg-rose-950/40 ring-1 ring-[#d11243]'
-                      : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-black text-xs text-gray-950 dark:text-white">
-                      <Zap className="w-4 h-4 fill-emerald-500 text-emerald-500" />
-                      <span>Pay Online</span>
+                {/* Custom Tip Confirmation over ₹100 */}
+                {tipAmount > 100 && (
+                  <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-slate-900 border border-neutral-300 dark:border-slate-700 flex items-center justify-between gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="text-xs text-neutral-800 dark:text-neutral-200">
+                        Confirm custom tip of <strong>₹{tipAmount}</strong> to rider?
+                      </span>
                     </div>
-                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-                      Fast & Safe
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomTipConfirmed(true);
+                        setError(null);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition min-h-[32px] ${
+                        customTipConfirmed
+                          ? 'bg-emerald-700 text-white'
+                          : 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90'
+                      }`}
+                    >
+                      {customTipConfirmed ? '✓ Confirmed' : 'Confirm Tip'}
+                    </button>
                   </div>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1.5">
-                    UPI (Google Pay, PhonePe, Paytm), Cards, or NetBanking.
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60 dark:border-slate-700/60 text-[10px] text-gray-500 dark:text-gray-400">
-                    <Lock className="w-3 h-3 text-emerald-600" />
-                    <span>100% Safe Payment</span>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                {/* Cash on Delivery */}
-                <div
-                  onClick={() => setPaymentMethod('cod')}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
-                    paymentMethod === 'cod'
-                      ? 'border-[#d11243] bg-rose-50/70 dark:bg-rose-950/40 ring-1 ring-[#d11243]'
-                      : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
-                  }`}
+              {/* Step 2 Navigation Buttons */}
+              <div className="pt-4 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutStep(1)}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition min-h-[44px]"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold text-xs text-gray-950 dark:text-white">
-                      <Banknote className="w-4 h-4 text-amber-500" />
-                      <span>Cash on Delivery</span>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-500">Pay at Door</span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
-                    Pay with cash or scan UPI QR code when your order arrives.
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60 dark:border-slate-700/60 text-[10px] text-gray-500 dark:text-gray-400">
-                    <Info className="w-3 h-3 text-amber-600" />
-                    <span>Exact cash or UPI recommended</span>
-                  </div>
-                </div>
+                  <span>← Back to Address</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tipAmount > 100 && !customTipConfirmed) {
+                      setError(`Please confirm your custom tip of ₹${tipAmount} to your delivery partner before continuing.`);
+                      return;
+                    }
+                    setError(null);
+                    setCheckoutStep(3);
+                  }}
+                  className="px-6 py-3 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition active:scale-98 min-h-[44px]"
+                >
+                  <span>Continue to Payment</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/70 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                <Wallet className="w-4 h-4 text-emerald-600" />
-                <span>Payment: Paid using BrisketBox Wallet</span>
-              </div>
-              <span className="text-[11px] font-black text-emerald-700 dark:text-emerald-300">₹0 to pay</span>
             </div>
           )}
 
-          {/* Swiggy Style Delivery Partner Tip */}
-          <div className="p-3.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
-                  <Bike className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-xs text-gray-900 dark:text-white">
-                      Tip your delivery partner
-                    </span>
-                    {tipAmount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/60 text-[#d11243] dark:text-rose-400 font-black text-[10px]">
-                        ₹{tipAmount} added
-                      </span>
-                    )}
+          {/* STEP 3: PAYMENT METHOD & SUMMARY */}
+          {checkoutStep === 3 && (
+            <div className="space-y-6 animate-fade-in">
+              {/* BrisketBox Wallet Card */}
+              <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shrink-0">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <span>Pay using BrisketBox Wallet</span>
+                        <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-[10px] rounded font-bold">
+                          Available: ₹{userWalletBalance}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 dark:text-gray-300">
+                        {userWalletBalance > 0
+                          ? 'Available wallet store credit.'
+                          : 'Available wallet balance.'}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                    "100% of your tip goes directly to your partner."
-                  </p>
+
+                  {userWalletBalance > 0 && (
+                    <label className="flex items-center gap-2 cursor-pointer select-none bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                      <input
+                        type="checkbox"
+                        checked={useWallet}
+                        onChange={(e) => setUseWallet(e.target.checked)}
+                        className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        {useWallet ? 'Applied' : 'Use'}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
+                {useWallet && userWalletBalance > 0 && (
+                  <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-800/60 flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    <span>Wallet Discount Deducted:</span>
+                    <span>-₹{walletDeduction}</span>
+                  </div>
+                )}
+                {isFullyWalletPaid && (
+                  <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1 bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-emerald-300/60">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Full amount covered by your wallet! You pay ₹0.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Choose Payment Method */}
+              {!isFullyWalletPaid ? (
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Choose Payment Method (₹{finalPayable})</span>
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Online Payment (UPI, Cards, NetBanking) */}
+                    <div
+                      onClick={() => setPaymentMethod('razorpay')}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
+                        paymentMethod === 'razorpay'
+                          ? 'border-[#d11243] bg-gray-50 dark:bg-slate-800 ring-1 ring-[#d11243]'
+                          : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-black text-xs text-gray-950 dark:text-white">
+                          <Zap className="w-4 h-4 text-emerald-600" />
+                          <span>Pay Online</span>
+                        </div>
+                        <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                          Fast & Safe
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1.5">
+                        UPI (Google Pay, PhonePe, Paytm), Cards, or NetBanking.
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60 dark:border-slate-700/60 text-[10px] text-gray-500 dark:text-gray-400">
+                        <Lock className="w-3 h-3 text-emerald-600" />
+                        <span>100% Safe Payment</span>
+                      </div>
+                    </div>
+
+                    {/* Cash on Delivery */}
+                    <div
+                      onClick={() => setPaymentMethod('cod')}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition relative ${
+                        paymentMethod === 'cod'
+                          ? 'border-[#d11243] bg-gray-50 dark:bg-slate-800 ring-1 ring-[#d11243]'
+                          : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-gray-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-xs text-gray-950 dark:text-white">
+                          <Banknote className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                          <span>Cash on Delivery</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-500">Pay at Door</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
+                        Pay with cash or scan UPI QR code when your order arrives.
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60 dark:border-slate-700/60 text-[10px] text-gray-500 dark:text-gray-400">
+                        <Info className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                        <span>Exact cash or UPI recommended</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/70 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    <Wallet className="w-4 h-4 text-emerald-600" />
+                    <span>Payment: Paid using BrisketBox Wallet</span>
+                  </div>
+                  <span className="text-[11px] font-black text-emerald-700 dark:text-emerald-300">₹0 to pay</span>
+                </div>
+              )}
+
+              {/* Order Summary */}
+              <div className="p-3.5 bg-gray-50 dark:bg-slate-800/70 rounded-xl border border-gray-200 dark:border-slate-700 space-y-2">
+                <div className="space-y-1.5 pb-2 border-b border-gray-200 dark:border-slate-700">
+                  {items.map(item => {
+                    const itemPrice = typeof item.unitPrice === 'number' && item.unitPrice > 0 ? item.unitPrice : item.product.price;
+                    const packWeight = item.selectedWeight || item.product.netWeight || item.product.unit || '500g';
+                    return (
+                      <div key={item.id || `${item.product.id}_${packWeight}`} className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 truncate max-w-[70%]">
+                          <span className="font-bold text-gray-900 dark:text-white truncate">{item.product.name}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-extrabold text-[9px] shrink-0">
+                            {packWeight}
+                          </span>
+                          <span className="text-gray-400 shrink-0">×{item.quantity}</span>
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white">₹{itemPrice * item.quantity}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between text-gray-600 dark:text-gray-300">
+                  <span>Item Total ({items.length} items):</span>
+                  <span className="font-bold text-gray-900 dark:text-white">₹{subtotal}</span>
+                </div>
+
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
+                    <span>Coupon Applied ({couponCode}):</span>
+                    <span>-₹{couponDiscount}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-gray-600 dark:text-gray-300">
+                  <span>Delivery Fee:</span>
+                  <span>{shippingFee === 0 ? <strong className="text-emerald-700 dark:text-emerald-400">FREE</strong> : `₹${shippingFee}`}</span>
+                </div>
+
+                {tipAmount > 0 && (
+                  <div className="flex justify-between text-gray-700 dark:text-gray-200 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Bike className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Delivery Partner Tip:</span>
+                    </span>
+                    <span>+₹{tipAmount}</span>
+                  </div>
+                )}
+
+                {walletDeduction > 0 && (
+                  <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/70 dark:bg-emerald-900/40 p-2 rounded-lg border border-emerald-300 dark:border-emerald-700">
+                    <span className="flex items-center gap-1.5">
+                      <Wallet className="w-4 h-4 text-emerald-600" />
+                      <span>BrisketBox Wallet:</span>
+                    </span>
+                    <span>-₹{walletDeduction}</span>
+                  </div>
+                )}
+                
+                <div className="border-t border-gray-200 dark:border-slate-700 pt-2 flex justify-between items-center text-sm font-black text-gray-950 dark:text-white">
+                  <span>Total Amount:</span>
+                  <span className="text-xl font-black text-[#d11243]">₹{finalPayable}</span>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 pt-0.5">
-              {[
-                { amount: 0, label: 'No Tip' },
-                { amount: 20, label: '₹20' },
-                { amount: 30, label: '₹30' },
-                { amount: 50, label: '₹50' }
-              ].map(t => (
+              {/* Step 3 Navigation & Pay CTA */}
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <button
-                  key={t.amount}
                   type="button"
-                  onClick={() => {
-                    setTipAmount(t.amount);
-                    setCustomTipInput('');
-                  }}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition cursor-pointer border ${
-                    tipAmount === t.amount && !customTipInput
-                      ? 'bg-[#d11243] text-white border-[#d11243] shadow-xs ring-1 ring-[#d11243]/30'
-                      : 'bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800'
+                  onClick={() => setCheckoutStep(2)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition min-h-[44px]"
+                >
+                  <span>← Back to Delivery</span>
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || verifyingPayment}
+                  className={`w-full sm:flex-1 py-3.5 px-4 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg transition disabled:opacity-50 active:scale-98 min-h-[44px] ${
+                    isFullyWalletPaid
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+                      : 'bg-[#d11243] hover:bg-[#b80f3b]'
                   }`}
                 >
-                  {t.label}
+                  {isSubmitting || verifyingPayment ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>{verifyingPayment ? 'Checking payment...' : 'Placing your order...'}</span>
+                    </span>
+                  ) : isFullyWalletPaid ? (
+                    <span className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4" />
+                      <span>Place Order (Paid with Wallet)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  ) : paymentMethod === 'razorpay' ? (
+                    <span className="flex items-center gap-2">
+                      <span>Pay Now • ₹{finalPayable}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>Place Order (Pay ₹{finalPayable} on Delivery)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  )}
                 </button>
-              ))}
-
-              <div className="relative w-24">
-                <input
-                  type="number"
-                  min="0"
-                  max="500"
-                  placeholder="Custom"
-                  value={customTipInput}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    setCustomTipInput(e.target.value);
-                    setTipAmount(isNaN(val) || val < 0 ? 0 : val);
-                  }}
-                  className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold bg-gray-50 dark:bg-slate-900 border text-center focus:outline-none focus:border-[#d11243] text-gray-900 dark:text-white ${
-                    customTipInput
-                      ? 'border-[#d11243] ring-1 ring-[#d11243]'
-                      : 'border-gray-200 dark:border-slate-700'
-                  }`}
-                />
               </div>
             </div>
-          </div>
-
-          {/* Section 5: Order Summary */}
-          <div className="p-3.5 bg-gray-50 dark:bg-slate-800/70 rounded-xl border border-gray-200 dark:border-slate-700 space-y-2">
-            {/* Items Breakdown with Selected Weights */}
-            <div className="space-y-1.5 pb-2 border-b border-gray-200 dark:border-slate-700">
-              {items.map(item => {
-                const itemPrice = typeof item.unitPrice === 'number' && item.unitPrice > 0 ? item.unitPrice : item.product.price;
-                const packWeight = item.selectedWeight || item.product.netWeight || item.product.unit || '500g';
-                return (
-                  <div key={item.id || `${item.product.id}_${packWeight}`} className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5 truncate max-w-[70%]">
-                      <span className="font-bold text-gray-900 dark:text-white truncate">{item.product.name}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/60 text-[#d11243] dark:text-rose-400 font-extrabold text-[9px] shrink-0">
-                        {packWeight}
-                      </span>
-                      <span className="text-gray-400 shrink-0">×{item.quantity}</span>
-                    </div>
-                    <span className="font-bold text-gray-900 dark:text-white">₹{itemPrice * item.quantity}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-between text-gray-600 dark:text-gray-300">
-              <span>Item Total ({items.length} items):</span>
-              <span className="font-bold text-gray-900 dark:text-white">₹{subtotal}</span>
-            </div>
-            
-            
-
-            {couponDiscount > 0 && (
-              <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
-                <span>Coupon Applied ({couponCode}):</span>
-                <span>-₹{couponDiscount}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between text-gray-600 dark:text-gray-300">
-              <span>Delivery Fee:</span>
-              <span>{shippingFee === 0 ? <strong className="text-emerald-700 dark:text-emerald-400">FREE</strong> : `₹${shippingFee}`}</span>
-            </div>
-
-            {tipAmount > 0 && (
-              <div className="flex justify-between text-gray-700 dark:text-gray-200 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <Bike className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Delivery Partner Tip:</span>
-                </span>
-                <span>+₹{tipAmount}</span>
-              </div>
-            )}
-
-            {walletDeduction > 0 && (
-              <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/70 dark:bg-emerald-900/40 p-2 rounded-lg border border-emerald-300 dark:border-emerald-700">
-                <span className="flex items-center gap-1.5">
-                  <Wallet className="w-4 h-4 text-emerald-600" />
-                  <span>BrisketBox Wallet:</span>
-                </span>
-                <span>-₹{walletDeduction}</span>
-              </div>
-            )}
-            
-            <div className="border-t border-gray-200 dark:border-slate-700 pt-2 flex justify-between items-center text-sm font-black text-gray-950 dark:text-white">
-              <span>Total Amount:</span>
-              <span className="text-xl font-black text-[#d11243] dark:text-rose-400">₹{finalPayable}</span>
-            </div>
-          </div>
-
-          
-
-          {/* Action CTA Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting || verifyingPayment}
-            className={`w-full py-3.5 px-4 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg transition disabled:opacity-50 ${
-              isFullyWalletPaid
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
-                : 'bg-[#d11243] hover:bg-[#b80f3b]'
-            }`}
-          >
-            {isSubmitting || verifyingPayment ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>{verifyingPayment ? 'Checking payment...' : 'Placing your order...'}</span>
-              </span>
-            ) : isFullyWalletPaid ? (
-              <span className="flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
-                <span>Place Order (Paid with Wallet)</span>
-                <ArrowRight className="w-4 h-4" />
-              </span>
-            ) : paymentMethod === 'razorpay' ? (
-              <span className="flex items-center gap-2">
-                <span>Pay Now • ₹{finalPayable}</span>
-                <ArrowRight className="w-4 h-4" />
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <span>Place Order (Pay ₹{finalPayable} on Delivery)</span>
-                <ArrowRight className="w-4 h-4" />
-              </span>
-            )}
-          </button>
-
+          )}
         </form>
 
       </div>

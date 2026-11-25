@@ -129,14 +129,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deliveryFee = useMemo(() => {
     if (subtotal === 0) return 0;
     if (subtotal >= freeDeliveryThreshold) return 0;
-    if (appliedCoupon === 'FREEDEL') return 0;
+    if (appliedCoupon === 'FREESHIP') return 0;
     return config.standardDeliveryFee;
   }, [subtotal, appliedCoupon, freeDeliveryThreshold]);
 
   const discount = useMemo(() => {
     if (subtotal === 0) return 0;
-    if (appliedCoupon === 'MEAT100') return Math.min(100, Math.round(subtotal * 0.2));
-    if (appliedCoupon === 'FREEDEL') return config.standardDeliveryFee;
+    if (appliedCoupon === 'WELCOME50') return Math.min(50, subtotal);
+    if (appliedCoupon === 'BRISKET100') return Math.min(100, subtotal);
+    if (appliedCoupon === 'FREESHIP') return config.standardDeliveryFee;
     return 0;
   }, [appliedCoupon, subtotal]);
 
@@ -156,7 +157,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const applyCoupon = (code: string): boolean => {
     const clean = code.trim().toUpperCase();
-    if (clean === 'MEAT100' || clean === 'FREEDEL') {
+    if (clean === 'WELCOME50' || clean === 'BRISKET100' || clean === 'FREESHIP') {
       setAppliedCoupon(clean);
       return true;
     }

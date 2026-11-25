@@ -408,6 +408,11 @@ describe('Phase 5 Honest Data, Claims Enforcement & Telemetry Suite', () => {
 
     const guaranteeSlaRegex = /\b(guarantee|guaranteed|guarantees|SLA|response[-\s]*time)\b/i;
     const deliveryMinutePromiseRegex = /\b(\d+[\s-]*(min|minute|mins|minutes)[\w\s]{0,30}(deliver|delivery|doorstep|dispatch|drop-off|reach|eta)|(deliver|delivery|doorstep|dispatch|drop-off|reach|eta)[\w\s]{0,30}\b\d+[\s-]*(min|minute|mins|minutes)|90[-\s]*min|15[-\s]*min)\b/i;
+    const unapproved247Regex = /\b24\/7\s*(live)?\b/i;
+
+    const approvedPath = path.join(projectRoot, 'docs/APPROVED_CLAIMS.md');
+    const approvedText = fs.existsSync(approvedPath) ? fs.readFileSync(approvedPath, 'utf8') : '';
+    const is247Approved = approvedText.toLowerCase().includes('24/7');
 
     const violations = [];
     for (const filePath of filesToScan) {
@@ -429,6 +434,14 @@ describe('Phase 5 Honest Data, Claims Enforcement & Telemetry Suite', () => {
         if (deliveryMinutePromiseRegex.test(line)) {
           violations.push({
             type: 'Minute-based Delivery Promise',
+            file: path.relative(projectRoot, filePath),
+            line: lineNum + 1,
+            text: line.trim().slice(0, 100)
+          });
+        }
+        if (!is247Approved && unapproved247Regex.test(line)) {
+          violations.push({
+            type: 'Unapproved 24/7 Availability Claim',
             file: path.relative(projectRoot, filePath),
             line: lineNum + 1,
             text: line.trim().slice(0, 100)

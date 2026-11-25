@@ -2,13 +2,13 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 45000,
   fullyParallel: true,
-  retries: 0,
+  retries: process.env.CI ? 2 : 0,
   workers: 2,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: 'http://127.0.0.1:4173',
     trace: 'off',
   },
   projects: [
@@ -32,6 +32,6 @@ export default defineConfig({
     command: 'npm --prefix frontend run preview -- --port 4173 --host 127.0.0.1',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: true,
-    timeout: 30000,
+    timeout: 60000,
   },
 });

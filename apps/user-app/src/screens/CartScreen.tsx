@@ -228,27 +228,27 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             <Pressable
               style={[
                 styles.couponChip,
-                appliedCoupon === 'MEAT100' && styles.couponChipActive,
+                appliedCoupon === 'WELCOME50' && styles.couponChipActive,
               ]}
-              onPress={() => (appliedCoupon === 'MEAT100' ? removeCoupon() : applyCoupon('MEAT100'))}
+              onPress={() => (appliedCoupon === 'WELCOME50' ? removeCoupon() : applyCoupon('WELCOME50'))}
             >
-              <Text style={[styles.couponText, appliedCoupon === 'MEAT100' && styles.couponTextActive]}>
-                MEAT100 (₹100 OFF)
+              <Text style={[styles.couponText, appliedCoupon === 'WELCOME50' && styles.couponTextActive]}>
+                WELCOME50 (₹50 OFF)
               </Text>
-              {appliedCoupon === 'MEAT100' && <CheckCircle2 size={14} color="#ffffff" />}
+              {appliedCoupon === 'WELCOME50' && <CheckCircle2 size={14} color="#ffffff" />}
             </Pressable>
 
             <Pressable
               style={[
                 styles.couponChip,
-                appliedCoupon === 'FREEDEL' && styles.couponChipActive,
+                appliedCoupon === 'FREESHIP' && styles.couponChipActive,
               ]}
-              onPress={() => (appliedCoupon === 'FREEDEL' ? removeCoupon() : applyCoupon('FREEDEL'))}
+              onPress={() => (appliedCoupon === 'FREESHIP' ? removeCoupon() : applyCoupon('FREESHIP'))}
             >
-              <Text style={[styles.couponText, appliedCoupon === 'FREEDEL' && styles.couponTextActive]}>
-                FREEDEL (Free Delivery)
+              <Text style={[styles.couponText, appliedCoupon === 'FREESHIP' && styles.couponTextActive]}>
+                FREESHIP (Free Delivery)
               </Text>
-              {appliedCoupon === 'FREEDEL' && <CheckCircle2 size={14} color="#ffffff" />}
+              {appliedCoupon === 'FREESHIP' && <CheckCircle2 size={14} color="#ffffff" />}
             </Pressable>
           </View>
         </View>

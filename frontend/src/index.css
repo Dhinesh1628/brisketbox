@@ -2,6 +2,69 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-primary: #d11243;
+  --color-primary-hover: #b80f3b;
+  --color-primary-active: #9e0d32;
+
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-dark: #166534;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+}
+
+:root {
+  /* Design Tokens: 3-Colour Rule */
+  --primary: #d11243;
+  --primary-hover: #b80f3b;
+  --primary-active: #9e0d32;
+
+  --success: #16a34a;
+  --success-hover: #15803d;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+
+  /* Neutral Grey Scale (Light Mode) */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-light: #64748b;
+}
+
+.dark {
+  /* Neutral Grey Scale (Dark Mode) */
+  --bg-page: #090d16;
+  --bg-card: #111827;
+  --bg-subtle: #1f2937;
+  --border-subtle: #1f2937;
+  --border-strong: #374151;
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-light: #94a3b8;
+
+  --success: #22c55e;
+  --success-hover: #16a34a;
+  --success-bg: #052e16;
+  --success-text: #86efac;
+}
+
 @layer base {
   html {
     overflow-x: clip;
@@ -15,11 +78,11 @@
     max-width: 100vw;
     width: 100%;
     position: relative;
-    background-color: #f7f7f9;
-    color: #1e293b;
+    background-color: var(--bg-page);
+    color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root {
@@ -29,37 +92,53 @@
   }
 
   .dark body {
-    background-color: #090d16;
-    color: #f1f5f9;
+    background-color: var(--bg-page);
+    color: var(--text-main);
   }
 }
 
-/* Smooth Licious-grade Transitions & Layout */
-.card-smooth {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
-  will-change: transform;
+/* Neutral Badge Standard (3-Colour Rule: No blue, purple, amber, teal, pink) */
+.badge-neutral {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.dark .badge-neutral {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
 }
 
-.card-smooth:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08), 0 4px 8px -4px rgba(0, 0, 0, 0.04);
-}
-
-.dark .card-smooth:hover {
-  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(209, 18, 67, 0.15);
-}
-
-/* Licious Red Accent & Smooth Stepper */
-.btn-licious-add {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.btn-licious-add:hover {
+/* Primary Buy Button Standard */
+.btn-buy-primary {
   background-color: #d11243;
   color: #ffffff;
-  border-color: #d11243;
+  font-weight: 700;
+  transition: all 0.2s ease;
 }
-.btn-licious-add:active {
-  transform: scale(0.96);
+.btn-buy-primary:hover {
+  background-color: #b80f3b;
+}
+.btn-buy-primary:active {
+  background-color: #9e0d32;
+  transform: scale(0.98);
+}
+
+/* Smooth Transitions & Card Hovers */
+.card-smooth {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-smooth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+}
+.dark .card-smooth:hover {
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4);
 }
 
 /* Crisp scrollbar */

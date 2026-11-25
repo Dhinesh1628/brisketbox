@@ -2,11 +2,14 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SoundProvider } from './context/SoundContext';
+import { ToastProvider } from './context/ToastContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { SoundControlButton } from './components/SoundControlButton';
+import { HomePage } from './pages/HomePage';
 import { CatalogPage } from './pages/CatalogPage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartDrawer } from './components/CartDrawer';
 import { FloatingBottomCartBar } from './components/FloatingBottomCartBar';
 import { SEOHead } from './components/SEOHead';
@@ -38,14 +41,14 @@ const PageLoadingSpinner = () => (
 );
 
 interface RouteState {
-  page: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher' | 'product';
+  page: 'home' | 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher' | 'product';
   category?: string;
   productId?: string;
   orderId?: string;
 }
 
 const parseCurrentRoute = (): RouteState => {
-  if (typeof window === 'undefined') return { page: 'catalog' };
+  if (typeof window === 'undefined') return { page: 'home' };
   const pathname = window.location.pathname.replace(/\/$/, '') || '/';
   const hash = window.location.hash.replace(/^#/, '').toLowerCase();
 
@@ -73,7 +76,11 @@ const parseCurrentRoute = (): RouteState => {
     return { page: 'product', productId: decodeURIComponent(prodId) };
   }
 
-  return { page: 'catalog' };
+  if (pathname === '/catalog' || hash === 'catalog') {
+    return { page: 'catalog' };
+  }
+
+  return { page: 'home' };
 };
 
 const MainApp: React.FC = () => {
@@ -196,9 +203,10 @@ const MainApp: React.FC = () => {
   }, [isLocationModalOpen, isAiButcherOpen, isAuthOpen, isCheckoutOpen, isConfirmationOpen, legalModalType, isContactOpen, isCartOpen, setIsCartOpen]);
 
   // Tab switching with real URL routes
-  const handleTabChange = (tab: 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher') => {
+  const handleTabChange = (tab: 'home' | 'catalog' | 'tracking' | 'dashboard' | 'coolers' | 'admin' | 'rider' | 'butcher') => {
     const pathMap: Record<string, string> = {
-      catalog: '/',
+      home: '/',
+      catalog: '/catalog',
       tracking: '/tracking',
       dashboard: '/dashboard',
       coolers: '/coolers',
@@ -212,7 +220,7 @@ const MainApp: React.FC = () => {
   const handleCategorySelect = (cat: string) => {
     setSelectedCategory(cat);
     if (cat === 'All') {
-      navigate('/');
+      navigate('/catalog');
     } else {
       navigate(`/category/${cat.toLowerCase()}`);
     }
@@ -315,25 +323,40 @@ const MainApp: React.FC = () => {
 
       {/* Main Container */}
       <main className={`flex-1 w-full min-w-0 ${['rider', 'butcher'].includes(currentTab) ? 'p-0 max-w-full' : 'max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5'}`}>
-        {currentTab === 'catalog' && (
-          <CatalogPage 
+        {route.page === 'home' && (
+          <HomePage 
+            onNavigateToCatalog={(cat) => {
+              if (cat) setSelectedCategory(cat);
+              navigate(cat && cat !== 'All' ? `/category/${cat.toLowerCase()}` : '/catalog');
+            }}
+            onNavigateToProduct={(productId) => navigate(`/product/${productId}`)}
             onNavigateToReturns={() => {
               if (!user) handleOpenAuth('customer');
               else handleTabChange('coolers');
             }}
-            selectedCity={selectedCity}
+          />
+        )}
+
+        {route.page === 'catalog' && (
+          <CatalogPage 
+            initialCategory={selectedCategory}
             searchQuery={searchQuery}
             onSetSearchQuery={setSearchQuery}
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleCategorySelect}
-            initialProductId={route.page === 'product' ? route.productId : undefined}
-            onProductInspected={(p) => setActiveProductForSeo(p)}
-            onProductClosed={() => {
-              setActiveProductForSeo(null);
-              if (route.page === 'product') {
-                navigate(selectedCategory !== 'All' ? `/category/${selectedCategory.toLowerCase()}` : '/');
-              }
+            onNavigateToProduct={(productId) => navigate(`/product/${productId}`)}
+            onNavigateHome={() => navigate('/')}
+            onNavigateToReturns={() => {
+              if (!user) handleOpenAuth('customer');
+              else handleTabChange('coolers');
             }}
+          />
+        )}
+
+        {route.page === 'product' && route.productId && (
+          <ProductDetailPage 
+            productId={route.productId}
+            onNavigateHome={() => navigate('/')}
+            onNavigateCatalog={() => navigate('/catalog')}
+            onOpenCart={() => setIsCartOpen(true)}
           />
         )}
 
@@ -439,14 +462,14 @@ const MainApp: React.FC = () => {
                   className="h-10 sm:h-12 w-auto max-w-[200px] object-contain hidden dark:block" 
                 />
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
                 Fresh meat and seafood cut daily and delivered cold to your door. Freshness, sealed with flavour.
               </p>
             </div>
 
             <div>
-              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Popular Categories</h4>
-              <ul className="space-y-1.5 text-gray-600 dark:text-gray-400 text-[11px]">
+              <p className="text-neutral-900 dark:text-white font-bold mb-3">Fresh Categories</p>
+              <ul className="space-y-1.5 text-neutral-600 dark:text-neutral-400 text-xs">
                 <li>Daily Fish & Seafood (Surmai, Pomfret)</li>
                 <li>Fresh Chicken</li>
                 <li>Tender Mutton</li>
@@ -456,8 +479,8 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-gray-900 dark:text-white font-bold mb-3">Quality & Service</h4>
-              <ul className="space-y-1.5 text-gray-600 dark:text-gray-400 text-[11px]">
+              <p className="text-neutral-900 dark:text-white font-bold mb-3">Quality & Service</p>
+              <ul className="space-y-1.5 text-neutral-600 dark:text-neutral-400 text-xs">
                 <li>Zero Security Deposit (Free Packaging)</li>
                 <li>EPP Insulated Box with Ice Gel Packs</li>
                 <li>Chilled Temperature Packaging</li>
@@ -466,12 +489,12 @@ const MainApp: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-gray-950 dark:text-white font-bold mb-3">Customer & Legal</h4>
+              <p className="text-gray-950 dark:text-white font-bold mb-3">Customer & Legal</p>
               <ul className="space-y-1 text-xs">
                 <li>
                   <button 
                     onClick={() => handleOpenLegalModal('tos')} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Terms of Service & Delivery Policy
                   </button>
@@ -479,7 +502,7 @@ const MainApp: React.FC = () => {
                 <li>
                   <button 
                     onClick={() => handleOpenLegalModal('privacy')} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Privacy Policy (DPDP Compliance)
                   </button>
@@ -490,10 +513,9 @@ const MainApp: React.FC = () => {
                       window.history.pushState({ type: 'modal', name: 'contact' }, '');
                       setIsContactOpen(true);
                     }} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-emerald-800 dark:text-emerald-300 font-bold hover:text-emerald-900 dark:hover:text-emerald-200 cursor-pointer gap-1.5 focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-emerald-800 dark:text-emerald-300 font-bold hover:text-emerald-900 dark:hover:text-emerald-200 cursor-pointer gap-1.5 focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     <span>Contact Support & Concierge</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 font-extrabold border border-emerald-300 dark:border-emerald-700">24/7 Live</span>
                   </button>
                 </li>
                 <li>
@@ -502,7 +524,7 @@ const MainApp: React.FC = () => {
                       if (!user) handleOpenAuth('customer');
                       else handleTabChange('coolers');
                     }} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Doorstep Box Collection
                   </button>
@@ -510,7 +532,7 @@ const MainApp: React.FC = () => {
                 <li>
                   <button 
                     onClick={() => handleTabChange('rider')} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Fleet Rider Partner App
                   </button>
@@ -518,7 +540,7 @@ const MainApp: React.FC = () => {
                 <li>
                   <button 
                     onClick={() => handleTabChange('butcher')} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Master Butcher Station & KDS
                   </button>
@@ -529,7 +551,7 @@ const MainApp: React.FC = () => {
                       if (user?.role === 'admin') handleTabChange('admin');
                       else handleOpenAuth('admin');
                     }} 
-                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-[#d11243] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#d11243]"
+                    className="min-h-[44px] flex items-center py-2 px-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-neutral-400"
                   >
                     Hub Fulfillment Operations
                   </button>
@@ -539,7 +561,7 @@ const MainApp: React.FC = () => {
 
           </div>
 
-          <div className="border-t border-gray-100 dark:border-slate-800 pt-5 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 dark:text-gray-500 gap-2">
+          <div className="border-t border-gray-100 dark:border-slate-800 pt-5 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 gap-2">
             <div>
               © 2026 BrisketBox Technologies Private Limited. All rights reserved.
             </div>
@@ -599,6 +621,7 @@ const MainApp: React.FC = () => {
               setIsConfirmationOpen(false);
               handleTabChange('coolers');
             }}
+            onOpenCart={() => setIsCartOpen(true)}
           />
         )}
 
@@ -629,13 +652,15 @@ const MainApp: React.FC = () => {
           />
         )}
 
-        {/* Floating Master Butcher Concierge & WhatsApp Concierge */}
+        {/* Floating Master Butcher Concierge & WhatsApp Concierge (Rule 11: hidden if cart or checkout open) */}
         {!['rider', 'butcher', 'admin'].includes(currentTab) && (
           <WhatsAppButton 
             isChatbotOpen={isAiButcherOpen}
             onOpenChatbot={handleOpenAiButcher}
             onCloseChatbot={handleCloseAiButcher}
             onNavigateTab={handleTabChange}
+            isCheckoutOpen={isCheckoutOpen}
+            isProductPage={route.page === 'product'}
           />
         )}
       </Suspense>
@@ -653,9 +678,11 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <SoundProvider>
-            <CartProvider>
-              <MainApp />
-            </CartProvider>
+            <ToastProvider>
+              <CartProvider>
+                <MainApp />
+              </CartProvider>
+            </ToastProvider>
           </SoundProvider>
         </AuthProvider>
       </ThemeProvider>

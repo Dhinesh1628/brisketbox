@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { searchProductsWithTypoTolerance } from '../utils/searchUtils';
 import { 
   ShoppingBag, 
   MapPin, 
@@ -167,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectCategory
 }) => {
   const { user, logout } = useAuth();
-  const { totalItems, subtotal, setIsCartOpen, items, addItem, updateQuantity, applyCoupon } = useCart();
+  const { totalItems, subtotal, setIsCartOpen, items, addItem, updateQuantity, applyCoupon, activeCoupons } = useCart();
   const { theme, toggleTheme } = useTheme();
   const { isSoundEnabled, toggleSound } = useSound();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -279,19 +280,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Live matching cuts
-  const matchingProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
-    return allProducts.filter(p =>
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.category && p.category.toLowerCase().includes(q)) ||
-      (p.cutStyle && p.cutStyle.toLowerCase().includes(q)) ||
-      (p.description && p.description.toLowerCase().includes(q)) ||
-      (p.origin && p.origin.toLowerCase().includes(q)) ||
-      (p.chillingMethod && p.chillingMethod.toLowerCase().includes(q))
-    ).slice(0, 5);
+  // Live matching cuts with typo tolerance (Item 9)
+  const searchResult = useMemo(() => {
+    return searchProductsWithTypoTolerance(searchQuery, allProducts, 6);
   }, [allProducts, searchQuery]);
+
+  const matchingProducts = searchResult.products;
+  const typoSuggestion = searchResult.isTypoCorrected ? searchResult.suggestedTerm : null;
 
   const handleSelectSearchTerm = (term: string) => {
     const cleanTerm = term.replace(/^[^\w]+/, '').trim();
@@ -357,8 +352,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const handleOffersClick = () => {
-    applyCoupon('FRESH20');
-    setOffersToast('BrisketBox Exclusive Deal Applied: 20% OFF coupon (FRESH20) added to your cart!');
+    if (activeCoupons && activeCoupons.length > 0) {
+      applyCoupon(activeCoupons[0].code);
+      setOffersToast(`Active Deal Applied: ${activeCoupons[0].code} added to your cart!`);
+    } else {
+      setOffersToast('No active discount coupons at this time.');
+    }
     setTimeout(() => setOffersToast(null), 4000);
   };
 
@@ -375,13 +374,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             {recentSearches.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-bold text-[11px] uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-bold text-xs uppercase tracking-wider">
                     <Clock className="w-3.5 h-3.5 text-gray-400" />
                     <span>Recent Searches</span>
                   </div>
                   <button
                     onClick={handleClearRecent}
-                    className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -407,18 +406,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
 
-            {/* Trending Searches */}
+            {/* Suggested Searches */}
             <div>
-              <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-[11px] uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Trending Searches</span>
+              <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 font-bold text-xs uppercase tracking-wider mb-2">
+                <Search className="w-3.5 h-3.5 text-neutral-500" />
+                <span>Suggested Searches</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {TRENDING_SEARCH_CHIPS.map((chip) => (
                   <button
                     key={chip.term}
                     onClick={() => handleSelectSearchTerm(chip.term)}
-                    className="px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-900/60 text-gray-800 dark:text-gray-200 text-xs font-semibold cursor-pointer transition flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold cursor-pointer transition flex items-center gap-1"
                   >
                     <span>{chip.label}</span>
                   </button>
@@ -427,7 +426,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Trust badge */}
-            <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                 <Zap className="w-3.5 h-3.5" /> Express Chilled Delivery
               </span>
@@ -437,17 +436,30 @@ export const Navbar: React.FC<NavbarProps> = ({
         ) : (
           <div className="py-2">
             <div className="px-4 py-1.5 flex items-center justify-between border-b border-gray-100 dark:border-slate-800">
-              <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Matching Cuts ({matchingProducts.length})
               </span>
               <button
                 onClick={handleViewAllResults}
-                className="text-[11px] font-bold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-neutral-900 dark:text-neutral-100 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View all in catalog</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
+
+            {typoSuggestion && (
+              <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                <span>Did you mean:</span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSearchTerm(typoSuggestion)}
+                  className="font-bold text-neutral-900 dark:text-white underline hover:no-underline cursor-pointer"
+                >
+                  {typoSuggestion}
+                </button>
+              </div>
+            )}
 
             {matchingProducts.length === 0 ? (
               <div className="p-6 text-center space-y-2">
@@ -455,7 +467,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <p className="font-bold text-gray-800 dark:text-gray-200 text-xs">
                   No fresh cuts matching "{searchQuery}"
                 </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Try searching for general terms like Chicken, Mutton, Fish, Prawns, or Biryani.
                 </p>
                 <div className="pt-2 flex flex-wrap gap-1.5 justify-center">
@@ -492,16 +504,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                         />
                         <div className="min-w-0">
-                          <h4 className="font-bold text-gray-900 dark:text-white truncate group-hover:text-[#d11243] transition-colors text-xs">
+                          <h4 className="font-bold text-gray-900 dark:text-white truncate group-hover:text-black dark:group-hover:text-white transition-colors text-xs">
                             {product.name}
                           </h4>
                           <div className="flex items-center gap-2 mt-0.5">
                             {product.cutStyle && (
-                              <span className="px-1.5 py-0.2 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 text-[10px] font-medium truncate max-w-[140px]">
+                              <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 text-xs font-medium truncate max-w-[140px]">
                                 {product.cutStyle}
                               </span>
                             )}
-                            <span className="text-gray-400 text-[10px]">
+                            <span className="text-gray-400 text-xs">
                               {product.unit || '500g'}
                             </span>
                           </div>
@@ -510,7 +522,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               ₹{product.price}
                             </span>
                             {product.mrp && product.mrp > product.price && (
-                              <span className="line-through text-gray-400 text-[10px]">
+                              <span className="line-through text-gray-400 text-xs">
                                 ₹{product.mrp}
                               </span>
                             )}
@@ -554,7 +566,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <div 
                   onClick={handleViewAllResults}
-                  className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800/40 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-center font-bold text-[#d11243] text-xs cursor-pointer transition flex items-center justify-center gap-1.5"
+                  className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800/40 hover:bg-neutral-100 dark:hover:bg-slate-800 text-center font-bold text-neutral-900 dark:text-neutral-100 text-xs cursor-pointer transition flex items-center justify-center gap-1.5"
                 >
                   <span>View all results for "{searchQuery}" in catalog</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -576,14 +588,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     { name: 'Chennai', locality: 'Adyar, 600020' }
   ];
 
-  const currentLocality = indianCities.find(c => c.name === selectedCity)?.locality || 'Indiranagar, 560038';
 
-  // Smart, clean location display logic (Swiggy / Zepto standard)
+  // Clean location display logic (No default area: shows 'Select location' until chosen)
   const getLocationHeading = () => {
-    if (!currentAddress) return selectedCity || 'Select Location';
+    if (!currentAddress && !selectedCity) return 'Select location';
+    if (!currentAddress) return selectedCity;
     
     if (currentAddress.tag === 'Home' || currentAddress.tag === 'Work') {
-      return `${currentAddress.tag} • ${currentAddress.city || selectedCity || 'Select Location'}`;
+      return `${currentAddress.tag} • ${currentAddress.city || selectedCity || 'Select location'}`;
     }
     
     // For GPS or other locations: show area or city
@@ -591,11 +603,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       return `${currentAddress.area}, ${currentAddress.city}`;
     }
     
-    return currentAddress.area || currentAddress.city || selectedCity || 'Select Location';
+    return currentAddress.area || currentAddress.city || selectedCity || 'Select location';
   };
 
   const getLocationSubtitle = () => {
-    if (!currentAddress) return currentLocality || 'Select Location';
+    if (!currentAddress && !selectedCity) return 'Choose delivery address';
+    if (!currentAddress) return indianCities.find(c => c.name === selectedCity)?.locality || selectedCity || 'Choose delivery address';
     
     if (currentAddress.formattedAddress) {
       // Clean up and prevent duplicate repeating names in the subtitle
@@ -612,7 +625,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       return uniqueParts.slice(0, 2).join(', ');
     }
     
-    return currentAddress.street || currentAddress.area || currentAddress.city || 'Express Delivery';
+    return currentAddress.street || currentAddress.area || currentAddress.city || 'Choose delivery address';
   };
 
   const handleAdminTabClick = () => {
@@ -632,10 +645,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 shadow-2xs transition-colors duration-300">
       
       {/* Top announcement */}
-      <div className="bg-[#fcf8f9] dark:bg-slate-950 border-b border-rose-100/70 dark:border-slate-800/80 px-3 sm:px-4 py-1.5 text-[10px] sm:text-[11px] text-gray-700 dark:text-gray-300 overflow-hidden">
+      <div className="bg-[#fcf8f9] dark:bg-slate-950 border-b border-neutral-200 dark:border-slate-800/80 px-3 sm:px-4 py-1.5 text-xs text-gray-700 dark:text-gray-300 overflow-hidden">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0 truncate">
-            <span className="font-extrabold text-[#d11243] dark:text-rose-400 shrink-0 text-[10px] sm:text-[11px]">Fresh delivery:</span>
+            <span className="font-bold text-neutral-900 dark:text-neutral-100 shrink-0 text-xs">Fresh delivery:</span>
             <span className="truncate text-gray-800 dark:text-gray-200 font-medium">Daily fresh cuts delivered cold to your door</span>
           </div>
 
@@ -685,20 +698,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Click to enter custom delivery address or detect location"
               type="button"
             >
-              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-rose-50 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                 <MapPin className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" />
               </div>
               <div className="leading-tight overflow-hidden min-w-0 flex-1">
                 <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-                  <span className="font-extrabold text-gray-900 dark:text-white group-hover:text-[#d11243] transition-colors truncate text-[10px] sm:text-xs">Delivering to {getLocationHeading()}</span>
-                  <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-[#d11243] transition-transform group-hover:translate-y-0.5 shrink-0" />
+                  <span className="font-extrabold text-gray-900 dark:text-white group-hover:text-black dark:group-hover:text-white transition-colors truncate text-xs">Delivering to {getLocationHeading()}</span>
+                  <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-black dark:group-hover:text-white transition-transform group-hover:translate-y-0.5 shrink-0" />
                 </div>
                 <div className="hidden sm:flex items-center gap-1 mt-0.5">
-                  <span className="text-gray-500 dark:text-gray-400 font-medium truncate max-w-[80px] sm:max-w-[130px] lg:max-w-[160px] text-[10px]">
+                  <span className="text-gray-500 dark:text-gray-400 font-medium truncate max-w-[80px] sm:max-w-[130px] lg:max-w-[160px] text-xs">
                     {getLocationSubtitle()}
                   </span>
                   <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">Express Dispatch</span>
+                  <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold whitespace-nowrap shrink-0">Express Dispatch</span>
                 </div>
               </div>
             </button>
@@ -708,7 +721,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div ref={searchContainerRef} className="hidden sm:flex flex-1 min-w-[220px] max-w-xl mx-2 lg:mx-4 relative z-10">
             <div className="relative w-full">
               <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors z-10 ${
-                isSearchFocused ? 'text-[#d11243]' : 'text-gray-500 dark:text-gray-400'
+                isSearchFocused ? 'text-neutral-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
               }`} />
               <input
                 ref={searchInputRef}
@@ -729,7 +742,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }
                 }}
                 placeholder={isSearchFocused ? 'Search chicken, mutton, or fish...' : searchPlaceholders[placeholderIndex]}
-                className="w-full h-10 pl-10 pr-9 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-100/90 dark:hover:bg-slate-700/80 focus:bg-white dark:focus:bg-slate-900 border border-gray-300 dark:border-slate-600 focus:border-[#d11243] text-gray-900 dark:text-white text-xs font-medium placeholder-gray-500 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#d11243]/20 shadow-xs transition-all"
+                className="w-full h-10 pl-10 pr-9 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-100/90 dark:hover:bg-slate-700/80 focus:bg-white dark:focus:bg-slate-900 border border-gray-300 dark:border-slate-600 focus:border-neutral-900 dark:focus:border-neutral-100 text-gray-900 dark:text-white text-xs font-medium placeholder-gray-500 dark:placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-neutral-400 shadow-xs transition-all"
               />
               {searchQuery && (
                 <button
@@ -750,21 +763,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Navigation & Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
-            {/* Licious-Style Categories Mega-Flyout Menu */}
+            {/* Categories Flyout Menu */}
             <div ref={categoriesDropdownRef} className="relative hidden md:block">
               <button
                 type="button"
                 onClick={() => setCategoriesMenuOpen(!categoriesMenuOpen)}
                 className={`h-9 sm:h-10 px-3 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
                   categoriesMenuOpen
-                    ? 'bg-rose-50 dark:bg-rose-950/70 text-[#d11243] dark:text-rose-400 border-[#d11243]/50 shadow-xs'
-                    : 'text-gray-700 dark:text-gray-200 hover:text-[#d11243] dark:hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-2xs'
+                    ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-950 dark:text-white border-neutral-400 dark:border-neutral-600 shadow-xs'
+                    : 'text-gray-700 dark:text-gray-200 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-2xs'
                 }`}
                 aria-expanded={categoriesMenuOpen}
               >
-                <LayoutGrid className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#d11243]" />
+                <LayoutGrid className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-neutral-700 dark:text-neutral-300" />
                 <span>Categories</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${categoriesMenuOpen ? 'rotate-180 text-[#d11243]' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${categoriesMenuOpen ? 'rotate-180 text-neutral-900 dark:text-white' : ''}`} />
               </button>
 
               {/* Flyout Mega Dropdown */}
@@ -784,7 +797,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={() => handleSelectCategoryFromMenu(cat.categoryValue)}
                           className={`px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition text-xs font-semibold ${
                             isHovered
-                              ? 'bg-white dark:bg-slate-900 text-[#d11243] dark:text-rose-400 font-bold shadow-2xs border-l-3 border-[#d11243]'
+                              ? 'bg-white dark:bg-slate-900 text-neutral-950 dark:text-white font-bold shadow-2xs border-l-3 border-neutral-900 dark:border-white'
                               : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-slate-900/50'
                           }`}
                         >
@@ -796,7 +809,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             />
                             <span className="truncate">{cat.name}</span>
                           </div>
-                          <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isHovered ? 'text-[#d11243] translate-x-0.5' : 'text-gray-400 opacity-40'}`} />
+                          <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isHovered ? 'text-neutral-900 dark:text-white translate-x-0.5' : 'text-gray-400 opacity-40'}`} />
                         </div>
                       );
                     })}
@@ -806,10 +819,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex-1 p-4 bg-white dark:bg-slate-900 flex flex-col justify-between max-h-[380px] overflow-y-auto">
                     <div>
                       <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-2">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                           {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} Cuts
                         </span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                           Chilled Fresh
                         </span>
                       </div>
@@ -820,10 +833,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                             key={sub.name}
                             type="button"
                             onClick={() => handleSelectSubCategory(sub, CATEGORY_NAV_DATA[hoveredCategoryIndex].categoryValue)}
-                            className="w-full text-left py-2 px-2.5 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:text-[#d11243] dark:hover:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/40 transition flex items-center justify-between group cursor-pointer"
+                            className="w-full text-left py-2 px-2.5 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition flex items-center justify-between group cursor-pointer"
                           >
                             <span>{sub.name}</span>
-                            <ArrowRight className="w-3.5 h-3.5 text-[#d11243] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                            <ArrowRight className="w-3.5 h-3.5 text-neutral-900 dark:text-white opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                           </button>
                         ))}
                       </div>
@@ -833,7 +846,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSelectCategoryFromMenu(CATEGORY_NAV_DATA[hoveredCategoryIndex].categoryValue)}
-                        className="text-xs font-bold text-[#d11243] hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-xs font-bold text-neutral-900 dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <span>View all {CATEGORY_NAV_DATA[hoveredCategoryIndex]?.name} cuts</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -847,12 +860,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* BrisketBox Offers Button (Visible on extra-wide screens) */}
             <button
               onClick={handleOffersClick}
-              title="Click to apply instant 20% OFF deals"
-              className="hidden 2xl:flex h-10 px-2.5 rounded-xl text-xs font-bold transition items-center gap-1.5 whitespace-nowrap shrink-0 text-amber-700 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/70 shadow-2xs cursor-pointer"
+              title="View and apply active server discounts"
+              className="hidden 2xl:flex h-10 px-2.5 rounded-xl text-xs font-bold transition items-center gap-1.5 whitespace-nowrap shrink-0 text-neutral-800 dark:text-neutral-200 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 shadow-2xs cursor-pointer"
             >
-              <Percent className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <Percent className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
               <span>Offers</span>
-              <span className="text-[10px] bg-amber-600 text-white font-extrabold px-1.5 py-0.2 rounded-full">20%</span>
+              <span className="text-xs bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 font-extrabold px-1.5 py-0.5 rounded-full">Deals</span>
             </button>
             
             {/* My Orders / Dashboard Button (Visible on extra-wide screens) */}
@@ -863,7 +876,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className={`hidden 2xl:flex h-10 px-3 rounded-xl text-xs font-bold cursor-pointer transition items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 currentTab === 'dashboard' 
-                  ? 'bg-rose-50 dark:bg-rose-950/60 text-[#d11243] dark:text-rose-400 border border-rose-200 dark:border-rose-900 shadow-2xs' 
+                  ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-950 dark:text-white font-bold border border-neutral-300 dark:border-neutral-700 shadow-2xs' 
                   : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 border border-transparent'
               }`}
             >
@@ -878,12 +891,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="hidden 2xl:flex h-10 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0 whitespace-nowrap"
               >
                 <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">Wallet:</span>
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Wallet:</span>
                 <span className="font-extrabold text-emerald-900 dark:text-emerald-200">₹{user.walletBalance ?? 0}</span>
               </button>
             )}
 
-            {/* Ding Sound Toggle Button: Visible on sm+ screens */}
+            {/* Sound Effects Toggle Button: Visible on sm+ screens */}
             <button
               onClick={toggleSound}
               className={`hidden sm:flex h-8 sm:h-10 w-8 sm:w-10 rounded-xl border transition-all duration-200 cursor-pointer items-center justify-center shrink-0 active:scale-95 ${
@@ -891,8 +904,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700/80 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
                   : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
               }`}
-              title={isSoundEnabled ? 'Ding Chime is ON (Click to mute)' : 'Sound is Muted (Click to unmute)'}
-              aria-label="Toggle chime sound"
+              title={isSoundEnabled ? 'Sound effects are ON (Click to mute)' : 'Sound effects are OFF (Click to unmute)'}
+              aria-label="Toggle sound effects"
             >
               {isSoundEnabled ? (
                 <Bell className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-600 dark:text-emerald-400" />
@@ -904,14 +917,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Dark / Light Theme Toggle: ALWAYS VISIBLE ON NAVBAR */}
             <button
               onClick={toggleTheme}
-              className="min-h-[44px] min-w-[44px] rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-amber-400 hover:border-[#d11243] hover:shadow-[0_0_15px_rgba(225,29,67,0.25)] transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+              className="min-h-[44px] min-w-[44px] rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-neutral-200 hover:border-neutral-400 dark:hover:border-neutral-500 transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
               title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? (
-                <Sun className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-amber-400 hover:rotate-45 transition-transform" />
+                <Sun className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-neutral-100 hover:rotate-45 transition-transform" />
               ) : (
-                <Moon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-700 hover:text-[#d11243] transition-colors" />
+                <Moon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-700 hover:text-black dark:hover:text-white transition-colors" />
               )}
             </button>
 
@@ -930,7 +943,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-[#d11243] text-white flex items-center justify-center font-bold text-[10px]">
+                    <div className="w-6 h-6 rounded-full bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 flex items-center justify-center font-bold text-xs">
                       {user.name.charAt(0)}
                     </div>
                   )}
@@ -953,29 +966,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                             referrerPolicy="no-referrer"
                           />
                         ) : (
-                          <div className="w-7 h-7 rounded-full bg-[#d11243] text-white flex items-center justify-center font-bold text-xs">
+                          <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-900 flex items-center justify-center font-bold text-xs">
                             {user.name.charAt(0)}
                           </div>
                         )}
                         <div className="overflow-hidden">
                           <p className="font-bold text-gray-900 dark:text-white truncate">{user.name}</p>
-                          <p className="text-gray-500 dark:text-gray-400 text-[10px] truncate">{user.email}</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs truncate">{user.email}</p>
                         </div>
                       </div>
                       {user.authProvider === 'google' && (
-                        <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold">
+                        <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
                           <svg className="w-3 h-3 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                           </svg>
                           <span>Verified with Google</span>
                         </div>
                       )}
-                      <p className="text-gray-600 dark:text-gray-400 text-[11px] mt-1">
+                      <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">
                         Role: <strong className="text-gray-900 dark:text-white uppercase font-semibold">{user.role}</strong>
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400 text-[11px]">
+                      <p className="text-gray-600 dark:text-gray-400 text-xs">
                         BrisketBox Wallet: <strong className="text-emerald-700 dark:text-emerald-400 font-extrabold">₹{user.walletBalance || 0}</strong>
-                        <span className="ml-1 text-[9px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-1 py-0.5 rounded font-semibold">Store Credit</span>
+                        <span className="ml-1 text-xs bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-1 py-0.5 rounded font-semibold">Store Credit</span>
                       </p>
                       
                     </div>
@@ -988,22 +1001,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Wallet className="w-3.5 h-3.5 text-emerald-600" />
                         BrisketBox Vault Wallet
                       </span>
-                      <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 rounded text-[10px] font-bold">₹{user.walletBalance || 0}</span>
+                      <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 rounded text-xs font-bold">₹{user.walletBalance || 0}</span>
                     </button>
 
                     <button
                       onClick={() => setCurrentTab('dashboard')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-[#d11243] dark:hover:text-rose-400 font-bold flex items-center justify-between cursor-pointer"
+                      className="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-slate-800 hover:text-black dark:hover:text-white font-bold flex items-center justify-between cursor-pointer"
                     >
                       <span>Your orders</span>
-                      <span className="px-1.5 py-0.2 bg-rose-50 dark:bg-rose-950/60 text-[#d11243] dark:text-rose-400 rounded text-[10px] font-semibold">Dashboard</span>
+                      <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded text-xs font-semibold border border-neutral-200 dark:border-neutral-700">Dashboard</span>
                     </button>
 
                     
 
                     <button
                       onClick={() => setCurrentTab('tracking')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-[#d11243] dark:hover:text-rose-400 cursor-pointer"
+                      className="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-slate-800 hover:text-black dark:hover:text-white cursor-pointer"
                     >
                       Order & Temperature Status
                     </button>
@@ -1015,13 +1028,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                             handleAdminTabClick();
                             setUserDropdownOpen(false);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold flex items-center justify-between cursor-pointer"
+                          className="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold flex items-center justify-between cursor-pointer"
                         >
                           <span className="flex items-center gap-1.5">
-                            <Settings className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <Settings className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
                             <span>Admin portal</span>
                           </span>
-                          <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-black">
+                          <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-bold border border-neutral-300 dark:border-neutral-700">
                             Admin
                           </span>
                         </button>
@@ -1035,13 +1048,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setCurrentTab('butcher');
                             setUserDropdownOpen(false);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-semibold flex items-center justify-between cursor-pointer"
+                          className="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold flex items-center justify-between cursor-pointer"
                         >
                           <span className="flex items-center gap-1.5">
-                            <Utensils className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <Utensils className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
                             <span>Butcher Station KDS</span>
                           </span>
-                          <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-black">
+                          <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-bold border border-neutral-300 dark:border-neutral-700">
                             Station
                           </span>
                         </button>
@@ -1061,7 +1074,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <Bike className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Rider Deliveries</span>
                           </span>
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[9px] font-black">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-xs font-bold">
                             Fleet
                           </span>
                         </button>
@@ -1099,12 +1112,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ShoppingBag className="w-4 h-4 text-white" />
               <span className="hidden sm:inline">Cart</span>
               {totalItems > 0 && (
-                <span className="px-1.5 py-0.5 bg-white text-[#d11243] rounded-full text-[10px] sm:text-[11px] font-extrabold leading-none">
+                <span className="px-1.5 py-0.5 bg-white text-[#d11243] rounded-full text-xs font-extrabold leading-none">
                   {totalItems}
                 </span>
               )}
               {subtotal > 0 && (
-                <span className="hidden md:inline font-bold pl-1 border-l border-rose-400/50">
+                <span className="hidden md:inline font-bold pl-1 border-l border-white/40">
                   ₹{subtotal}
                 </span>
               )}
@@ -1132,20 +1145,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           type="button"
           title="Click to detect or change delivery address"
         >
-          <div className="w-5 h-5 rounded-md bg-rose-50 dark:bg-rose-950/80 text-[#d11243] dark:text-rose-400 flex items-center justify-center shrink-0">
+          <div className="w-5 h-5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center shrink-0">
             <MapPin className="w-3 h-3" />
           </div>
           <div className="flex items-center gap-1 min-w-0 overflow-hidden">
             <span className="font-extrabold text-gray-900 dark:text-white text-xs truncate">
               Delivering to {getLocationHeading()}
             </span>
-            <span className="text-gray-600 dark:text-gray-300 text-[10px] truncate max-w-[110px]">
+            <span className="text-gray-600 dark:text-gray-300 text-xs truncate max-w-[110px]">
               {getLocationSubtitle()}
             </span>
             <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
           </div>
         </button>
-        <div className="flex items-center gap-1 shrink-0 pl-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center gap-1 shrink-0 pl-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Express Chilled</span>
         </div>
@@ -1155,7 +1168,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div ref={mobileSearchRef} className="sm:hidden px-3 pb-2 pt-0.5 relative w-full">
         <div className="relative w-full">
           <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
-            isSearchFocused ? 'text-[#d11243]' : 'text-gray-400'
+            isSearchFocused ? 'text-neutral-900 dark:text-white' : 'text-gray-400'
           }`} />
           <input
             type="text"
@@ -1170,7 +1183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }
             }}
             placeholder={isSearchFocused ? 'Search chicken, mutton, or fish...' : searchPlaceholders[placeholderIndex]}
-            className="w-full min-h-[44px] pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#d11243]"
+            className="w-full min-h-[44px] pl-9 pr-8 rounded-xl bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-neutral-900 dark:focus:border-neutral-100"
           />
           {searchQuery && (
             <button
@@ -1200,21 +1213,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onOpenLocationModal?.();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-rose-50/60 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 text-left text-xs"
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 text-left text-xs"
               type="button"
             >
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#d11243] shrink-0" />
+                <MapPin className="w-4 h-4 text-neutral-700 dark:text-neutral-300 shrink-0" />
                 <div>
                   <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
                     <span>Delivering to {getLocationHeading()}</span>
                   </div>
-                  <div className="text-[11px] text-gray-600 dark:text-gray-300 truncate max-w-[240px]">
+                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[240px]">
                     {getLocationSubtitle()}
                   </div>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-[#d11243] underline shrink-0">Change</span>
+              <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 underline shrink-0">Change</span>
             </button>
           </div>
 
@@ -1226,7 +1239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 tracking-wide">BrisketBox Wallet</div>
+                  <div className="text-xs uppercase font-bold text-emerald-800 dark:text-emerald-400 tracking-wide">BrisketBox Wallet</div>
                   <div className="font-extrabold text-sm text-emerald-900 dark:text-emerald-100">₹{user.walletBalance ?? 0}</div>
                 </div>
               </div>
@@ -1235,7 +1248,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setCurrentTab('dashboard');
                   setMobileMenuOpen(false);
                 }}
-                className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 rounded-lg shadow-2xs"
+                className="px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 rounded-lg shadow-2xs"
               >
                 Passbook →
               </button>
@@ -1251,29 +1264,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={toggleTheme}
               className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-xs font-bold flex items-center gap-1.5 shadow-2xs"
             >
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-gray-700" />}
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-neutral-100" /> : <Moon className="w-3.5 h-3.5 text-gray-700" />}
               <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
           </div>
 
-          {/* Sound Chime Toggle in Mobile */}
+          {/* Sound Effects Toggle in Menu */}
           <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
             <span className="font-bold text-gray-700 dark:text-gray-300 text-xs flex items-center gap-1.5">
-              <span>Chime Sound:</span>
-              <span className={`text-[10px] font-bold ${isSoundEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                {isSoundEnabled ? 'ON' : 'MUTED'}
+              <span>Sound Effects:</span>
+              <span className={`text-xs font-bold ${isSoundEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'}`}>
+                {isSoundEnabled ? 'On' : 'Off'}
               </span>
             </span>
             <button
               onClick={toggleSound}
-              className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs ${
+              className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ${
                 isSoundEnabled
                   ? 'bg-emerald-50 dark:bg-emerald-950 border-emerald-300 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500'
+                  : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300'
               }`}
+              aria-label={isSoundEnabled ? 'Turn sound effects off' : 'Turn sound effects on'}
             >
               {isSoundEnabled ? <Bell className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-gray-400" />}
-              <span>{isSoundEnabled ? 'Mute' : 'Enable'}</span>
+              <span>{isSoundEnabled ? 'Turn Off' : 'Turn On'}</span>
             </button>
           </div>
 
@@ -1290,7 +1304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="w-full text-left py-2 px-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200 font-semibold flex items-center justify-between"
           >
             <span>Your orders</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-[#d11243] font-bold">Dashboard</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold border border-neutral-200 dark:border-neutral-700">Dashboard</span>
           </button>
           <button
             onClick={() => { 

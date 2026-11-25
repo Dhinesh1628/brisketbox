@@ -41,8 +41,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         netWeight: '12 Eggs',
         grossWeight: '12 Eggs',
         pieces: '12 Eggs',
-        serves: 'Serves 2-4',
-        badge: 'Popular'
+        serves: 'Serves 2-4'
       },
       {
         weight: '30 Eggs',
@@ -54,8 +53,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
         netWeight: '30 Eggs',
         grossWeight: '30 Eggs',
         pieces: '30 Eggs (Crate)',
-        serves: 'Family Monthly Value',
-        badge: 'Best Value'
+        serves: 'Family Monthly Value'
       }
     ];
   }
@@ -115,8 +113,7 @@ export function getProductWeightOptions(product: Product): WeightOption[] {
       netWeight: `${Math.round(netNum * 2)}g`,
       grossWeight: '1000g (1kg)',
       pieces: '8-12 cuts',
-      serves: 'Serves 4-6',
-      badge: 'Best Value'
+      serves: 'Serves 4-6'
     }
   ];
 }

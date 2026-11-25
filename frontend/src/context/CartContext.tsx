@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Product, CartItem } from '../types';
 import { useSound } from './SoundContext';
+import { useToast } from './ToastContext';
+import { api } from '../api';
+
+export interface ActiveCoupon {
+  code: string;
+  description: string;
+  type: string;
+  discount: number;
+  discountPercent: number;
+  minOrderValue: number;
+  maxDiscount: number;
+}
 
 interface CartContextType {
   items: CartItem[];
@@ -24,6 +36,7 @@ interface CartContextType {
   couponDiscount: number;
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
+  activeCoupons: ActiveCoupon[];
   total: number;
   totalItems: number;
 }
@@ -32,6 +45,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { playPopSound } = useSound();
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('brisketbox_cart') || localStorage.getItem('sagar_cart');
@@ -44,56 +58,57 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [activeCoupons, setActiveCoupons] = useState<ActiveCoupon[]>([]);
 
   useEffect(() => {
     localStorage.setItem('brisketbox_cart', JSON.stringify(items));
   }, [items]);
 
+  useEffect(() => {
+    api.getActiveCoupons()
+      .then(coupons => {
+        if (Array.isArray(coupons)) {
+          setActiveCoupons(coupons);
+        }
+      })
+      .catch(() => setActiveCoupons([]));
+  }, []);
+
   const applyCoupon = (code: string): { success: boolean; message: string } => {
     const clean = code.trim().toUpperCase();
     if (!clean) return { success: false, message: 'Please enter a coupon code' };
     
-    if (clean === 'MEAT100') {
-      if (subtotal < 499) {
-        return { success: false, message: 'Add items worth ₹' + (499 - subtotal) + ' more for MEAT100 (Min order ₹499)' };
-      }
-      setCouponCode('MEAT100');
-      setCouponDiscount(100);
-      return { success: true, message: '₹100 discount applied with MEAT100!' };
-    } else if (clean === 'FIRST20' || clean === 'FIRSTORDER' || clean === 'FIRSTMEAT') {
-      if (subtotal < 399) {
-        return { success: false, message: 'Add items worth ₹' + (399 - subtotal) + ' more for FIRST20 (Min order ₹399)' };
-      }
-      const disc = Math.min(120, Math.round(subtotal * 0.20)) || 100;
-      setCouponCode(clean);
-      setCouponDiscount(disc);
-      return { success: true, message: `₹${disc} discount applied on your first order!` };
-    } else if (clean === 'FREEDEL') {
-      setCouponCode('FREEDEL');
-      setCouponDiscount(40);
-      return { success: true, message: 'FREE Delivery coupon applied (₹40 saved)!' };
-    } else if (clean === 'FRESH50') {
-      if (subtotal < 249) {
-        return { success: false, message: 'Min order of ₹249 required for FRESH50' };
-      }
-      setCouponCode('FRESH50');
-      setCouponDiscount(50);
-      return { success: true, message: '₹50 discount applied with FRESH50!' };
-    } else if (clean === 'COLDCHAIN' || clean === 'FRESH100') {
-      if (subtotal < 499) {
-        return { success: false, message: 'Min order of ₹499 required for this coupon' };
-      }
-      setCouponCode(clean);
-      setCouponDiscount(75);
-      return { success: true, message: '₹75 cold-chain bonus discount applied!' };
-    } else {
-      return { success: false, message: 'Invalid or expired coupon code. Try MEAT100, FIRST20, or FREEDEL.' };
+    const matched = activeCoupons.find(c => c.code.toUpperCase() === clean);
+    if (!matched) {
+      return { success: false, message: 'Invalid or expired coupon code' };
     }
+
+    if (matched.minOrderValue && subtotal < matched.minOrderValue) {
+      return { 
+        success: false, 
+        message: `Add items worth ₹${matched.minOrderValue - subtotal} more for ${matched.code} (Min order ₹${matched.minOrderValue})` 
+      };
+    }
+
+    let disc = 0;
+    if (matched.type === 'percentage') {
+      const calc = Math.round((subtotal * (matched.discountPercent || 10)) / 100);
+      disc = Math.min(calc, matched.maxDiscount || calc, subtotal);
+    } else {
+      disc = Math.min(matched.discount || 0, subtotal);
+    }
+
+    setCouponCode(matched.code);
+    setCouponDiscount(disc);
+    const msg = `Discount of ₹${disc} applied with ${matched.code}!`;
+    showToast(msg, 'success');
+    return { success: true, message: msg };
   };
 
   const removeCoupon = () => {
     setCouponCode(null);
     setCouponDiscount(0);
+    showToast('Coupon removed', 'info');
   };
 
   const addItem = (
@@ -138,11 +153,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       ];
     });
+    showToast(`Added ${product.name} (${weight}) to cart`, 'success');
     setIsCartOpen(true);
   };
 
   const removeItem = (itemIdOrProductId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemIdOrProductId && item.product.id !== itemIdOrProductId));
+    showToast('Item removed from cart', 'info');
   };
 
   const updateQuantity = (itemIdOrProductId: string, quantity: number) => {
@@ -193,6 +210,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         couponDiscount: effectiveDiscount,
         applyCoupon,
         removeCoupon,
+        activeCoupons,
         total,
         totalItems
       }}

@@ -98,7 +98,7 @@ export const OrderTrackingPage: React.FC<OrderTrackingPageProps> = ({ onNavigate
             onClick={onNavigateToReturns}
             className="px-5 py-2.5 rounded-xl bg-[#d11243] hover:bg-[#b80f3b] text-white font-bold text-xs transition shadow-sm cursor-pointer"
           >
-            Explore Cold-Box Services
+            Start shopping
           </button>
         </div>
       </div>

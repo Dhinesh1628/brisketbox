@@ -49,6 +49,8 @@ const orderSchema = new mongoose.Schema({
   coolerReleased: { type: Boolean, default: false },
   coolerReturned: { type: Boolean, default: false },
   coolerDepositRefunded: { type: Boolean, default: false },
+  slotReleased: { type: Boolean, default: false, index: true },
+  holdExpiresAt: { type: Date, default: null, index: true },
 
   // Delivery & Location details
   deliveryAddress: { type: String, default: 'Indiranagar, Bengaluru' },
@@ -64,6 +66,7 @@ const orderSchema = new mongoose.Schema({
     pincode: { type: String },
     instructions: { type: String }
   },
+  deliverySlotId: { type: String, default: null, index: true },
   deliverySlot: { type: String, default: 'Today, Express Delivery' },
   city: { type: String, default: 'Bengaluru', index: true },
   deliveryNotes: { type: String, default: '' },

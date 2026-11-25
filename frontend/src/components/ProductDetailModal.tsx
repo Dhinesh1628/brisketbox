@@ -45,13 +45,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     {
       id: 'Curry Cut (Medium Bone-in)',
       name: 'Curry Cut - Medium',
-      badge: 'Popular',
       description: 'Evenly sized pieces with bone. Ideal for rich curries, gravies, and slow stews.'
     },
     {
       id: 'Biryani Cut (Large Juicy Pieces)',
       name: 'Biryani Cut - Large',
-      badge: 'Chef Favorite',
       description: 'Even cuts that cook well in curries and dum biryani.'
     },
     {
