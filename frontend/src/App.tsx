@@ -13,6 +13,7 @@ import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartDrawer } from './components/CartDrawer';
 import { FloatingBottomCartBar } from './components/FloatingBottomCartBar';
 import { SEOHead } from './components/SEOHead';
+import { SplashIntro } from './components/SplashIntro';
 import { DEFAULT_HONEST_PRODUCTS } from './data/honestProducts';
 import type { Order, DeliveryAddress } from './types';
 
@@ -274,6 +275,8 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="min-h-screen max-w-full overflow-x-hidden bg-[#f7f7f9] dark:bg-[#080c14] text-gray-800 dark:text-gray-100 flex flex-col font-sans selection:bg-[#d11243] selection:text-white transition-colors duration-300 relative">
+      {/* Brand Splash Opening Animation */}
+      <SplashIntro />
       
       {/* Dynamic SEO Metadata & Schema */}
       {route.page === 'product' ? (
