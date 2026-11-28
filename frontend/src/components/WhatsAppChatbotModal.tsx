@@ -199,7 +199,7 @@ export const WhatsAppChatbotModal: React.FC<WhatsAppChatbotModalProps> = ({
         couponCode
       };
 
-      const response = await fetch('/api/chatbot/chat', {
+      const response = await fetch('/api/whatsapp/chatbot/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, phone: whatsappNumber, cartSummary })

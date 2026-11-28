@@ -218,6 +218,7 @@ describe('Live Security Hotfix & Access Control Suite', () => {
       'GET /api/whatsapp/webhook/whatsapp',
       'POST /api/whatsapp/webhook/whatsapp',
       'POST /api/whatsapp/chatbot/chat',
+      'POST /api/chatbot/chat',
       'POST /api/contact',
       'POST /api/iot/coldchain-ping',
       'GET /api/coupons/active',
@@ -263,6 +264,22 @@ describe('Live Security Hotfix & Access Control Suite', () => {
         0,
         `Found non-public route(s) accessible without login: ${JSON.stringify(unauthenticatedLeakingRoutes, null, 2)}`
       );
+    });
+  });
+
+  describe('4. Chatbot Endpoints Availability', () => {
+    it('answers customer questions on both /api/whatsapp/chatbot/chat and /api/chatbot/chat with 200 OK', async () => {
+      for (const endpoint of ['/api/whatsapp/chatbot/chat', '/api/chatbot/chat']) {
+        const res = await fetch(`${baseUrl}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Mutton Rogan Josh' })
+        });
+        assert.strictEqual(res.status, 200, `${endpoint} should return 200 OK`);
+        const data = await res.json();
+        assert.ok(data.success, `${endpoint} should indicate success`);
+        assert.ok(data.reply && data.reply.length > 20, `${endpoint} should return rich reply`);
+      }
     });
   });
 });
