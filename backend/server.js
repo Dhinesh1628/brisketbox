@@ -237,6 +237,10 @@ if (fs.existsSync(clientDist)) {
 // 7. Mount specialized sub-routers
 app.use('/api/payments', paymentsRouter);
 app.use('/api/whatsapp', whatsappWebhookRouter);
+app.post('/api/chatbot/chat', (req, res, next) => {
+  req.url = '/chatbot/chat';
+  whatsappWebhookRouter(req, res, next);
+});
 app.use('/api/analytics', authenticate, requireAdmin, analyticsRouter);
 app.use('/api/coupons', couponsRouter);
 app.use('/api/delivery', deliveryRouter);
